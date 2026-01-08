@@ -1,9 +1,37 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import { db } from "../lib/firebase.ts";
+import { collection, getDocs } from "firebase/firestore";
 
+const snapshot = await getDocs(collection(db, "menus"));
+const menus = snapshot.docs.map((doc) => doc.data());
+
+// Console.log en el servidor (se ve en la terminal)
+console.log("Menus desde servidor:", menus);
 ---
 
-<Layout>
-	<h1>Hola mundo 👋</h1>
-	<p>Proyecto de menús en Astro</p>
+<Layout title="Menús">
+  <h1>Menús</h1>
+
+  <ul>
+    {
+      menus.map((menu) => (
+        <li>
+          <h2>{menu.restaurant}</h2>
+          <ul>
+            {menu.items.map((item) => (
+              <li>
+                {item.name} - ${item.price}
+              </li>
+            ))}
+          </ul>
+        </li>
+      ))
+    }
+  </ul>
+
+  <!-- Console.log en el cliente (se ve en la consola del navegador) -->
+  <script define:vars={{ menus: JSON.stringify(menus) }}>
+    console.log("Menus desde cliente:", JSON.parse(menus));
+  </script>
 </Layout>
