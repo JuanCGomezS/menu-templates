@@ -1,0 +1,80 @@
+---
+import RestaurantHeader from "./RestaurantHeader.astro";
+import ContactInfo from "./ContactInfo.astro";
+import Schedule from "./Schedule.astro";
+import CategorySection from "./CategorySection.astro";
+
+interface Props {
+  restaurant: {
+    id: string;
+    name: string;
+    slug: string;
+    isActive: boolean;
+    currency: string;
+    template?: { name: string } | null;
+    contact?: {
+      whatsapp?: string;
+      instagram?: string;
+      address?: string;
+    };
+    schedule?: Record<string, string>;
+    categories: Array<{
+      id: string;
+      name: string;
+      items: Array<{
+        name: string;
+        description?: string;
+        price: number;
+      }>;
+    }>;
+  };
+}
+
+const { restaurant } = Astro.props;
+---
+
+<article class="restaurant-card">
+  <RestaurantHeader
+    name={restaurant.name}
+    slug={restaurant.slug}
+    isActive={restaurant.isActive}
+    currency={restaurant.currency}
+    template={restaurant.template}
+  />
+
+  {restaurant.contact && <ContactInfo contact={restaurant.contact} />}
+
+  {restaurant.schedule && <Schedule schedule={restaurant.schedule} />}
+
+  {
+    restaurant.categories && restaurant.categories.length > 0 ? (
+      <div class="menu-section">
+        <h3>Menú</h3>
+        {restaurant.categories.map((category) => (
+          <CategorySection category={category} currency={restaurant.currency} />
+        ))}
+      </div>
+    ) : (
+      <p class="empty-message">No hay categorías disponibles</p>
+    )
+  }
+</article>
+
+<style>
+  .restaurant-card {
+    margin-bottom: 3rem;
+    padding: 1.5rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+  }
+
+  .menu-section h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .empty-message {
+    color: #999;
+    font-style: italic;
+  }
+</style>

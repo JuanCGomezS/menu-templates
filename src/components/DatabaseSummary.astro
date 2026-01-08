@@ -1,0 +1,45 @@
+---
+interface Props {
+  restaurants: number;
+  categories: number;
+  items: number;
+  templates: number;
+}
+
+const { restaurants, categories, items, templates } = Astro.props;
+---
+
+<div class="database-summary">
+  <h2>Resumen de la Base de Datos</h2>
+  <ul>
+    <li><strong>Restaurantes:</strong> {restaurants}</li>
+    <li><strong>Categorías:</strong> {categories}</li>
+    <li><strong>Items:</strong> {items}</li>
+    <li><strong>Templates:</strong> {templates}</li>
+  </ul>
+  <p>
+    <small>Revisa la consola del navegador para ver el log completo.</small>
+  </p>
+</div>
+
+<style>
+  .database-summary {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: #f5f5f5;
+    border-radius: 8px;
+  }
+
+  .database-summary ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .database-summary li {
+    padding: 0.25rem 0;
+  }
+
+  .database-summary small {
+    color: #666;
+  }
+</style>

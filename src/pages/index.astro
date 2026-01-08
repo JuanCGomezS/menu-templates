@@ -1,37 +1,52 @@
 ---
+import DatabaseLogger from "../components/DatabaseLogger.astro";
+import DatabaseSummary from "../components/DatabaseSummary.astro";
+import RestaurantCard from "../components/RestaurantCard.astro";
 import Layout from "../layouts/Layout.astro";
-import { db } from "../lib/firebase.ts";
-import { collection, getDocs } from "firebase/firestore";
+import {
+  createDatabaseLog,
+  relateRestaurantData
+} from "../lib/data-helpers";
+import { getAllCollections } from "../lib/firebase-helpers";
 
-const snapshot = await getDocs(collection(db, "menus"));
-const menus = snapshot.docs.map((doc) => doc.data());
+// @ts-ignore
+const { restaurants, categories, items, templates } = await getAllCollections();
 
-// Console.log en el servidor (se ve en la terminal)
-console.log("Menus desde servidor:", menus);
+const restaurantsWithData = relateRestaurantData(
+  restaurants,
+  categories,
+  items,
+  templates,
+);
+
+const dbLog = createDatabaseLog(
+  restaurants,
+  categories,
+  items,
+  templates,
+  restaurantsWithData,
+);
 ---
 
 <Layout title="Menús">
-  <h1>Menús</h1>
+  <h1>Menús de Restaurantes</h1>
 
-  <ul>
-    {
-      menus.map((menu) => (
-        <li>
-          <h2>{menu.restaurant}</h2>
-          <ul>
-            {menu.items.map((item) => (
-              <li>
-                {item.name} - ${item.price}
-              </li>
-            ))}
-          </ul>
-        </li>
+  <DatabaseSummary
+    restaurants={restaurants.length}
+    categories={categories.length}
+    items={items.length}
+    templates={templates.length}
+  />
+
+  {
+    restaurantsWithData.length > 0 ? (
+      restaurantsWithData.map((restaurant) => (
+        <RestaurantCard restaurant={restaurant} />
       ))
-    }
-  </ul>
+    ) : (
+      <p>No hay restaurantes disponibles.</p>
+    )
+  }
 
-  <!-- Console.log en el cliente (se ve en la consola del navegador) -->
-  <script define:vars={{ menus: JSON.stringify(menus) }}>
-    console.log("Menus desde cliente:", JSON.parse(menus));
-  </script>
+  <DatabaseLogger dbLog={dbLog} show={false} />
 </Layout>

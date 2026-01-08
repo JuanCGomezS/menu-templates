@@ -1,0 +1,39 @@
+---
+interface Props {
+  name: string;
+  slug: string;
+  isActive: boolean;
+  currency: string;
+  template?: { name: string } | null;
+}
+
+const { name, slug, isActive, currency, template } = Astro.props;
+---
+
+<header class="restaurant-header">
+  <h2>{name}</h2>
+  <div class="restaurant-meta">
+    <p><strong>Slug:</strong> {slug}</p>
+    <p><strong>Estado:</strong> {isActive ? '✅ Activo' : '❌ Inactivo'}</p>
+    <p><strong>Moneda:</strong> {currency}</p>
+    {template && (
+      <p><strong>Plantilla:</strong> {template.name}</p>
+    )}
+  </div>
+</header>
+
+<style>
+  .restaurant-header {
+    margin-bottom: 1rem;
+  }
+  
+  .restaurant-meta {
+    color: #666;
+    font-size: 0.9rem;
+  }
+  
+  .restaurant-meta p {
+    margin: 0.25rem 0;
+  }
+</style>
+

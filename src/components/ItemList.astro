@@ -1,0 +1,77 @@
+---
+import { formatPrice } from "../lib/utils";
+
+interface Props {
+  items: Array<{
+    name: string;
+    description?: string;
+    price: number;
+  }>;
+  currency: string;
+}
+
+const { items, currency } = Astro.props;
+---
+
+<ul class="item-list">
+  {items.map((item) => (
+    <li class="item">
+      <div class="item-content">
+        <div class="item-info">
+          <strong class="item-name">{item.name}</strong>
+          {item.description && (
+            <p class="item-description">{item.description}</p>
+          )}
+        </div>
+        <div class="item-price">
+          {formatPrice(item.price, currency)}
+        </div>
+      </div>
+    </li>
+  ))}
+</ul>
+
+<style>
+  .item-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .item {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .item:last-child {
+    border-bottom: none;
+  }
+  
+  .item-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+  }
+  
+  .item-info {
+    flex: 1;
+  }
+  
+  .item-name {
+    display: block;
+  }
+  
+  .item-description {
+    margin: 0.25rem 0 0 0;
+    color: #666;
+    font-size: 0.9rem;
+  }
+  
+  .item-price {
+    font-weight: bold;
+    color: #2c5aa0;
+    margin-left: 1rem;
+    white-space: nowrap;
+  }
+</style>
+

@@ -1,0 +1,18 @@
+---
+interface Props {
+  dbLog: any;
+  show: boolean;
+}
+
+const { dbLog, show } = Astro.props;
+---
+
+{/* @ts-ignore */}
+<script define:vars={{ dbLog: JSON.stringify(dbLog), show: show }}>
+  {/* @ts-ignore */}
+  const data = JSON.parse(dbLog);
+  if (show) {
+    console.log(data);
+  }
+</script>
+

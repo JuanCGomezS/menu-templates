@@ -1,0 +1,55 @@
+---
+import { formatDayName, sortScheduleDays } from "../lib/utils";
+
+interface Props {
+  schedule?: Record<string, string>;
+}
+
+const { schedule } = Astro.props;
+
+if (!schedule) {
+  return null;
+}
+
+// Ordenar los días de la semana correctamente
+const sortedSchedule = sortScheduleDays(schedule);
+---
+
+<div class="schedule">
+  <h3>Horarios</h3>
+  <ul>
+    {
+      sortedSchedule.map(([day, scheduleValue]) => (
+        <li>
+          <strong>{formatDayName(day)}:</strong>{" "}
+          {scheduleValue === "closed" ? "Cerrado" : scheduleValue}
+        </li>
+      ))
+    }
+  </ul>
+</div>
+
+<style>
+  .schedule {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: #fff9e6;
+    border-radius: 4px;
+  }
+
+  .schedule h3 {
+    margin-top: 0;
+  }
+
+  .schedule ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    columns: 2;
+  }
+
+  .schedule li {
+    padding: 0.25rem 0;
+    break-inside: avoid;
+  }
+</style>

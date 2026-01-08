@@ -1,0 +1,54 @@
+---
+interface Props {
+  contact?: {
+    whatsapp?: string;
+    instagram?: string;
+    address?: string;
+  };
+}
+
+const { contact } = Astro.props;
+
+if (!contact) {
+  return null;
+}
+---
+
+<div class="contact-info">
+  <h3>Contacto</h3>
+  <ul>
+    {contact.whatsapp && (
+      <li>📱 WhatsApp: {contact.whatsapp}</li>
+    )}
+    {contact.instagram && (
+      <li>📷 Instagram: {contact.instagram}</li>
+    )}
+    {contact.address && (
+      <li>📍 Dirección: {contact.address}</li>
+    )}
+  </ul>
+</div>
+
+<style>
+  .contact-info {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: #e8f4f8;
+    border-radius: 4px;
+  }
+  
+  .contact-info h3 {
+    margin-top: 0;
+  }
+  
+  .contact-info ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .contact-info li {
+    padding: 0.25rem 0;
+  }
+</style>
+
