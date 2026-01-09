@@ -10,30 +10,17 @@ interface Props {
 const { name, slug, isActive, currency, template } = Astro.props;
 ---
 
-<header class="restaurant-header">
-  <h2>{name}</h2>
-  <div class="restaurant-meta">
-    <p><strong>Slug:</strong> {slug}</p>
-    <p><strong>Estado:</strong> {isActive ? '✅ Activo' : '❌ Inactivo'}</p>
-    <p><strong>Moneda:</strong> {currency}</p>
-    {template && (
-      <p><strong>Plantilla:</strong> {template.name}</p>
-    )}
+<header class="mb-4">
+  <h2 class="text-4xl font-bold text-white mb-4">{name}</h2>
+  <div class="bg-white/20 backdrop-blur-sm rounded-lg p-4 text-white text-sm">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+      <p class="my-1"><strong class="font-semibold">Slug:</strong> <span class="opacity-90">{slug}</span></p>
+      <p class="my-1"><strong class="font-semibold">Estado:</strong> <span class={isActive ? 'text-green-200' : 'text-red-200'}>{isActive ? '✅ Activo' : '❌ Inactivo'}</span></p>
+      <p class="my-1"><strong class="font-semibold">Moneda:</strong> <span class="opacity-90">{currency}</span></p>
+      {template && (
+        <p class="my-1"><strong class="font-semibold">Plantilla:</strong> <span class="opacity-90">{template.name}</span></p>
+      )}
+    </div>
   </div>
 </header>
-
-<style>
-  .restaurant-header {
-    margin-bottom: 1rem;
-  }
-  
-  .restaurant-meta {
-    color: #666;
-    font-size: 0.9rem;
-  }
-  
-  .restaurant-meta p {
-    margin: 0.25rem 0;
-  }
-</style>
 

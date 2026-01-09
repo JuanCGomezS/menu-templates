@@ -1,52 +1,50 @@
 ---
-import DatabaseLogger from "../components/DatabaseLogger.astro";
-import DatabaseSummary from "../components/DatabaseSummary.astro";
-import RestaurantCard from "../components/RestaurantCard.astro";
 import Layout from "../layouts/Layout.astro";
-import {
-  createDatabaseLog,
-  relateRestaurantData
-} from "../lib/data-helpers";
 import { getAllCollections } from "../lib/firebase-helpers";
+import { relateRestaurantData } from "../lib/data-helpers";
+import RestaurantCard from "../components/RestaurantCard.astro";
+import DatabaseSummary from "../components/DatabaseSummary.astro";
 
-// @ts-ignore
-const { restaurants, categories, items, templates } = await getAllCollections();
+// Obtener datos en el servidor (build time)
+const { restaurants, categories, items, templates } = await getAllCollections() as {
+  restaurants: any[];
+  categories: any[];
+  items: any[];
+  templates: any[];
+};
 
+// Relacionar datos
 const restaurantsWithData = relateRestaurantData(
   restaurants,
   categories,
   items,
-  templates,
-);
-
-const dbLog = createDatabaseLog(
-  restaurants,
-  categories,
-  items,
-  templates,
-  restaurantsWithData,
+  templates
 );
 ---
 
 <Layout title="Menús">
-  <h1>Menús de Restaurantes</h1>
+  <div class="container mx-auto px-4 py-8 max-w-6xl">
+    <div class="mb-8 text-center">
+      <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-3">Menús de Restaurantes</h1>
+      <div class="w-24 h-1 bg-gradient-to-r from-orange-500 to-pink-500 rounded-full mx-auto"></div>
+    </div>
 
-  <DatabaseSummary
-    restaurants={restaurants.length}
-    categories={categories.length}
-    items={items.length}
-    templates={templates.length}
-  />
+    {/* @ts-ignore - TypeScript inference issue with destructured arrays */}
+    <DatabaseSummary
+      restaurants={restaurants.length}
+      categories={categories.length}
+      items={items.length}
+      templates={templates.length}
+    />
 
-  {
-    restaurantsWithData.length > 0 ? (
+    {restaurantsWithData.length === 0 ? (
+      <div class="bg-white rounded-xl shadow-md p-12 text-center">
+        <p class="text-xl text-gray-500">No hay restaurantes disponibles.</p>
+      </div>
+    ) : (
       restaurantsWithData.map((restaurant) => (
         <RestaurantCard restaurant={restaurant} />
       ))
-    ) : (
-      <p>No hay restaurantes disponibles.</p>
-    )
-  }
-
-  <DatabaseLogger dbLog={dbLog} show={false} />
+    )}
+  </div>
 </Layout>

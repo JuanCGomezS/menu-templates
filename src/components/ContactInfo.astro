@@ -14,41 +14,41 @@ if (!contact) {
 }
 ---
 
-<div class="contact-info">
-  <h3>Contacto</h3>
-  <ul>
-    {contact.whatsapp && (
-      <li>📱 WhatsApp: {contact.whatsapp}</li>
-    )}
-    {contact.instagram && (
-      <li>📷 Instagram: {contact.instagram}</li>
-    )}
-    {contact.address && (
-      <li>📍 Dirección: {contact.address}</li>
-    )}
-  </ul>
+<div class="mb-4">
+  <h3 class="text-xl font-bold text-gray-900 mb-4 flex items-center">
+    <span class="mr-2">📞</span>
+    Contacto
+  </h3>
+  <div class="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-lg p-5 border border-cyan-200">
+    <ul class="list-none p-0 m-0 space-y-3">
+      {contact.whatsapp && (
+        <li class="flex items-center py-2">
+          <span class="text-2xl mr-3">📱</span>
+          <div>
+            <span class="text-sm text-gray-600 font-medium">WhatsApp</span>
+            <p class="text-gray-900 font-semibold">{contact.whatsapp}</p>
+          </div>
+        </li>
+      )}
+      {contact.instagram && (
+        <li class="flex items-center py-2">
+          <span class="text-2xl mr-3">📷</span>
+          <div>
+            <span class="text-sm text-gray-600 font-medium">Instagram</span>
+            <p class="text-gray-900 font-semibold">{contact.instagram}</p>
+          </div>
+        </li>
+      )}
+      {contact.address && (
+        <li class="flex items-center py-2">
+          <span class="text-2xl mr-3">📍</span>
+          <div>
+            <span class="text-sm text-gray-600 font-medium">Dirección</span>
+            <p class="text-gray-900 font-semibold">{contact.address}</p>
+          </div>
+        </li>
+      )}
+    </ul>
+  </div>
 </div>
-
-<style>
-  .contact-info {
-    margin-bottom: 1rem;
-    padding: 1rem;
-    background: #e8f4f8;
-    border-radius: 4px;
-  }
-  
-  .contact-info h3 {
-    margin-top: 0;
-  }
-  
-  .contact-info ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-  
-  .contact-info li {
-    padding: 0.25rem 0;
-  }
-</style>
 
