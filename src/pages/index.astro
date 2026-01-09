@@ -1,25 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import { getAllCollections } from "../lib/firebase-helpers";
-import { relateRestaurantData } from "../lib/data-helpers";
-import RestaurantCard from "../components/RestaurantCard.astro";
-import DatabaseSummary from "../components/DatabaseSummary.astro";
-
-// Obtener datos en el servidor (build time)
-const { restaurants, categories, items, templates } = await getAllCollections() as {
-  restaurants: any[];
-  categories: any[];
-  items: any[];
-  templates: any[];
-};
-
-// Relacionar datos
-const restaurantsWithData = relateRestaurantData(
-  restaurants,
-  categories,
-  items,
-  templates
-);
+import RestaurantList from "../components/react/RestaurantList";
+import DatabaseSummary from "../components/react/DatabaseSummary";
 ---
 
 <Layout title="Menús">
@@ -29,22 +11,8 @@ const restaurantsWithData = relateRestaurantData(
       <div class="w-24 h-1 bg-gradient-to-r from-orange-500 to-pink-500 rounded-full mx-auto"></div>
     </div>
 
-    {/* @ts-ignore - TypeScript inference issue with destructured arrays */}
-    <DatabaseSummary
-      restaurants={restaurants.length}
-      categories={categories.length}
-      items={items.length}
-      templates={templates.length}
-    />
+    <DatabaseSummary client:load />
 
-    {restaurantsWithData.length === 0 ? (
-      <div class="bg-white rounded-xl shadow-md p-12 text-center">
-        <p class="text-xl text-gray-500">No hay restaurantes disponibles.</p>
-      </div>
-    ) : (
-      restaurantsWithData.map((restaurant) => (
-        <RestaurantCard restaurant={restaurant} />
-      ))
-    )}
+    <RestaurantList client:load />
   </div>
 </Layout>
