@@ -1,0 +1,21 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import RestaurantMenuView from '../../components/react/RestaurantMenuView';
+
+export async function getStaticPaths() {
+  return [
+    { params: { slug: 'pizzeria-don-juan' } },
+  ];
+}
+
+interface Props {
+  slug: string;
+}
+
+const { slug } = Astro.params;
+---
+
+<Layout title={`Menú - ${slug || ''}`}>
+  <RestaurantMenuView slug={slug || ''} client:load />
+</Layout>
+

@@ -44,6 +44,19 @@ export default function RestaurantCard({ restaurant }: Props) {
                 <strong className="font-semibold">Slug:</strong>{' '}
                 <span className="opacity-90">{restaurant.slug}</span>
               </p>
+              {restaurant.isActive && (
+                <p className="my-1">
+                  <strong className="font-semibold">URL Pública:</strong>{' '}
+                  <a
+                    href={`/menu-templates/m/${restaurant.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="opacity-90 underline hover:opacity-100 text-blue-200 hover:text-blue-100 transition-colors"
+                  >
+                    Ver menú público →
+                  </a>
+                </p>
+              )}
               <p className="my-1">
                 <strong className="font-semibold">Estado:</strong>{' '}
                 <span
