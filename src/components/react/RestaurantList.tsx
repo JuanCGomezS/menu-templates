@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { db } from '../../lib/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, getDocs } from 'firebase/firestore';
 import { relateRestaurantData } from '../../lib/data-helpers';
 import RestaurantCard from './RestaurantCard';
 
@@ -38,6 +38,8 @@ export default function RestaurantList() {
     let categoriesData: any[] = [];
     let itemsData: any[] = [];
     let templatesData: any[] = [];
+    const categoryUnsubscribes: Map<string, () => void> = new Map();
+    const itemUnsubscribes: Map<string, () => void> = new Map();
 
     const updateRestaurants = () => {
       if (
@@ -59,7 +61,104 @@ export default function RestaurantList() {
       }
     };
 
-    // Usar onSnapshot para tiempo real - todos en paralelo
+    // Cargar templates (solo una vez, no cambian frecuentemente)
+    const loadTemplates = async () => {
+      try {
+        const templatesSnapshot = await getDocs(collection(db, 'templates'));
+        templatesData = templatesSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        updateRestaurants();
+      } catch (err) {
+        console.error('Error en templates:', err);
+      }
+    };
+
+    loadTemplates();
+
+    // Función para cargar categorías e items de un restaurante
+    const loadRestaurantData = (restaurantId: string) => {
+      // Limpiar suscripciones anteriores de este restaurante
+      const oldCategoryUnsub = categoryUnsubscribes.get(restaurantId);
+      if (oldCategoryUnsub) oldCategoryUnsub();
+      categoryUnsubscribes.delete(restaurantId);
+      
+      // Limpiar items de este restaurante
+      itemUnsubscribes.forEach((unsub, key) => {
+        if (key.startsWith(`${restaurantId}/`)) {
+          unsub();
+          itemUnsubscribes.delete(key);
+        }
+      });
+
+      // Suscribirse a categorías del restaurante
+      const categoriesRef = collection(db, 'restaurants', restaurantId, 'categories');
+      const unsubscribeCategories = onSnapshot(
+        categoriesRef,
+        (categoriesSnapshot) => {
+          // Actualizar categorías de este restaurante
+          const restaurantCategories = categoriesSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            restaurantId, // Mantener para compatibilidad
+            ...doc.data()
+          }));
+
+          // Remover categorías antiguas de este restaurante
+          categoriesData = categoriesData.filter(cat => cat.restaurantId !== restaurantId);
+          categoriesData = [...categoriesData, ...restaurantCategories];
+
+          // Suscribirse a items de cada categoría
+          categoriesSnapshot.docs.forEach((categoryDoc) => {
+            const categoryId = categoryDoc.id;
+            const itemsKey = `${restaurantId}/${categoryId}`;
+            
+            // Limpiar suscripción anterior si existe
+            const oldItemUnsub = itemUnsubscribes.get(itemsKey);
+            if (oldItemUnsub) oldItemUnsub();
+
+            const itemsRef = collection(db, 'restaurants', restaurantId, 'categories', categoryId, 'items');
+            const unsubscribeItems = onSnapshot(
+              itemsRef,
+              (itemsSnapshot) => {
+                // Actualizar items de esta categoría
+                const categoryItems = itemsSnapshot.docs.map((itemDoc) => ({
+                  id: itemDoc.id,
+                  restaurantId,
+                  categoryId,
+                  ...itemDoc.data()
+                }));
+
+                // Remover items antiguos de esta categoría
+                itemsData = itemsData.filter(item => 
+                  !(item.restaurantId === restaurantId && item.categoryId === categoryId)
+                );
+                itemsData = [...itemsData, ...categoryItems];
+
+                updateRestaurants();
+              },
+              (err) => {
+                console.error(`Error en items de categoría ${categoryId}:`, err);
+              }
+            );
+
+            itemUnsubscribes.set(itemsKey, unsubscribeItems);
+          });
+
+          // Si no hay categorías, actualizar de todas formas
+          if (categoriesSnapshot.empty) {
+            updateRestaurants();
+          }
+        },
+        (err) => {
+          console.error(`Error en categories de restaurante ${restaurantId}:`, err);
+        }
+      );
+
+      categoryUnsubscribes.set(restaurantId, unsubscribeCategories);
+    };
+
+    // Suscribirse a restaurantes
     const unsubscribeRestaurants = onSnapshot(
       collection(db, 'restaurants'),
       (snapshot) => {
@@ -67,6 +166,17 @@ export default function RestaurantList() {
           id: doc.id,
           ...doc.data()
         }));
+
+        // Cargar datos de cada restaurante
+        snapshot.docs.forEach((doc) => {
+          loadRestaurantData(doc.id);
+        });
+
+        // Limpiar datos de restaurantes que ya no existen
+        const currentRestaurantIds = new Set(snapshot.docs.map(doc => doc.id));
+        categoriesData = categoriesData.filter(cat => currentRestaurantIds.has(cat.restaurantId));
+        itemsData = itemsData.filter(item => currentRestaurantIds.has(item.restaurantId));
+
         updateRestaurants();
       },
       (err) => {
@@ -76,59 +186,10 @@ export default function RestaurantList() {
       }
     );
 
-    const unsubscribeCategories = onSnapshot(
-      collection(db, 'categories'),
-      (snapshot) => {
-        categoriesData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        updateRestaurants();
-      },
-      (err) => {
-        console.error('Error en categories:', err);
-        setError('Error al cargar categories');
-        setLoading(false);
-      }
-    );
-
-    const unsubscribeItems = onSnapshot(
-      collection(db, 'items'),
-      (snapshot) => {
-        itemsData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        updateRestaurants();
-      },
-      (err) => {
-        console.error('Error en items:', err);
-        setError('Error al cargar items');
-        setLoading(false);
-      }
-    );
-
-    const unsubscribeTemplates = onSnapshot(
-      collection(db, 'templates'),
-      (snapshot) => {
-        templatesData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        updateRestaurants();
-      },
-      (err) => {
-        console.error('Error en templates:', err);
-        setError('Error al cargar templates');
-        setLoading(false);
-      }
-    );
-
     return () => {
       unsubscribeRestaurants();
-      unsubscribeCategories();
-      unsubscribeItems();
-      unsubscribeTemplates();
+      categoryUnsubscribes.forEach(unsub => unsub());
+      itemUnsubscribes.forEach(unsub => unsub());
     };
   }, []);
 

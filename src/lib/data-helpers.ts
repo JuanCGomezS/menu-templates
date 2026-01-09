@@ -5,16 +5,21 @@ export function relateRestaurantData(
   templates: any[]
 ) {
   return restaurants.map((restaurant) => {
+    // Las categorías ya vienen filtradas por restaurante (son subcolecciones)
     const restaurantCategories = categories
-      .filter((cat) => cat.restaurantId === restaurant.id && cat.active)
+      .filter((cat) => 
+        cat.restaurantId === restaurant.id && 
+        (cat.active === undefined || cat.active !== false) // undefined o true = activo
+      )
       .sort((a, b) => (a.order || 0) - (b.order || 0))
       .map((category) => {
+        // Los items ya vienen filtrados por categoría (son subcolecciones)
         const categoryItems = items
           .filter(
             (item) =>
               item.categoryId === category.id &&
               item.restaurantId === restaurant.id &&
-              item.active
+              (item.active === undefined || item.active !== false) // undefined o true = activo
           )
           .sort((a, b) => (a.order || 0) - (b.order || 0));
 

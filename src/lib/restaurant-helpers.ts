@@ -29,6 +29,7 @@ export interface RestaurantData {
 
 /**
  * Relaciona los datos de un restaurante con sus categorías, items y template
+ * Ahora las categorías e items vienen como subcolecciones, así que ya vienen organizados
  */
 export function getRestaurantWithData(
   restaurant: any,
@@ -36,16 +37,16 @@ export function getRestaurantWithData(
   items: any[],
   templates: any[]
 ): RestaurantData {
+  // Las categorías ya vienen filtradas por restaurante (son subcolecciones)
   const restaurantCategories = categories
-    .filter((cat) => cat.restaurantId === restaurant.id && cat.active)
+    .filter((cat) => cat.active !== false) // Filtrar solo activas (undefined o true = activo)
     .sort((a, b) => (a.order || 0) - (b.order || 0))
     .map((category) => {
+      // Los items vienen con categoryId, filtrar por categoría y estado activo
       const categoryItems = items
-        .filter(
-          (item) =>
-            item.categoryId === category.id &&
-            item.restaurantId === restaurant.id &&
-            item.active
+        .filter((item) => 
+          item.categoryId === category.id && 
+          (item.active === undefined || item.active !== false) // undefined o true = activo
         )
         .sort((a, b) => (a.order || 0) - (b.order || 0));
 

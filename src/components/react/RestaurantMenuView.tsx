@@ -48,7 +48,7 @@ export default function RestaurantMenuView({ slug }: Props) {
     let itemsData: any[] = [];
     let templatesData: any[] = [];
     let unsubscribeCategories: (() => void) | null = null;
-    let unsubscribeItems: (() => void) | null = null;
+    const itemUnsubscribes: (() => void)[] = [];
 
     const loadData = async () => {
       try {
@@ -57,9 +57,9 @@ export default function RestaurantMenuView({ slug }: Props) {
           collection(db, 'restaurants'),
           where('slug', '==', slug)
         );
-        
+
         const restaurantsSnapshot = await getDocs(restaurantsQuery);
-        
+
         if (restaurantsSnapshot.empty) {
           setError('Restaurante no encontrado');
           setLoading(false);
@@ -73,7 +73,7 @@ export default function RestaurantMenuView({ slug }: Props) {
         };
 
         if (!restaurantData.isActive) {
-          setError('Este restaurante no está disponible');
+          setError('No disponible');
           setLoading(false);
           return;
         }
@@ -87,44 +87,58 @@ export default function RestaurantMenuView({ slug }: Props) {
           ...doc.data()
         }));
 
-        // Suscribirse a cambios en categorías e items
-        const categoriesQuery = query(
-          collection(db, 'categories'),
-          where('restaurantId', '==', restaurantData.id)
-        );
-
-        const itemsQuery = query(
-          collection(db, 'items'),
-          where('restaurantId', '==', restaurantData.id)
-        );
+        // Suscribirse a cambios en categorías usando subcolecciones
+        const categoriesRef = collection(db, 'restaurants', restaurantData.id, 'categories');
 
         unsubscribeCategories = onSnapshot(
-          categoriesQuery,
-          (snapshot) => {
-            categoriesData = snapshot.docs.map((doc) => ({
+          categoriesRef,
+          async (categoriesSnapshot) => {
+            // Limpiar suscripciones anteriores de items
+            itemUnsubscribes.forEach(unsub => unsub());
+            itemUnsubscribes.length = 0;
+
+            categoriesData = categoriesSnapshot.docs.map((doc) => ({
               id: doc.id,
               ...doc.data()
             }));
-            updateRestaurant();
+
+            // Suscribirse a items de cada categoría (subcolecciones anidadas)
+            categoriesSnapshot.docs.forEach((categoryDoc) => {
+              const itemsRef = collection(db, 'restaurants', restaurantData.id, 'categories', categoryDoc.id, 'items');
+
+              const unsubscribeItems = onSnapshot(
+                itemsRef,
+                (itemsSnapshot) => {
+                  // Actualizar items de esta categoría
+                  const categoryItems = itemsSnapshot.docs.map((itemDoc) => ({
+                    id: itemDoc.id,
+                    categoryId: categoryDoc.id,
+                    ...itemDoc.data()
+                  }));
+
+                  // Actualizar itemsData: remover items antiguos de esta categoría y agregar nuevos
+                  itemsData = itemsData.filter(item => item.categoryId !== categoryDoc.id);
+                  itemsData = [...itemsData, ...categoryItems];
+
+                  updateRestaurant();
+                },
+                (err) => {
+                  console.error(`Error en items de categoría ${categoryDoc.id}:`, err);
+                }
+              );
+
+              itemUnsubscribes.push(unsubscribeItems);
+            });
+
+            // Si no hay categorías, actualizar de todas formas
+            if (categoriesSnapshot.empty) {
+              itemsData = [];
+              updateRestaurant();
+            }
           },
           (err) => {
             console.error('Error en categories:', err);
             setError('Error al cargar categorías');
-          }
-        );
-
-        unsubscribeItems = onSnapshot(
-          itemsQuery,
-          (snapshot) => {
-            itemsData = snapshot.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data()
-            }));
-            updateRestaurant();
-          },
-          (err) => {
-            console.error('Error en items:', err);
-            setError('Error al cargar items');
           }
         );
 
@@ -155,7 +169,7 @@ export default function RestaurantMenuView({ slug }: Props) {
 
     return () => {
       if (unsubscribeCategories) unsubscribeCategories();
-      if (unsubscribeItems) unsubscribeItems();
+      itemUnsubscribes.forEach(unsub => unsub());
     };
   }, [slug]);
 
@@ -176,6 +190,7 @@ export default function RestaurantMenuView({ slug }: Props) {
         <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center max-w-md">
           <p className="text-2xl text-red-600 font-semibold mb-2">⚠️</p>
           <p className="text-xl text-red-600">{error}</p>
+          <p className="text-gray-600 text-sm">Consulte con el administrador del sistema para obtener más información.</p>
         </div>
       </div>
     );
@@ -187,7 +202,7 @@ export default function RestaurantMenuView({ slug }: Props) {
 
   const templateComponent = getTemplateComponent(restaurant.templateId || '');
   const sortedSchedule = restaurant.schedule ? sortScheduleDays(restaurant.schedule) : [];
-  
+
   switch (templateComponent) {
     case 'christmas':
       return <ChristmasTemplate restaurant={restaurant} sortedSchedule={sortedSchedule} />;
@@ -236,52 +251,6 @@ function DefaultTemplate({ restaurant, sortedSchedule }: { restaurant: Restauran
       </header>
 
       <main className="container mx-auto px-4 py-8 max-w-6xl">
-        {restaurant.contact && (restaurant.contact.whatsapp || restaurant.contact.instagram) && (
-          <section className="mb-8 bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Contacto</h2>
-            <div className="flex flex-wrap gap-4">
-              {restaurant.contact.whatsapp && (
-                <a
-                  href={`https://wa.me/${restaurant.contact.whatsapp.replace(/[^0-9]/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors"
-                >
-                  <span>📱</span>
-                  WhatsApp
-                </a>
-              )}
-              {restaurant.contact.instagram && (
-                <a
-                  href={`https://instagram.com/${restaurant.contact.instagram.replace('@', '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors"
-                >
-                  <span>📷</span>
-                  Instagram
-                </a>
-              )}
-            </div>
-          </section>
-        )}
-
-        {restaurant.schedule && sortedSchedule.length > 0 && (
-          <section className="mb-8 bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">Horarios</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {sortedSchedule.map(([day, scheduleValue]) => (
-                <div key={day} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
-                  <span className="font-semibold text-gray-900">{formatDayName(day)}</span>
-                  <span className={scheduleValue === 'closed' ? 'text-red-600' : 'text-gray-700'}>
-                    {scheduleValue === 'closed' ? 'Cerrado' : scheduleValue}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
         {restaurant.categories && restaurant.categories.length > 0 ? (
           <section className="bg-white rounded-xl shadow-md p-6 md:p-8">
             <div className="mb-8">
@@ -320,6 +289,52 @@ function DefaultTemplate({ restaurant, sortedSchedule }: { restaurant: Restauran
         ) : (
           <section className="bg-white rounded-xl shadow-md p-12 text-center">
             <p className="text-gray-500 text-lg">No hay categorías disponibles</p>
+          </section>
+        )}
+
+        {restaurant.schedule && sortedSchedule.length > 0 && (
+          <section className="mb-8 bg-white rounded-xl shadow-md p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Horarios</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {sortedSchedule.map(([day, scheduleValue]) => (
+                <div key={day} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0">
+                  <span className="font-semibold text-gray-900">{formatDayName(day)}</span>
+                  <span className={scheduleValue === 'closed' ? 'text-red-600' : 'text-gray-700'}>
+                    {scheduleValue === 'closed' ? 'Cerrado' : scheduleValue}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {restaurant.contact && (restaurant.contact.whatsapp || restaurant.contact.instagram) && (
+          <section className="mb-8 bg-white rounded-xl shadow-md p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Contacto</h2>
+            <div className="flex flex-wrap gap-4">
+              {restaurant.contact.whatsapp && (
+                <a
+                  href={`https://wa.me/${restaurant.contact.whatsapp.replace(/[^0-9]/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors"
+                >
+                  <span>📱</span>
+                  WhatsApp
+                </a>
+              )}
+              {restaurant.contact.instagram && (
+                <a
+                  href={`https://instagram.com/${restaurant.contact.instagram.replace('@', '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors"
+                >
+                  <span>📷</span>
+                  Instagram
+                </a>
+              )}
+            </div>
           </section>
         )}
       </main>
