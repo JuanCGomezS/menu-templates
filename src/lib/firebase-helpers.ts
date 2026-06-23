@@ -1,14 +1,20 @@
 import { db } from "./firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, limit, query } from "firebase/firestore";
+
+const DEV_COLLECTION_READ_LIMIT = 50;
 
 /**
- * Obtiene todos los documentos de una colección de Firestore
+ * Obtiene una muestra acotada de documentos de una colección de Firestore.
  * @param collectionName - Nombre de la colección
+ * @param maxDocs - Cantidad máxima de documentos a leer
  * @returns Array de documentos con su id incluido
  */
-export async function getAllFromCollection(collectionName: string): Promise<any[]> {
+export async function getLimitedFromCollection(
+  collectionName: string,
+  maxDocs = DEV_COLLECTION_READ_LIMIT
+): Promise<any[]> {
   try {
-    const snapshot = await getDocs(collection(db, collectionName));
+    const snapshot = await getDocs(query(collection(db, collectionName), limit(maxDocs)));
     return snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data()
@@ -21,26 +27,25 @@ export async function getAllFromCollection(collectionName: string): Promise<any[
 }
 
 /**
- * Obtiene todas las colecciones principales de la base de datos
+ * Helper interno de diagnóstico. Mantiene límites explícitos para no leer colecciones completas.
  */
-export async function getAllCollections(): Promise<{
-  restaurants: any[];
+export async function getLimitedCollections(maxDocs = DEV_COLLECTION_READ_LIMIT): Promise<{
+  stores: any[];
   categories: any[];
   items: any[];
   templates: any[];
 }> {
-  const [restaurants, categories, items, templates] = await Promise.all([
-    getAllFromCollection("restaurants"),
-    getAllFromCollection("categories"),
-    getAllFromCollection("items"),
-    getAllFromCollection("templates")
+  const [stores, categories, items, templates] = await Promise.all([
+    getLimitedFromCollection("stores", maxDocs),
+    getLimitedFromCollection("categories", maxDocs),
+    getLimitedFromCollection("items", maxDocs),
+    getLimitedFromCollection("templates", maxDocs)
   ]);
 
   return {
-    restaurants,
+    stores,
     categories,
     items,
     templates
   };
 }
-

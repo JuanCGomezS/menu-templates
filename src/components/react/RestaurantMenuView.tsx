@@ -1,37 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
-import { db } from '../../lib/firebase';
-import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
-import { getRestaurantWithData } from '../../lib/restaurant-helpers';
 import { formatPrice, formatDayName, sortScheduleDays } from '../../lib/utils';
 import { getTemplateComponent } from '../../lib/templates';
+import { getPublicStoreBySlug } from '../../lib/public-store-data';
+import type { PublicStore } from '../../lib/store-helpers';
 
-interface RestaurantData {
-  id: string;
-  name: string;
-  slug: string;
-  isActive: boolean;
-  currency: string;
-  templateId: string;
-  template?: { id: string; name: string } | null;
-  contact?: {
-    whatsapp?: string;
-    instagram?: string;
-    address?: string;
-  };
-  schedule?: Record<string, string>;
-  categories: Array<{
-    id: string;
-    name: string;
-    order: number;
-    items: Array<{
-      id: string;
-      name: string;
-      description?: string;
-      price: number;
-      order: number;
-    }>;
-  }>;
-}
+type RestaurantData = PublicStore;
 
 interface Props {
   slug: string;
@@ -43,124 +16,31 @@ export default function RestaurantMenuView({ slug }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let restaurantsData: any[] = [];
-    let categoriesData: any[] = [];
-    let itemsData: any[] = [];
-    let templatesData: any[] = [];
-    let unsubscribeCategories: (() => void) | null = null;
-    const itemUnsubscribes: (() => void)[] = [];
+    let cancelled = false;
 
     const loadData = async () => {
       try {
-        // Cargar restaurante por slug
-        const restaurantsQuery = query(
-          collection(db, 'restaurants'),
-          where('slug', '==', slug)
-        );
+        setLoading(true);
+        setError(null);
 
-        const restaurantsSnapshot = await getDocs(restaurantsQuery);
+        const store = await getPublicStoreBySlug(slug);
 
-        if (restaurantsSnapshot.empty) {
-          setError('Restaurante no encontrado');
+        if (cancelled) return;
+
+        if (!store) {
+          setRestaurant(null);
+          setError('Tienda no encontrada o inactiva');
           setLoading(false);
           return;
         }
 
-        const restaurantDoc = restaurantsSnapshot.docs[0];
-        const restaurantData: any = {
-          id: restaurantDoc.id,
-          ...restaurantDoc.data()
-        };
-
-        if (!restaurantData.isActive) {
-          setError('No disponible');
-          setLoading(false);
-          return;
-        }
-
-        restaurantsData = [restaurantData];
-
-        // Cargar templates
-        const templatesSnapshot = await getDocs(collection(db, 'templates'));
-        templatesData = templatesSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-
-        // Suscribirse a cambios en categorías usando subcolecciones
-        const categoriesRef = collection(db, 'restaurants', restaurantData.id, 'categories');
-
-        unsubscribeCategories = onSnapshot(
-          categoriesRef,
-          async (categoriesSnapshot) => {
-            // Limpiar suscripciones anteriores de items
-            itemUnsubscribes.forEach(unsub => unsub());
-            itemUnsubscribes.length = 0;
-
-            categoriesData = categoriesSnapshot.docs.map((doc) => ({
-              id: doc.id,
-              ...doc.data()
-            }));
-
-            // Suscribirse a items de cada categoría (subcolecciones anidadas)
-            categoriesSnapshot.docs.forEach((categoryDoc) => {
-              const itemsRef = collection(db, 'restaurants', restaurantData.id, 'categories', categoryDoc.id, 'items');
-
-              const unsubscribeItems = onSnapshot(
-                itemsRef,
-                (itemsSnapshot) => {
-                  // Actualizar items de esta categoría
-                  const categoryItems = itemsSnapshot.docs.map((itemDoc) => ({
-                    id: itemDoc.id,
-                    categoryId: categoryDoc.id,
-                    ...itemDoc.data()
-                  }));
-
-                  // Actualizar itemsData: remover items antiguos de esta categoría y agregar nuevos
-                  itemsData = itemsData.filter(item => item.categoryId !== categoryDoc.id);
-                  itemsData = [...itemsData, ...categoryItems];
-
-                  updateRestaurant();
-                },
-                (err) => {
-                  console.error(`Error en items de categoría ${categoryDoc.id}:`, err);
-                }
-              );
-
-              itemUnsubscribes.push(unsubscribeItems);
-            });
-
-            // Si no hay categorías, actualizar de todas formas
-            if (categoriesSnapshot.empty) {
-              itemsData = [];
-              updateRestaurant();
-            }
-          },
-          (err) => {
-            console.error('Error en categories:', err);
-            setError('Error al cargar categorías');
-          }
-        );
-
-        const updateRestaurant = () => {
-          if (restaurantsData.length > 0) {
-            const restaurantWithData = getRestaurantWithData(
-              restaurantsData[0],
-              categoriesData,
-              itemsData,
-              templatesData
-            );
-            setRestaurant(restaurantWithData);
-            setLoading(false);
-            setError(null);
-          }
-        };
-
-        // Actualizar inicialmente
-        updateRestaurant();
+        setRestaurant(store);
+        setLoading(false);
       } catch (err: any) {
-        console.error('Error loading restaurant:', err);
-        setError('Error al cargar el restaurante');
+        if (cancelled) return;
+
+        console.error('Error loading store:', err);
+        setError('Error al cargar la tienda');
         setLoading(false);
       }
     };
@@ -168,8 +48,7 @@ export default function RestaurantMenuView({ slug }: Props) {
     loadData();
 
     return () => {
-      if (unsubscribeCategories) unsubscribeCategories();
-      itemUnsubscribes.forEach(unsub => unsub());
+      cancelled = true;
     };
   }, [slug]);
 
@@ -200,11 +79,12 @@ export default function RestaurantMenuView({ slug }: Props) {
     return null;
   }
 
-  const templateComponent = getTemplateComponent(restaurant.templateId || '');
+  const templateComponent: string = getTemplateComponent(restaurant.templateId || '');
   const sortedSchedule = restaurant.schedule ? sortScheduleDays(restaurant.schedule) : [];
 
   switch (templateComponent) {
     case 'christmas':
+    case 'seasonal-christmas':
       return <ChristmasTemplate restaurant={restaurant} sortedSchedule={sortedSchedule} />;
     case 'halloween':
       return <HalloweenTemplate restaurant={restaurant} sortedSchedule={sortedSchedule} />;

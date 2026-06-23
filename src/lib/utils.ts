@@ -44,12 +44,38 @@ export function formatDayName(day: string): string {
   return days[day.toLowerCase()] || capitalize(day);
 }
 
+export type ScheduleDayValue =
+  | string
+  | {
+      open?: string;
+      close?: string;
+      closed?: boolean;
+    };
+
+export type Schedule = Record<string, ScheduleDayValue>;
+
+export function formatScheduleValue(value: ScheduleDayValue): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (!value || value.closed) {
+    return 'closed';
+  }
+
+  if (value.open && value.close) {
+    return `${value.open}-${value.close}`;
+  }
+
+  return value.open || value.close || '';
+}
+
 /**
  * Ordena los días de la semana en orden correcto (Lunes a Domingo)
  * @param schedule - Objeto con los horarios por día
  * @returns Array de tuplas [día, horario] ordenadas
  */
-export function sortScheduleDays(schedule: Record<string, string>): Array<[string, string]> {
+export function sortScheduleDays(schedule: Schedule): Array<[string, string]> {
   const dayOrder: Record<string, number> = {
     'monday': 1,
     'tuesday': 2,
@@ -60,11 +86,12 @@ export function sortScheduleDays(schedule: Record<string, string>): Array<[strin
     'sunday': 7
   };
 
-  // Convertir a array de tuplas y ordenar
-  return Object.entries(schedule).sort(([dayA], [dayB]) => {
-    const orderA = dayOrder[dayA.toLowerCase()] || 999;
-    const orderB = dayOrder[dayB.toLowerCase()] || 999;
-    return orderA - orderB;
-  });
+  return Object.entries(schedule)
+    .map(([day, value]) => [day, formatScheduleValue(value)] as [string, string])
+    .filter(([, value]) => value.length > 0)
+    .sort(([dayA], [dayB]) => {
+      const orderA = dayOrder[dayA.toLowerCase()] || 999;
+      const orderB = dayOrder[dayB.toLowerCase()] || 999;
+      return orderA - orderB;
+    });
 }
-

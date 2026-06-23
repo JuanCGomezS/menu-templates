@@ -1,556 +1,565 @@
-# Plan de trabajo — Menús de restaurantes (Astro + GitHub Pages + Firebase)
+# Menu Templates — Plan de Desarrollo
 
-## 0) Objetivo
-Sistema multi-tenant donde cada restaurante:
-- Tiene su menú público accesible por URL/QR (sin autenticación)
-- Puede elegir una plantilla visual (navideña, halloween, personalizada, etc.)
-- Gestiona sus productos, categorías, precios y horarios desde un panel admin
-- Todo desplegado en GitHub Pages con Firebase como backend
+Plataforma multi-tienda construida sobre **Astro + React + Firebase + GitHub Pages** para vender menús, catálogos y control básico de pedidos a múltiples negocios. El objetivo inicial es mantenerse dentro de infraestructura gratuita: **GitHub Pages para despliegue estático** y **Firebase Spark** para Auth, Firestore y Storage.
+
+El producto no es solo “un menú digital”. Es una base reutilizable para que restaurantes, emprendimientos de comida y tiendas puedan tener una presencia pública vendible, con plantillas reales según su enfoque, administración propia y herramientas operativas básicas.
 
 ---
 
-## 1) Modelo de datos (Firestore)
+## 0) Visión del producto
 
-### 1.1 Colecciones principales
+### Objetivo principal
 
-**`restaurants`** (colección principal)
-```typescript
-{
-  name: string              // "Pizzeria Don Juan"
-  slug: string              // "pizzeria-don-juan" (único, usado en URL)
-  templateId: string        // "default" | "christmas" | "halloween" | "custom"
-  ownerUid: string         // UID del usuario Firebase Auth
-  isActive: boolean         // true = visible públicamente
-  currency: string          // "COP" | "USD" | "EUR"
-  contact?: {
-    whatsapp?: string       // "+57 300 123 4567"
-    instagram?: string      // "@pizzeriadonjuan"
-    address?: string
-  }
-  schedule: {
-    // Formato: { day: "monday", open: "09:00", close: "22:00", closed: false }
-    // o más simple: { monday: "09:00-22:00", tuesday: "09:00-22:00", ... }
-    [day: string]: string | { open: string, close: string, closed?: boolean }
-  }
-  createdAt: timestamp
-  updatedAt: timestamp
-}
-```
+Vender este sistema a múltiples tiendas para mejorar su atención, presentación y operación diaria mediante:
 
-**`categories`** (subcolección de restaurants o colección con restaurantId)
-```typescript
-{
-  restaurantId: string      // Referencia al restaurante
-  name: string              // "Pizzas", "Bebidas", "Postres"
-  order: number             // Para ordenar (0, 1, 2...)
-  active: boolean           // true = visible en menú público
-  createdAt: timestamp
-}
-```
+- Menús públicos por URL/QR.
+- Catálogos visuales para productos físicos o emprendimientos de venta.
+- Pedidos en tienda y pedidos a domicilio.
+- Control básico de stock.
+- Panel de administración por tienda.
+- Varias plantillas visuales según tipo de negocio, ocasión o experiencia deseada.
 
-**`items`** (subcolección de categories o colección con categoryId)
-```typescript
-{
-  restaurantId: string
-  categoryId: string        // Referencia a categoría
-  name: string              // "Pizza Margarita"
-  description?: string      // Opcional
-  price: number             // 7000 (sin símbolo, se agrega según currency)
-  active: boolean           // true = visible en menú público
-  imageUrl?: string         // URL de Firebase Storage (futuro)
-  order: number             // Para ordenar dentro de la categoría
-  createdAt: timestamp
-  updatedAt: timestamp
-}
-```
+### Tipos de negocio objetivo
 
-**`templates`** (colección estática/config)
-```typescript
-{
-  id: string                // "default" | "christmas" | "halloween"
-  name: string              // "Plantilla Navideña"
-  active: boolean           // true = disponible para elegir
-  // Los templates se definen en código (componentes Astro), no en DB
-}
-```
+| Tipo | Enfoque público | Ejemplos |
+|---|---|---|
+| Restaurante | Menú gastronómico | Pizzería, café, hamburguesería, bar |
+| Emprendimiento de comida | Menú + pedidos por contacto | Postres, comidas rápidas, almuerzos |
+| Emprendimiento de ventas | Catálogo de productos | Ropa, accesorios, detalles, regalos |
 
-### 1.2 Decisiones de diseño
-- ✅ **Estructura simple**: `restaurants` → `categories` → `items`
-- ✅ **Sin colección `menus`**: Cada restaurante tiene un solo menú (simplifica MVP)
-- ✅ **Slug único**: Validar en Firestore Rules que no exista otro con mismo slug
-- ✅ **Subcolecciones vs referencias**: Usar referencias (`restaurantId`, `categoryId`) para facilitar queries y reglas de seguridad
+### Dos líneas funcionales del producto
 
-# Ejemplo de BD inicial
-```
-=== LOG COMPLETO DE FIREBASE ===
-Restaurantes: 1
-Categorías: 2
-Items: 3
-Templates: 2
-Menus: 1
-
---- DETALLE COMPLETO ---
-{
-  "restaurants": {
-    "count": 1,
-    "data": [
-      {
-        "id": "restaurant_1",
-        "updatedAt": {
-          "type": "firestore/timestamp/1.0",
-          "seconds": 1767907718,
-          "nanoseconds": 139000000
-        },
-        "createdAt": {
-          "type": "firestore/timestamp/1.0",
-          "seconds": 1767907696,
-          "nanoseconds": 746000000
-        },
-        "ownerUid": "",
-        "isActive": true,
-        "name": "Pizzeria Don Juan",
-        "templateId": "u9xq1W3qtbzWwoidBcrV",
-        "slug": "pizzeria-don-juan",
-        "currency": "COP",
-        "contact": {
-          "whatsapp": "+573001234567",
-          "address": "Calle 123 #45-67",
-          "instagram": "@pizzeriadonjuan"
-        },
-        "schedule": {
-          "thursday": "09:00-22:00",
-          "friday": "09:00-23:00",
-          "saturday": "10:00-23:00",
-          "wednesday": "09:00-22:00",
-          "monday": "09:00-22:00",
-          "tuesday": "09:00-22:00",
-          "sunday": "closed"
-        }
-      }
-    ]
-  },
-  "categories": {
-    "count": 2,
-    "data": [
-      {
-        "id": "6hPfe98jNbmiAhqiMOex",
-        "createdAt": {
-          "type": "firestore/timestamp/1.0",
-          "seconds": 1767908253,
-          "nanoseconds": 580000000
-        },
-        "restaurantId": "restaurant_1",
-        "order": 2,
-        "active": true,
-        "name": "Bebidas"
-      },
-      {
-        "id": "dfZ8bs8kELMhS7GwIL8M",
-        "restaurantId": "restaurant_1",
-        "active": true,
-        "order": 1,
-        "name": "Pizzas",
-        "createdAt": {
-          "type": "firestore/timestamp/1.0",
-          "seconds": 1767907812,
-          "nanoseconds": 433000000
-        }
-      }
-    ]
-  },
-  "items": {
-    "count": 3,
-    "data": [
-      {
-        "id": "4Ice1bYIUAzNlK3yF3RN",
-        "createdAt": {
-          "type": "firestore/timestamp/1.0",
-          "seconds": 1767907976,
-          "nanoseconds": 270000000
-        },
-        "price": 18000,
-        "order": 1,
-        "updatedAt": {
-          "type": "firestore/timestamp/1.0",
-          "seconds": 1767907981,
-          "nanoseconds": 581000000
-        },
-        "restaurantId": "restaurant_1",
-        "description": "Tomate, mozzarella, albahaca",
-        "active": true,
-        "categoryId": "dfZ8bs8kELMhS7GwIL8M",
-        "name": "Pizza Margarita"
-      },
-      {
-        "id": "4iZFwMuUsHaEybKBsJ5N",
-        "order": 1,
-        "name": "Coca-Cola",
-        "updatedAt": {
-          "type": "firestore/timestamp/1.0",
-          "seconds": 1767908394,
-          "nanoseconds": 655000000
-        },
-        "createdAt": {
-          "type": "firestore/timestamp/1.0",
-          "seconds": 1767908384,
-          "nanoseconds": 904000000
-        },
-        "description": "Coca-Cola",
-        "restaurantId": "restaurant_1",
-        "price": 5000,
-        "active": true,
-        "categoryId": "6hPfe98jNbmiAhqiMOex"
-      },
-      {
-        "id": "VVL05cKQ5CYSM9Hh4uxy",
-        "order": 2,
-        "createdAt": {
-          "type": "firestore/timestamp/1.0",
-          "seconds": 1767908125,
-          "nanoseconds": 145000000
-        },
-        "active": true,
-        "price": 20000,
-        "updatedAt": {
-          "type": "firestore/timestamp/1.0",
-          "seconds": 1767908132,
-          "nanoseconds": 747000000
-        },
-        "name": "Pizza Pepperoni",
-        "categoryId": "dfZ8bs8kELMhS7GwIL8M",
-        "restaurantId": "restaurant_1",
-        "description": "Pepperoni y queso"
-      }
-    ]
-  },
-  "templates": {
-    "count": 2,
-    "data": [
-      {
-        "id": "u9xq1W3qtbzWwoidBcrV",
-        "active": true,
-        "name": "Plantilla por defecto"
-      },
-      {
-        "id": "xiYlcFdFbagz7169Dv2t",
-        "name": "christmas",
-        "active": true
-      }
-    ]
-  },
-  "menus": {
-    "count": 1,
-    "data": [
-      {
-        "id": "XvGr9LqCLjd2OcsANUrJ",
-        "restaurant": "Pizzeria Don Juan",
-        "items": [
-          {
-            "name": "Pizza Margarita",
-            "price": 7000
-          },
-          {
-            "name": "Lasagna",
-            "price": 11000
-          },
-          {
-            "price": "3000",
-            "name": "Jugos"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
+| Línea | Función | Prioridad |
+|---|---|---|
+| Presentación pública | Menú o catálogo público por tienda | MVP |
+| Operación interna | Pedidos, domicilios y stock | Post-MVP temprano |
 
 ---
 
-## 2) Firebase: configuración
+## 1) Restricción clave: infraestructura gratuita
 
-### 2.1 Proyecto Firebase
-- Proyecto: `menu-templates`
-- App Web: obtener `firebaseConfig`
-- Habilitar: Authentication (Email/Password), Firestore, Storage (opcional para MVP)
+Este proyecto debe vivir inicialmente dentro de planes gratuitos. Esta restricción define la arquitectura, no es un detalle secundario.
 
-### 2.2 Datos de prueba
-Crear manualmente en Firestore:
-- 1 restaurante con `slug: "pizzeria-don-juan"`
-- 2-3 categorías
-- 5-6 items distribuidos en categorías
-- Template: `default`
+### Stack de infraestructura
 
----
+| Capa | Tecnología | Razón |
+|---|---|---|
+| Hosting | GitHub Pages | Despliegue estático gratuito |
+| Framework | Astro | Excelente para sitios estáticos y performance |
+| UI interactiva | React en islands/client components | Paneles, Auth, formularios y estados complejos |
+| Auth | Firebase Auth | Email/password sin backend propio |
+| Base de datos | Firestore | Multi-tenant simple desde cliente |
+| Imágenes | Firebase Storage | Logos e imágenes de productos |
+| Automatización | GitHub Actions | Deploy gratuito |
 
-## 3) Firebase Auth (Panel Admin)
+### Límites relevantes de Firebase Spark
 
-### 3.1 Configuración
-- Habilitar: Email/Password provider
-- (Futuro: Google Sign-In, pero no necesario para MVP)
+| Recurso | Límite gratuito |
+|---|---|
+| Lecturas Firestore | 50.000 / día |
+| Escrituras Firestore | 20.000 / día |
+| Eliminaciones Firestore | 20.000 / día |
+| Storage almacenado | 5 GB total |
+| Storage descarga | 1 GB / día |
+| Firebase Auth | Sin límite práctico para este MVP |
 
-### 3.2 Flujo de autenticación
-1. Usuario se registra/inicia sesión en `/admin/login`
-2. Se obtiene `user.uid` de Firebase Auth
-3. Se busca `restaurant` donde `ownerUid == user.uid`
-4. Si existe → redirigir a `/admin` (dashboard)
-5. Si no existe → mostrar "No tienes un restaurante asignado" / onboarding
+### Reglas obligatorias para no quemar el plan free
 
-### 3.3 Protección de rutas
-- Middleware/componente `AuthGuard.astro` que verifica:
-  - Usuario autenticado
-  - Usuario tiene restaurante asociado
-  - Redirige a `/admin/login` si no cumple
+1. **Cachear datos públicos con `localStorage` + TTL.**
+2. **No usar `onSnapshot` para datos estáticos** como tiendas, categorías, productos o plantillas.
+3. **Reservar tiempo real solo para pedidos activos** si realmente aporta valor.
+4. **Consultar por tienda y estado**, nunca leer colecciones completas sin filtro.
+5. **Guardar URLs de Storage en Firestore**, no recalcular ni releer archivos.
+6. **Invalidar cache por recurso**, no borrar todo el cache ante cualquier cambio.
 
----
+TTL sugerido:
 
-## 4) Reglas de seguridad (Firestore Rules)
-
-### 4.1 Lectura pública (sin autenticación)
-```javascript
-// Cualquiera puede leer restaurantes activos y sus datos públicos
-match /restaurants/{restaurantId} {
-  allow read: if resource.data.isActive == true;
-  
-  // Cualquiera puede leer categorías e items de restaurantes activos
-  match /categories/{categoryId} {
-    allow read: if get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.isActive == true;
-  }
-}
-
-match /categories/{categoryId} {
-  allow read: if get(/databases/$(database)/documents/restaurants/$(resource.data.restaurantId)).data.isActive == true;
-}
-
-match /items/{itemId} {
-  allow read: if get(/databases/$(database)/documents/restaurants/$(resource.data.restaurantId)).data.isActive == true;
-}
-```
-
-### 4.2 Escritura (solo owner)
-```javascript
-// Solo el owner puede escribir su restaurante
-match /restaurants/{restaurantId} {
-  allow write: if request.auth != null && 
-                 request.auth.uid == resource.data.ownerUid;
-  allow create: if request.auth != null && 
-                 request.auth.uid == request.resource.data.ownerUid;
-}
-
-// Solo el owner puede escribir categorías e items de su restaurante
-match /categories/{categoryId} {
-  allow write: if request.auth != null && 
-                 request.auth.uid == get(/databases/$(database)/documents/restaurants/$(resource.data.restaurantId)).data.ownerUid;
-}
-
-match /items/{itemId} {
-  allow write: if request.auth != null && 
-                 request.auth.uid == get(/databases/$(database)/documents/restaurants/$(resource.data.restaurantId)).data.ownerUid;
-}
-```
-
-### 4.3 Validaciones adicionales
-- Slug único: Validar en cliente + regla de Firestore
-- Precios > 0
-- Campos requeridos no vacíos
+| Dato | TTL | Motivo |
+|---|---:|---|
+| Configuración de tienda | 1 hora | Cambia poco |
+| Categorías | 1 hora | Cambian poco |
+| Productos/items públicos | 30 min | Pueden cambiar por stock o disponibilidad |
+| Templates disponibles | 2 horas | Casi estático |
+| Pedidos activos admin | Sin cache o TTL corto | Operación diaria |
 
 ---
 
-## 5) Frontend Astro (estructura de rutas)
+## 2) Conceptos de producto
 
-### 5.1 Rutas públicas
-```
-/                           → Landing page (lista de restaurantes o buscador)
-/m/[slug]                   → Menú público del restaurante (ej: /m/pizzeria-don-juan)
+### Tienda
+
+Entidad principal del sistema. Una tienda puede ser restaurante, emprendimiento de comida o negocio de productos.
+
+### Menú vs catálogo
+
+| Concepto | Cuándo se usa | Qué muestra |
+|---|---|---|
+| Menú | Comida preparada o restaurante | Categorías, platos, precios, descripción, disponibilidad |
+| Catálogo | Productos físicos o emprendimientos de venta | Productos, fotos, variantes, stock, precio |
+
+La misma base técnica puede cubrir ambos, pero el lenguaje visual y la experiencia deben cambiar según el tipo de negocio.
+
+### Templates vs themes
+
+Esta distinción es IMPORTANTE:
+
+- **Theme**: cambia colores, tipografía, bordes, sombras o modo oscuro.
+- **Template**: cambia la estructura visual y la experiencia de navegación.
+
+Ejemplos de templates reales:
+
+| Template | Enfoque | Diferencia real |
+|---|---|---|
+| `restaurant-classic` | Restaurante tradicional | Categorías verticales, platos destacados, horario visible |
+| `fast-food` | Comida rápida | Cards grandes, combos, CTA de pedido rápido |
+| `dessert-shop` | Repostería/postres | Galería visual, secciones por ocasión, tono emocional |
+| `product-catalog` | Tienda de productos | Grid de productos, filtros, stock/variantes |
+| `seasonal-christmas` | Temporada navideña | Bloques de promociones, productos por regalo/ocasión |
+
+No crear un template nuevo solo para cambiar colores. Para eso existe el sistema de themes.
+
+---
+
+## 3) Roles y autenticación
+
+La autenticación se resuelve con **Firebase Auth**. La autorización se resuelve leyendo el documento `users/{uid}` en Firestore para mantener el proyecto simple y compatible con el plan gratuito.
+
+### Roles base
+
+| Rol | Descripción | Acceso |
+|---|---|---|
+| `superadmin` | Dueño de la plataforma | Control global de todas las tiendas, planes, estados y usuarios |
+| `storeadmin` | Dueño/admin de una tienda | Administra solo su tienda: menú, catálogo, pedidos, stock y configuración |
+| `customer` | Cliente final | Puede ver tienda pública y realizar pedidos |
+
+### Decisiones iniciales
+
+- El `superadmin` sos vos: controla todas las tiendas desde un panel global.
+- Cada `storeadmin` solo puede acceder a su propia tienda.
+- El `customer` puede iniciar sesión en una etapa posterior, pero para el MVP el pedido puede hacerse sin cuenta para reducir fricción.
+- No usar Custom Claims como fuente principal en esta etapa; Firestore es suficiente y más simple de operar.
+
+---
+
+## 4) Modelo de rutas
+
+```text
+/                         → Landing pública del producto
+/login                    → Login para superadmin/storeadmin
+/admin                    → Dashboard superadmin
+/t/[storeSlug]            → Vista pública de tienda: menú o catálogo, resuelta en cliente
+/t/[storeSlug]/admin      → Panel admin de la tienda
 ```
 
-### 5.2 Rutas admin (protegidas)
-```
-/admin/login                → Login/registro
-/admin                      → Dashboard (resumen, stats básicas)
-/admin/categories           → CRUD categorías
-/admin/items                → CRUD items (con filtro por categoría)
-/admin/settings             → Config: plantilla, horarios, contacto, info restaurante
+### Decisión de routing
+
+La ruta de tienda debe resolverse en cliente, no con páginas estáticas por tienda.
+
+**Por qué:** si se genera una página por tienda con `getStaticPaths`, habría que reconstruir y redesplegar cada vez que se cree una tienda nueva. Con resolución client-side, GitHub Pages sigue siendo estático y las tiendas nuevas aparecen solo con datos en Firestore.
+
+**Limitación actual en GitHub Pages:** la implementación estática usa `/t.astro` para la pantalla base y `404.html` como fallback para deep links `/t/{storeSlug}`. Eso permite renderizar la tienda en cliente, pero una visita directa a `/t/{storeSlug}` puede tener semántica HTTP inicial de 404 en GitHub Pages. No se debe documentar ni vender como una ruta generada real con HTTP 200 por tienda mientras se mantenga este hosting estático sin rewrites.
+
+---
+
+## 5) Modelo de datos Firestore
+
+Modelo propuesto para mantener multi-tenant simple, seguro y barato en lecturas.
+
+```text
+stores/{storeId}
+  ├── name: string
+  ├── slug: string
+  ├── type: 'restaurant' | 'food_business' | 'product_store'
+  ├── ownerUid: string
+  ├── active: boolean
+  ├── templateId: string
+  ├── themeId: string
+  ├── currency: 'COP' | 'USD' | 'EUR'
+  ├── plan: 'free_trial' | 'standard' | 'plus' | 'premium'
+  ├── trialStartedAt: Timestamp
+  ├── trialEndsAt: Timestamp
+  ├── planExpiresAt?: Timestamp
+  ├── limits: {
+  │     maxProducts: number
+  │     maxCategories: number
+  │     maxImages: number
+  │   }
+  ├── contact: {
+  │     whatsapp?: string
+  │     instagram?: string
+  │     address?: string
+  │     deliveryNotes?: string
+  │   }
+  ├── schedule: {
+  │     [day: string]: { open: string, close: string, closed: boolean }
+  │   }
+  └── createdAt / updatedAt
+
+stores/{storeId}/categories/{categoryId}
+  ├── name: string
+  ├── order: number
+  ├── active: boolean
+
+stores/{storeId}/items/{itemId}
+  ├── categoryId: string
+  ├── name: string
+  ├── description?: string
+  ├── price: number
+  ├── imageUrl?: string
+  ├── active: boolean
+  ├── order: number
+  ├── stock?: number
+  ├── trackStock: boolean
+  ├── variants?: Array<{ name: string, price?: number, stock?: number }>
+
+stores/{storeId}/orders/{orderId}
+  ├── customerName: string
+  ├── customerPhone: string
+  ├── type: 'in_store' | 'delivery'
+  ├── status: 'pending' | 'accepted' | 'preparing' | 'ready' | 'delivered' | 'cancelled'
+  ├── items: Array<{ itemId: string, name: string, quantity: number, price: number }>
+  ├── total: number
+  ├── deliveryAddress?: string
+  ├── notes?: string
+  ├── createdAt: Timestamp
+  └── updatedAt: Timestamp
+
+users/{uid}
+  ├── email: string
+  ├── role: 'superadmin' | 'storeadmin' | 'customer'
+  ├── storeId?: string
+  └── createdAt: Timestamp
+
+templates/{templateId}
+  ├── name: string
+  ├── type: 'restaurant' | 'food_business' | 'product_store' | 'seasonal'
+  ├── active: boolean
+  └── description: string
 ```
 
-### 5.3 Componentes principales
-```
+### Decisiones de datos
+
+- Usar `stores` en lugar de `restaurants` porque el producto no será solo para restaurantes.
+- Usar subcolecciones por tienda para simplificar reglas de seguridad: `stores/{storeId}/items`, `orders`, `categories`.
+- Mantener `templates` como configuración simple; los componentes reales viven en código.
+- `orders` queda dentro de cada tienda porque siempre pertenece a una tienda específica.
+- `stock` es opcional para menús de comida y útil para catálogos o productos limitados.
+
+---
+
+## 6) Reglas de seguridad Firestore — principios
+
+### Lectura pública
+
+- Cualquiera puede leer tiendas activas.
+- Cualquiera puede leer categorías e items activos de tiendas activas.
+- Cualquiera puede leer templates activos.
+
+### Escritura protegida
+
+- `superadmin` puede gestionar cualquier tienda.
+- `storeadmin` solo puede escribir dentro de su tienda.
+- `customer` no puede editar tienda, categorías, items ni stock.
+
+### Pedidos
+
+Para el MVP, crear pedidos puede permitirse sin login o con rol `customer`, según fricción deseada.
+
+Regla práctica inicial:
+
+- Crear pedido: público con validación estricta de campos.
+- Leer pedidos: solo `superadmin` o `storeadmin` de esa tienda.
+- Actualizar estado: solo `storeadmin` o `superadmin`.
+
+---
+
+## 7) Arquitectura UI: Astro vs React
+
+### Usar `.astro` para
+
+- Landing del producto.
+- Layouts base.
+- Secciones estáticas.
+- SEO inicial.
+- Contenedores de página.
+
+### Usar `.tsx` para
+
+- Login y Auth.
+- Dashboard superadmin.
+- Panel de tienda.
+- CRUD de categorías, items, pedidos y stock.
+- Vista pública dinámica que lee Firestore.
+- Componentes con estado, filtros, formularios o Firebase.
+
+### Regla práctica
+
+Astro arma la página. React maneja la app interactiva donde realmente hay estado.
+
+---
+
+## 8) Estructura de directorios propuesta
+
+```text
 src/
   components/
-    MenuLayout.astro         → Layout base para menú público
-    TemplateRenderer.astro  → Renderiza template según templateId
-    AuthGuard.astro         → Protege rutas admin
+    home/
+      HeroSection.astro
+      FeaturesSection.astro
+      TemplatesSection.astro
+      PricingSection.astro
+      ContactSection.astro
+    react/
+      auth/
+        LoginForm.tsx
+        AuthGuard.tsx
+      public-store/
+        StoreApp.tsx
+        MenuView.tsx
+        CatalogView.tsx
+        OrderCart.tsx
+      store-admin/
+        StoreAdminApp.tsx
+        CategoriesManager.tsx
+        ItemsManager.tsx
+        OrdersPanel.tsx
+        StockManager.tsx
+        StoreSettings.tsx
+      superadmin/
+        SuperAdminApp.tsx
+        StoresManager.tsx
+        UsersManager.tsx
     templates/
-      default.astro         → Plantilla por defecto
-      christmas.astro       → Plantilla navideña
-      halloween.astro       → Plantilla halloween
+      restaurant-classic/
+      fast-food/
+      dessert-shop/
+      product-catalog/
+      seasonal-christmas/
+  layouts/
+    Layout.astro
+    StoreLayout.astro
   lib/
-    firebase.ts             → Config Firebase (app, firestore, auth)
-    auth.ts                 → Helpers de autenticación
-    utils.ts                → Helpers (formatear precio, validar horarios, etc.)
+    firebase.ts
+    auth.ts
+    users.ts
+    stores.ts
+    categories.ts
+    items.ts
+    orders.ts
+    stock.ts
+    templates.ts
+    cache.ts
+    types.ts
+    utils.ts
+  pages/
+    index.astro
+    login.astro
+    admin.astro
+    t/
+      [...slug].astro
+  styles/
+    global.css
+    theme.css
 ```
 
 ---
 
-## 6) Integración Firebase en Astro
+## 9) Etapas de desarrollo
 
-### 6.1 Configuración
-- `src/lib/firebase.ts`: Inicializar Firebase App, Firestore, Auth
-- **Importante**: Firebase SDK funciona en cliente (browser), no en SSR de Astro
-- Para páginas públicas: usar `client:load` o `client:visible` en componentes que necesiten Firebase
-- Para admin: todo en cliente (SPA-like)
+### Etapa 0 — Setup técnico
 
-### 6.2 Data fetching
+**Objetivo:** proyecto listo para desarrollar y desplegar gratis.
 
-**Público (`/m/[slug]`):**
-- Opción A: Fetch en cliente con `useEffect` (React-like) o vanilla JS
-- Opción B: Usar Astro Islands con componente que carga datos en cliente
-- **Recomendado**: Componente `MenuView.astro` que se hidrata en cliente
+- [ ] Confirmar configuración Astro estática para GitHub Pages.
+- [ ] Configurar Firebase SDK en `src/lib/firebase.ts`.
+- [ ] Habilitar Firebase Auth Email/Password.
+- [ ] Habilitar Firestore en modo producción.
+- [ ] Habilitar Firebase Storage.
+- [ ] Configurar `.env` con variables `PUBLIC_FIREBASE_*`.
+- [ ] Configurar GitHub Actions para deploy.
+- [ ] Activar alertas de uso de Firebase.
 
-**Admin:**
-- Todo en cliente (Firestore SDK + Auth state)
-- Usar `onAuthStateChanged` para detectar cambios de sesión
+**Entregable:** sitio desplegado en GitHub Pages con Firebase conectado.
 
 ---
 
-## 7) UI Admin (MVP)
+### Etapa 1 — Landing comercial
 
-### 7.1 Funcionalidades mínimas
-- ✅ Login/registro
-- ✅ Dashboard: resumen (total categorías, items, estado)
-- ✅ CRUD categorías: crear, editar, eliminar, reordenar (drag & drop futuro)
-- ✅ CRUD items: crear, editar, eliminar, toggle active
-- ✅ Settings: cambiar plantilla, editar horarios, contacto, info restaurante
+**Objetivo:** explicar y vender el producto antes de tener toda la operación interna completa.
 
-### 7.2 UX básico
-- Formularios simples (sin librerías pesadas)
-- Feedback visual: toast/notificaciones al guardar/eliminar
-- Confirmación antes de eliminar
-- Loading states
-- Validación básica de campos
+- [ ] Hero con propuesta de valor: menús, catálogos y pedidos para tiendas.
+- [ ] Sección de beneficios para restaurantes y emprendimientos.
+- [ ] Sección de templates reales, explicando diferencia con themes.
+- [ ] Sección de precios/planes iniciales.
+- [ ] CTA por WhatsApp/contacto.
+- [ ] Footer con información básica.
 
-### 7.3 Estilo
-- CSS simple o framework ligero (Tailwind opcional)
-- Responsive básico
-- No necesita ser "bonito" para MVP, solo funcional
+**Entregable:** landing estática responsive lista para mostrar a posibles clientes.
 
 ---
 
-## 8) Vista pública (menú)
+### Etapa 2 — Superadmin
 
-### 8.1 MVP público
-- Mostrar nombre del restaurante
-- Indicador de estado: "Abierto" / "Cerrado" (según horario actual)
-- Lista de categorías activas (ordenadas por `order`)
-- Items activos por categoría (con precio formateado según `currency`)
-- Botón WhatsApp (si está configurado)
-- Link a Instagram (si está configurado)
+**Objetivo:** poder crear y controlar tiendas desde un panel global.
 
-### 8.2 Plantillas
-- Cada template es un componente Astro en `src/components/templates/`
-- `TemplateRenderer.astro` recibe datos del restaurante y renderiza el template correspondiente
-- Templates pueden tener estilos completamente diferentes
-- Estructura común: recibir `restaurant`, `categories`, `items` como props
+- [ ] Login con Firebase Auth.
+- [ ] Crear `users/{uid}` con rol `superadmin` mediante script seed.
+- [ ] Crear tienda desde dashboard.
+- [ ] Asignar `storeadmin` a una tienda.
+- [ ] Activar/desactivar tienda.
+- [ ] Elegir tipo de tienda: restaurante, comida o catálogo.
+- [ ] Elegir template inicial.
+- [ ] Ver resumen de tiendas, estado y uso básico.
 
-### 8.3 SEO básico
-- Meta tags: título, descripción
-- Open Graph para compartir en redes
-- URL limpia: `/m/[slug]`
+**Entregable:** superadmin puede crear y administrar tiendas sin tocar Firestore manualmente.
 
 ---
 
-## 9) Deploy (GitHub Pages)
+### Etapa 3 — Vista pública de tienda
 
-### 9.1 Configuración Astro
-```js
-// astro.config.mjs
-export default defineConfig({
-  site: 'https://tu-usuario.github.io',
-  base: '/menu-templates/',
-  output: 'static' // GitHub Pages es estático
-});
+**Objetivo:** cada tienda tiene una URL pública funcional para menú o catálogo.
+
+- [ ] Mantener fallback estático `/t.astro` + `404.html` para `/t/{storeSlug}` en GitHub Pages, o migrar a hosting con rewrites si se requiere HTTP 200 real.
+- [ ] Resolver `storeSlug` en cliente.
+- [ ] Cargar configuración de tienda con cache TTL.
+- [ ] Cargar categorías e items activos.
+- [ ] Renderizar template según `templateId`.
+- [ ] Mostrar contacto, horario y estado abierto/cerrado.
+- [ ] Agregar botón de WhatsApp.
+- [ ] Preparar SEO básico dinámico en cliente.
+
+**Entregable:** `/t/{storeSlug}` muestra menú o catálogo público desde Firestore.
+
+---
+
+### Etapa 4 — Panel admin de tienda
+
+**Objetivo:** el `storeadmin` gestiona su negocio sin ayuda técnica.
+
+- [ ] Validar acceso: `users/{uid}.role === 'storeadmin'` y `storeId` coincide.
+- [ ] CRUD categorías.
+- [ ] CRUD items/productos.
+- [ ] Activar/desactivar items sin borrar.
+- [ ] Subir imágenes a Firebase Storage.
+- [ ] Cambiar template.
+- [ ] Cambiar theme básico.
+- [ ] Editar horario, contacto, dirección y redes.
+- [ ] Invalidar cache específico al guardar cambios.
+
+**Entregable:** una tienda puede mantener su menú/catálogo desde el panel.
+
+---
+
+### Etapa 5 — Pedidos básicos
+
+**Objetivo:** permitir que clientes hagan pedidos desde la vista pública.
+
+- [ ] Agregar carrito simple en cliente.
+- [ ] Pedido en tienda: nombre + teléfono + notas.
+- [ ] Pedido a domicilio: dirección + teléfono + notas.
+- [ ] Crear documento en `stores/{storeId}/orders`.
+- [ ] Panel admin muestra pedidos pendientes.
+- [ ] Cambiar estados: pendiente → aceptado → preparando → listo/entregado/cancelado.
+- [ ] Notificación manual por WhatsApp como primer paso.
+
+**Entregable:** cliente crea pedido y la tienda lo gestiona desde su panel.
+
+---
+
+### Etapa 6 — Stock básico
+
+**Objetivo:** controlar disponibilidad de productos cuando aplique.
+
+- [ ] Campo `trackStock` por item.
+- [ ] Campo `stock` por item o variante.
+- [ ] Descontar stock al aceptar pedido, no necesariamente al crearlo.
+- [ ] Evitar aceptar pedidos con stock insuficiente.
+- [ ] Mostrar “agotado” en catálogo público.
+- [ ] Permitir ajuste manual de stock desde admin.
+
+**Entregable:** tiendas tipo catálogo pueden controlar disponibilidad sin sistema complejo de inventario.
+
+---
+
+### Etapa 7 — Plantillas y temas
+
+**Objetivo:** convertir la diferenciación visual en una ventaja comercial.
+
+- [ ] Crear `restaurant-classic`.
+- [ ] Crear `fast-food`.
+- [ ] Crear `product-catalog`.
+- [ ] Crear al menos un template estacional, por ejemplo `seasonal-christmas`.
+- [ ] Definir API común de props para templates: `store`, `categories`, `items`, `theme`.
+- [ ] Definir themes como tokens de color/estilo separados del template.
+
+**Entregable:** el producto puede vender variedad real, no solo cambios de color.
+
+---
+
+### Etapa 8 — Pulido comercial y técnico
+
+- [ ] Generación de QR por tienda.
+- [ ] PWA básica para acceso rápido desde celular.
+- [ ] Skeletons/loading states.
+- [ ] Error states claros.
+- [ ] Métricas básicas: pedidos del día, productos más pedidos, visitas estimadas.
+- [ ] Auditoría de lecturas Firestore.
+- [ ] Revisión de reglas de seguridad.
+- [ ] Deploy final verificado.
+
+---
+
+## 10) Orden de implementación recomendado
+
+```text
+Etapa 0 → Setup técnico
+Etapa 1 → Landing comercial
+Etapa 2 → Superadmin
+Etapa 3 → Vista pública de tienda
+Etapa 4 → Panel admin de tienda
+Etapa 5 → Pedidos básicos
+Etapa 6 → Stock básico
+Etapa 7 → Plantillas y temas
+Etapa 8 → Pulido
 ```
 
-### 9.2 Workflow GitHub Actions
-- Ya existe `.github/workflows/deploy.yml`
-- Build en cada push a `main`
-- Deploy a `gh-pages` branch
-
-### 9.3 Variables de entorno
-- Firebase config: puede ir en código (no es secreto)
-- O usar `.env` con `PUBLIC_` prefix para variables públicas de Vite
+La razón de este orden es simple: primero se construye lo que permite vender y crear tiendas; después se agregan operación y diferenciación visual.
 
 ---
 
-## 10) Checklist MVP (orden de implementación)
+## 11) Decisiones técnicas clave
 
-### Fase 1: Base de datos y estructura
-- [ ] 1. Crear proyecto Firebase y configurar Firestore
-- [ ] 2. Definir estructura de colecciones
-- [ ] 3. Crear datos de prueba (1 restaurante, categorías, items)
-- [ ] 4. Configurar reglas de seguridad básicas
+### ¿Por qué GitHub Pages + Firebase?
 
-### Fase 2: Frontend público
-- [ ] 5. Crear ruta `/m/[slug]` en Astro
-- [ ] 6. Componente para cargar datos de Firestore (cliente)
-- [ ] 7. Template `default.astro` básico
-- [ ] 8. Mostrar restaurante, categorías e items
+Porque permite vender y validar el producto sin costo fijo inicial. GitHub Pages sirve el frontend estático y Firebase cubre Auth, DB y Storage sin montar backend propio.
 
-### Fase 3: Autenticación
-- [ ] 9. Configurar Firebase Auth (Email/Password)
-- [ ] 10. Crear `/admin/login`
-- [ ] 11. Componente `AuthGuard` para proteger rutas
+### ¿Por qué resolver tiendas en cliente?
 
-### Fase 4: Panel admin
-- [ ] 12. Dashboard básico (`/admin`)
-- [ ] 13. CRUD categorías (`/admin/categories`)
-- [ ] 14. CRUD items (`/admin/items`)
-- [ ] 15. Settings (`/admin/settings`): plantilla, horarios, contacto
+Porque GitHub Pages no tiene servidor. Resolver por cliente evita rebuilds cada vez que se crea una tienda nueva.
 
-### Fase 5: Pulido y deploy
-- [ ] 16. Validar reglas de seguridad
-- [ ] 17. Testing básico (crear, editar, eliminar)
-- [ ] 18. Deploy a GitHub Pages
-- [ ] 19. Verificar que todo funciona en producción
+### ¿Por qué pedidos sin pago online inicialmente?
+
+Porque integrar pagos exige backend, pasarela, webhooks y más superficie de seguridad. Para el MVP, WhatsApp y confirmación manual son suficientes para validar valor.
+
+### ¿Por qué clientes sin cuenta en MVP?
+
+Porque pedir registro baja conversión. Primero importa que el cliente pueda pedir rápido. La cuenta de cliente puede venir después si hay historial, puntos o recompra.
+
+### ¿Por qué templates separados de themes?
+
+Porque vender “plantillas” como simples cambios de color es débil. Una plantilla debe cambiar layout, jerarquía visual y experiencia. El theme solo cambia la piel.
 
 ---
 
-## 11) Mejoras futuras (post-MVP)
+## 12) Fuera de alcance inicial
 
-### Funcionalidades
-- 📸 **Imágenes**: Firebase Storage para fotos de productos
-- 🎨 **Más plantillas**: Agregar plantillas premium
-- 📊 **Estadísticas**: Vistas, productos más vistos
-- 👥 **Multi-usuario**: Staff users (varios admins por restaurante)
-- 📱 **QR Codes**: Generar QR por restaurante
-- 🌍 **Multi-idioma**: Soporte i18n
-- ⏰ **Horarios por item**: Items disponibles solo en ciertos horarios
-- 💾 **Import/Export**: CSV para productos
-- 📱 **PWA**: Offline caching del menú
+- Pagos online.
+- Facturación automática.
+- Pasarela tipo Stripe/MercadoPago.
+- Backend propio permanente.
+- Inventario avanzado con proveedores, costos o bodegas.
+- Multi-sucursal avanzada.
+- App móvil nativa.
+- Analítica avanzada.
 
-### Técnicas
-- ⚡ **Performance**: Lazy loading de imágenes, code splitting
-- 🔍 **SEO avanzado**: Sitemap, structured data
-- 🎯 **Analytics**: Google Analytics o similar
-- 🧪 **Testing**: Unit tests, E2E tests
-
----
-
-## 12) Notas importantes
-
-### Limitaciones de GitHub Pages
-- ✅ Solo hosting estático (perfecto para Astro)
-- ❌ No hay backend (por eso Firebase)
-- ❌ No hay SSR real (Astro genera HTML estático)
-- ✅ Firebase funciona perfecto desde cliente
-
-### Consideraciones de Firebase
-- Firestore tiene límites de lectura/escritura (plan gratuito: 50K lecturas/día)
-- Para muchos restaurantes, considerar índices compuestos
-- Storage tiene límite de 5GB en plan gratuito
-
-### Seguridad
-- **Nunca** exponer API keys secretas (Firebase config es público, está bien)
-- Validar todo en Firestore Rules (no confiar solo en cliente)
-- Sanitizar inputs del usuario
-
----
+Estas funciones pueden agregarse cuando el producto ya tenga tiendas pagando o uso suficiente para justificar complejidad.

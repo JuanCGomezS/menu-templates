@@ -1,4 +1,6 @@
 import { formatPrice, formatDayName, sortScheduleDays } from '../../lib/utils';
+import type { Schedule } from '../../lib/utils';
+import { withBasePath } from '../../lib/base-path';
 
 interface Restaurant {
   id: string;
@@ -12,7 +14,7 @@ interface Restaurant {
     instagram?: string;
     address?: string;
   };
-  schedule?: Record<string, string>;
+  schedule?: Schedule;
   categories: Array<{
     id: string;
     name: string;
@@ -48,7 +50,7 @@ export default function RestaurantCard({ restaurant }: Props) {
                 <p className="my-1">
                   <strong className="font-semibold">URL Pública:</strong>{' '}
                   <a
-                    href={`/menu-templates/m/${restaurant.slug}`}
+                    href={withBasePath(`/t/${restaurant.slug}`)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="opacity-90 underline hover:opacity-100 text-blue-200 hover:text-blue-100 transition-colors"
@@ -274,4 +276,3 @@ function ItemList({
     </div>
   );
 }
-

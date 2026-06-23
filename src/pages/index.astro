@@ -1,19 +1,159 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import RestaurantList from "../components/react/RestaurantList";
-import DatabaseSummary from "../components/react/DatabaseSummary";
+import AppFooter from "../components/react/AppFooter";
+import AppHeader from "../components/react/AppHeader";
+
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const path = (route: string) => `${basePath}${route}`;
 ---
 
-<Layout title="Menús de Restaurantes">
-  <div class="container mx-auto px-4 py-8 max-w-6xl">
-    <div class="mb-8 text-center">
-      <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-3">Super Admin - Menús de Restaurantes</h1>
-      <p class="text-gray-600 mb-4">Vista de administración: todos los restaurantes y sus configuraciones</p>
-      <div class="w-24 h-1 bg-gradient-to-r from-orange-500 to-pink-500 rounded-full mx-auto"></div>
-    </div>
+<Layout title="Menu Templates - Menús y catálogos multi-tienda">
+  <main class="min-h-screen overflow-hidden bg-[#fff8ef] text-gray-950">
+    <AppHeader client:load />
 
-    <DatabaseSummary client:load />
+    <section class="relative flex min-h-[100svh] items-center px-6 py-24 sm:py-28">
+      <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(251,146,60,0.28),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(20,184,166,0.16),transparent_28%),linear-gradient(135deg,#fff8ef_0%,#fffdf8_48%,#fff1d6_100%)]"></div>
+      <div class="absolute left-1/2 top-24 h-72 w-72 -translate-x-1/2 rounded-full bg-orange-200/50 blur-3xl"></div>
+      <div class="relative mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[1.05fr_0.95fr]">
+        <div class="max-w-3xl">
+          <p class="mb-5 inline-flex rounded-full border border-orange-200 bg-white/70 px-4 py-2 text-xs font-black uppercase tracking-[0.28em] text-orange-600 shadow-sm backdrop-blur">
+            Menús · Catálogos · Administración
+          </p>
+          <h1 class="text-5xl font-black tracking-tight sm:text-6xl lg:text-7xl">
+            Menús y catálogos para negocios.
+          </h1>
+          <p class="mt-6 max-w-2xl text-lg leading-8 text-gray-700 sm:text-xl">
+            Una plataforma para restaurantes, emprendimientos gastronómicos y tiendas de productos que necesitan una vitrina pública lista para QR sin pagar infraestructura a medida.
+          </p>
+          <div class="mt-9 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <a href={path("/login")} class="rounded-full bg-orange-600 px-7 py-4 text-center font-bold text-white shadow-xl shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-orange-700">
+              Entrar al sistema
+            </a>
+            <a href="#templates" class="rounded-full bg-gray-950 px-7 py-4 text-center font-bold text-white shadow-xl shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-gray-800">
+              Explorar plantillas
+            </a>
+            <a href="#platform" class="rounded-full border border-gray-300 bg-white px-7 py-4 text-center font-bold text-gray-950 transition hover:-translate-y-0.5 hover:border-gray-950">
+              Ver modelo de plataforma
+            </a>
+          </div>
 
-    <RestaurantList client:load />
-  </div>
+          <div class="mt-10 grid max-w-xl grid-cols-3 gap-3 text-sm text-gray-700">
+            <div class="rounded-2xl border border-orange-100 bg-white/70 p-4 shadow-sm backdrop-blur">
+              <p class="text-2xl font-black text-gray-950">100%</p>
+              <p class="mt-1">responsive</p>
+            </div>
+            <div class="rounded-2xl border border-orange-100 bg-white/70 p-4 shadow-sm backdrop-blur">
+              <p class="text-2xl font-black text-gray-950">QR</p>
+              <p class="mt-1">ready</p>
+            </div>
+            <div class="rounded-2xl border border-orange-100 bg-white/70 p-4 shadow-sm backdrop-blur">
+              <p class="text-2xl font-black text-gray-950">Multi</p>
+              <p class="mt-1">tienda</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative">
+          <div class="absolute -inset-4 rounded-[2.5rem] bg-gradient-to-br from-orange-300/40 via-white to-teal-200/40 blur-2xl"></div>
+          <div class="relative rounded-[2rem] border border-orange-200 bg-white p-5 shadow-2xl shadow-orange-200/70">
+            <div class="rounded-[1.5rem] bg-gray-950 p-5 text-white shadow-inner">
+              <div class="flex items-center justify-between border-b border-white/10 pb-4">
+                <div>
+                  <p class="text-sm text-orange-200">/t/la-esquina</p>
+                  <h2 class="text-2xl font-black">Vista previa pública</h2>
+                </div>
+                <span class="rounded-full bg-green-400/20 px-3 py-1 text-sm font-semibold text-green-200">Activa</span>
+              </div>
+              <div class="mt-5 grid gap-3">
+                <div class="rounded-2xl bg-white/10 p-4">
+                  <p class="text-xs uppercase tracking-[0.25em] text-orange-200">Restaurante clásico</p>
+                  <p class="mt-2 text-lg font-bold">Menú por categorías con horario y enlaces de contacto.</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="rounded-2xl bg-orange-400 p-4 text-gray-950">
+                    <p class="text-sm font-semibold">Comida rápida</p>
+                    <p class="mt-5 text-3xl font-black">Combos</p>
+                  </div>
+                  <div class="rounded-2xl bg-teal-300 p-4 text-gray-950">
+                    <p class="text-sm font-semibold">Catálogo</p>
+                    <p class="mt-5 text-3xl font-black">Inventario</p>
+                  </div>
+                </div>
+                <div class="rounded-2xl border border-white/10 p-4">
+                  <p class="text-sm text-gray-300">Los datos públicos con cache mantienen la experiencia rápida mientras cada tienda actualiza su contenido.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="platform" class="relative flex min-h-[100svh] items-center px-6 py-20 md:py-24">
+      <div class="absolute inset-0 bg-[linear-gradient(180deg,#fff8ef_0%,#ffffff_46%,#fff4df_100%)]" />
+      <div class="absolute inset-x-8 top-10 h-px bg-gradient-to-r from-transparent via-orange-200 to-transparent"></div>
+      <div class="relative mx-auto flex w-full max-w-6xl flex-col justify-center gap-12">
+        <div class="mx-auto max-w-3xl text-center">
+          <p class="text-sm font-semibold uppercase tracking-[0.35em] text-orange-600">Tu plataforma, tu control</p>
+          <h2 class="mt-5 text-4xl font-black leading-tight tracking-tight text-gray-950 sm:text-5xl lg:text-6xl">
+            Lleva tu negocio a otro nivel con menús, catálogos y administración fácil.
+          </h2>
+          <p class="mx-auto mt-6 max-w-2xl text-lg leading-8 text-gray-700 sm:text-xl">
+            Una experiencia moderna para tu tienda: contenido público atractivo, gestión completa de tus productos y la flexibilidad para adaptar cada detalle a tu estilo.
+          </p>
+        </div>
+
+        <div class="grid items-stretch gap-6 lg:grid-cols-3">
+          <article class="group flex h-full flex-col overflow-hidden rounded-[2rem] border border-orange-200 bg-white/95 p-8 shadow-xl shadow-orange-200/20 backdrop-blur transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-orange-300/30">
+            <p class="text-sm font-bold uppercase tracking-[0.25em] text-orange-600">Público</p>
+            <h3 class="mt-6 text-2xl font-black text-gray-950">Menús</h3>
+            <p class="mt-5 leading-8 text-gray-600">Cada negocio puede crear su propio menú original y con gran diseño, ideal para mostrar platos, horarios y enlaces de contacto en una sola página.</p>
+            <ul class="mt-8 space-y-3 text-gray-700">
+              <li>✔ Menús QR modernos</li>
+              <li>✔ Secciones por categoría</li>
+              <li>✔ Estilo único para cada tienda</li>
+            </ul>
+          </article>
+
+          <article class="group flex h-full flex-col overflow-hidden rounded-[2rem] border border-orange-200 bg-white/95 p-8 shadow-xl shadow-orange-200/20 backdrop-blur transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-orange-300/30 lg:-translate-y-4">
+            <p class="text-sm font-bold uppercase tracking-[0.25em] text-orange-600">Público</p>
+            <h3 class="mt-6 text-2xl font-black text-gray-950">Catálogos</h3>
+            <p class="mt-5 leading-8 text-gray-600">El negocio puede crear un catálogo de productos para la venta, con opciones de pedido a domicilio, en tienda y gestión clara de disponibilidad.</p>
+            <ul class="mt-8 space-y-3 text-gray-700">
+              <li>✔ Exhibición visual de productos</li>
+              <li>✔ Pedidos rápidos desde el catálogo</li>
+              <li>✔ Soporta stock y artículos agotados</li>
+            </ul>
+          </article>
+
+          <article class="group flex h-full flex-col overflow-hidden rounded-[2rem] border border-orange-200 bg-white/95 p-8 shadow-xl shadow-orange-200/20 backdrop-blur transition hover:-translate-y-1 hover:shadow-2xl hover:shadow-orange-300/30">
+            <p class="text-sm font-bold uppercase tracking-[0.25em] text-orange-600">Admin</p>
+            <h3 class="mt-6 text-2xl font-black text-gray-950">Administración de tienda</h3>
+            <p class="mt-5 leading-8 text-gray-600">Como dueño o encargado, puedes modificar todo a tu antojo: plantillas, menús, productos, stock y estados de disponibilidad.</p>
+            <ul class="mt-8 space-y-3 text-gray-700">
+              <li>✔ Cambios en tiempo real</li>
+              <li>✔ Gestión de productos y stock</li>
+              <li>✔ Control de plantillas y visibilidad</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="templates" class="relative flex min-h-[100svh] items-center px-6 py-20">
+      <div class="mx-auto w-full max-w-6xl rounded-[2rem] bg-gray-950 p-8 text-white shadow-2xl shadow-gray-950/20 md:p-12">
+        <p class="text-sm font-bold uppercase tracking-[0.25em] text-orange-300">Plantillas, no solo cambios de color</p>
+        <div class="mt-6 grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
+          <h2 class="text-4xl font-black tracking-tight md:text-5xl">Cada tipo de negocio necesita una estructura distinta.</h2>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="rounded-3xl bg-white/10 p-5">Restaurante clásico</div>
+            <div class="rounded-3xl bg-white/10 p-5">Comida rápida</div>
+            <div class="rounded-3xl bg-white/10 p-5">Catálogo de productos</div>
+            <div class="rounded-3xl bg-white/10 p-5">Temporada navideña</div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <AppFooter />
+  </main>
 </Layout>

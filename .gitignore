@@ -15,7 +15,11 @@ pnpm-debug.log*
 
 # environment variables
 .env
-.env.production
+.env.*
+!.env.example
+!.env.*.example
+service-account*.json
+firebase-service-account*.json
 
 # macOS-specific files
 .DS_Store

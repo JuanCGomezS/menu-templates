@@ -1,25 +1,23 @@
-export function relateRestaurantData(
-  restaurants: any[],
+export function relateStoreData(
+  stores: any[],
   categories: any[],
   items: any[],
   templates: any[]
 ) {
-  return restaurants.map((restaurant) => {
-    // Las categorías ya vienen filtradas por restaurante (son subcolecciones)
-    const restaurantCategories = categories
-      .filter((cat) => 
-        cat.restaurantId === restaurant.id && 
-        (cat.active === undefined || cat.active !== false) // undefined o true = activo
+  return stores.map((store) => {
+    const storeCategories = categories
+      .filter((cat) =>
+        cat.storeId === store.id &&
+        (cat.active === undefined || cat.active !== false)
       )
       .sort((a, b) => (a.order || 0) - (b.order || 0))
       .map((category) => {
-        // Los items ya vienen filtrados por categoría (son subcolecciones)
         const categoryItems = items
           .filter(
             (item) =>
               item.categoryId === category.id &&
-              item.restaurantId === restaurant.id &&
-              (item.active === undefined || item.active !== false) // undefined o true = activo
+              item.storeId === store.id &&
+              (item.active === undefined || item.active !== false)
           )
           .sort((a, b) => (a.order || 0) - (b.order || 0));
 
@@ -29,27 +27,32 @@ export function relateRestaurantData(
         };
       });
 
-    const template = templates.find((t) => t.id === restaurant.templateId);
+    const template = templates.find((t) => t.id === store.templateId);
+    const active = store.active ?? store.isActive ?? false;
 
     return {
-      ...restaurant,
-      categories: restaurantCategories,
+      ...store,
+      active,
+      isActive: active,
+      categories: storeCategories,
       template: template || null
     };
   });
 }
 
+export const relateRestaurantData = relateStoreData;
+
 export function createDatabaseLog(
-  restaurants: any[],
+  stores: any[],
   categories: any[],
   items: any[],
   templates: any[],
-  restaurantsWithData: any[]
+  storesWithData: any[]
 ) {
   return {
-    restaurants: {
-      count: restaurants.length,
-      data: restaurants
+    stores: {
+      count: stores.length,
+      data: stores
     },
     categories: {
       count: categories.length,
@@ -63,10 +66,9 @@ export function createDatabaseLog(
       count: templates.length,
       data: templates
     },
-    restaurantsWithData: {
-      count: restaurantsWithData.length,
-      data: restaurantsWithData
+    storesWithData: {
+      count: storesWithData.length,
+      data: storesWithData
     }
   };
 }
-

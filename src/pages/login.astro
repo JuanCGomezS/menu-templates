@@ -1,0 +1,21 @@
+---
+import Layout from '../layouts/Layout.astro';
+import AppFooter from '../components/react/AppFooter';
+import AppHeader from '../components/react/AppHeader';
+import LoginForm from '../components/react/LoginForm';
+---
+
+<Layout title="Iniciar sesión - Menu Templates">
+  <main class="min-h-screen bg-[#fff8ef] text-gray-950">
+    <AppHeader client:load />
+    <section class="mx-auto grid min-h-[calc(100vh-9rem)] max-w-5xl items-center gap-10 px-4 py-16 sm:px-6 lg:grid-cols-[0.9fr_1.1fr]">
+      <div>
+        <p class="text-sm font-bold uppercase tracking-[0.25em] text-orange-600">Administración</p>
+        <h1 class="mt-4 text-5xl font-black tracking-tight">Ingresa para gestionar la plataforma o tu tienda.</h1>
+        <p class="mt-5 max-w-xl text-lg leading-8 text-gray-700">Ingresá con tu correo y contraseña para administrar la plataforma o tu tienda según tus permisos.</p>
+      </div>
+      <LoginForm client:load />
+    </section>
+    <AppFooter client:load />
+  </main>
+</Layout>

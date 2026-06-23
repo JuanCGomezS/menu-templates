@@ -1,0 +1,9 @@
+---
+import Layout from '../layouts/Layout.astro';
+import StoreRoute from '../components/react/StoreRoute';
+---
+
+<Layout title="Tienda">
+  <!-- GitHub Pages no puede devolver un 200 generado real para /t/{slug}; este fallback 404 inicia la ruta en cliente. -->
+  <StoreRoute client:load />
+</Layout>
