@@ -9,7 +9,7 @@ function getRoleLabel(role?: AppUserProfile['role']) {
   return role ? ROLE_LABELS[role] : '';
 }
 
-export default function AppHeader({ title = 'Menu Templates' }: { title?: string }) {
+export default function AppHeader({ title = 'Menu Templates', fixed = false }: { title?: string; fixed?: boolean }) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [authStatus, setAuthStatus] = useState<'loading' | 'anonymous' | 'authenticated'>('loading');
   const [profile, setProfile] = useState<AppUserProfile | null>(null);
@@ -74,7 +74,7 @@ export default function AppHeader({ title = 'Menu Templates' }: { title?: string
   };
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-50 border-b border-white/70 bg-white/65 px-4 py-2 shadow-sm backdrop-blur-xl sm:px-6">
+    <header className={`${fixed ? 'fixed' : 'sticky'} left-0 right-0 top-0 z-50 border-b border-white/70 bg-white/65 px-4 py-2 shadow-sm backdrop-blur-xl sm:px-6`}>
       <Messaging message={message} tone={messageTone} onClose={() => setMessage(null)} />
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
         <a href={withBasePath('/')} className="flex items-center gap-3">
