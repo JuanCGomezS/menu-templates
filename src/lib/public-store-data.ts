@@ -23,6 +23,23 @@ function canUseLocalStorage() {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
 }
 
+export function clearPublicStoreCache(slug?: string, storeId?: string) {
+  if (!canUseLocalStorage()) return;
+
+  const keys = [
+    slug ? `${CACHE_PREFIX}:store:${slug}` : null,
+    slug ? `${CACHE_PREFIX}:legacy-restaurant:${slug}` : null,
+    storeId ? `${CACHE_PREFIX}:store:${storeId}:categories` : null,
+    storeId ? `${CACHE_PREFIX}:store:${storeId}:items` : null,
+    storeId ? `${CACHE_PREFIX}:legacy-restaurant:${storeId}:categories` : null,
+    storeId ? `${CACHE_PREFIX}:legacy-restaurant:${storeId}:items` : null,
+  ];
+
+  keys.forEach((key) => {
+    if (key) window.localStorage.removeItem(key);
+  });
+}
+
 async function getCachedOrFetch<T>(key: string, ttlMs: number, fetcher: () => Promise<T>): Promise<T> {
   const cacheKey = `${CACHE_PREFIX}:${key}`;
 
@@ -116,7 +133,7 @@ async function getLegacyRestaurantBySlug(slug: string) {
     type: data.type || "restaurant",
     active: data.active ?? data.isActive ?? true,
     isActive: data.isActive ?? data.active ?? true,
-    themeId: data.themeId || "theme-default",
+    themeId: data.themeId,
   };
 }
 

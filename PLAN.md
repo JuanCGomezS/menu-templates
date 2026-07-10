@@ -108,15 +108,24 @@ Esta distinción es IMPORTANTE:
 
 Ejemplos de templates reales:
 
-| Template | Enfoque | Diferencia real |
+| Plantilla / layout | Enfoque | Diferencia real |
 |---|---|---|
-| `restaurant-classic` | Restaurante tradicional | Categorías verticales, platos destacados, horario visible |
-| `fast-food` | Comida rápida | Cards grandes, combos, CTA de pedido rápido |
-| `dessert-shop` | Repostería/postres | Galería visual, secciones por ocasión, tono emocional |
-| `product-catalog` | Tienda de productos | Grid de productos, filtros, stock/variantes |
-| `seasonal-christmas` | Temporada navideña | Bloques de promociones, productos por regalo/ocasión |
+| `layout-minimal` | Lectura directa | Menú limpio, rápido y fácil de escanear |
+| `layout-natural` | Marca fresca/artesanal | Estética orgánica para cafés, comida saludable o productos naturales |
+| `layout-warm` | Promocional/cercano | Experiencia colorida para comida rápida, postres o combos |
+| `layout-elegant` | Marca premium | Presentación sobria para restaurantes o catálogos cuidados |
 
-No crear un template nuevo solo para cambiar colores. Para eso existe el sistema de themes.
+Ejemplos de themes reales:
+
+| Theme | Enfoque | Diferencia real |
+|---|---|---|
+| `theme-default` | Base permanente | Sin ambientación estacional |
+| `theme-christmas` | Navidad | Ambientación temporal para regalos, combos o temporada |
+| `theme-mothers-day` | Día de la Madre | Ambientación emocional para detalles, postres y promociones |
+| `theme-halloween` | Halloween | Ambientación oscura/promocional |
+| `theme-valentine` | San Valentín | Ambientación romántica para cenas, regalos o fechas especiales |
+
+No crear una plantilla nueva solo para cambiar colores o ambientación estacional. Para eso existe el sistema de themes.
 
 ---
 
@@ -147,6 +156,7 @@ La autenticación se resuelve con **Firebase Auth**. La autorización se resuelv
 /                         → Landing pública del producto
 /login                    → Login para superadmin/storeadmin
 /admin                    → Dashboard superadmin
+/admin/store              → Crear tienda o editar tienda con `?storeId=...`
 /t/[storeSlug]            → Vista pública de tienda: menú o catálogo, resuelta en cliente
 /t/[storeSlug]/admin      → Panel admin de la tienda
 ```
@@ -370,14 +380,14 @@ src/
 
 **Objetivo:** proyecto listo para desarrollar y desplegar gratis.
 
-- [ ] Confirmar configuración Astro estática para GitHub Pages.
-- [ ] Configurar Firebase SDK en `src/lib/firebase.ts`.
-- [ ] Habilitar Firebase Auth Email/Password.
-- [ ] Habilitar Firestore en modo producción.
-- [ ] Habilitar Firebase Storage.
-- [ ] Configurar `.env` con variables `PUBLIC_FIREBASE_*`.
-- [ ] Configurar GitHub Actions para deploy.
-- [ ] Activar alertas de uso de Firebase.
+- [x] Confirmar configuración Astro estática para GitHub Pages.
+- [x] Configurar Firebase SDK en `src/lib/firebase.ts`.
+- [x] Habilitar Firebase Auth Email/Password.
+- [x] Habilitar Firestore en modo producción.
+- [x] Habilitar Firebase Storage.
+- [x] Configurar `.env` con variables `PUBLIC_FIREBASE_*`.
+- [x] Configurar GitHub Actions para deploy.
+- [x] Activar alertas de uso de Firebase.
 
 **Entregable:** sitio desplegado en GitHub Pages con Firebase conectado.
 
@@ -387,12 +397,12 @@ src/
 
 **Objetivo:** explicar y vender el producto antes de tener toda la operación interna completa.
 
-- [ ] Hero con propuesta de valor: menús, catálogos y pedidos para tiendas.
-- [ ] Sección de beneficios para restaurantes y emprendimientos.
-- [ ] Sección de templates reales, explicando diferencia con themes.
+- [x] Hero con propuesta de valor: menús, catálogos y pedidos para tiendas.
+- [x] Sección de beneficios para restaurantes y emprendimientos.
+- [x] Sección de templates reales, explicando diferencia con themes.
 - [ ] Sección de precios/planes iniciales.
 - [ ] CTA por WhatsApp/contacto.
-- [ ] Footer con información básica.
+- [x] Footer con información básica.
 
 **Entregable:** landing estática responsive lista para mostrar a posibles clientes.
 
@@ -402,14 +412,14 @@ src/
 
 **Objetivo:** poder crear y controlar tiendas desde un panel global.
 
-- [ ] Login con Firebase Auth.
-- [ ] Crear `users/{uid}` con rol `superadmin` mediante script seed.
-- [ ] Crear tienda desde dashboard.
-- [ ] Asignar `storeadmin` a una tienda.
-- [ ] Activar/desactivar tienda.
-- [ ] Elegir tipo de tienda: restaurante, comida o catálogo.
-- [ ] Elegir template inicial.
-- [ ] Ver resumen de tiendas, estado y uso básico.
+- [x] Login con Firebase Auth.
+- [x] Crear `users/{uid}` con rol `superadmin` mediante script seed.
+- [x] Crear tienda desde dashboard.
+- [x] Asignar `storeadmin` a una tienda.
+- [x] Activar/desactivar tienda.
+- [x] Elegir tipo de tienda: restaurante, comida o catálogo.
+- [x] Elegir template inicial.
+- [x] Ver resumen de tiendas, estado y uso básico.
 
 **Entregable:** superadmin puede crear y administrar tiendas sin tocar Firestore manualmente.
 
@@ -419,13 +429,13 @@ src/
 
 **Objetivo:** cada tienda tiene una URL pública funcional para menú o catálogo.
 
-- [ ] Mantener fallback estático `/t.astro` + `404.html` para `/t/{storeSlug}` en GitHub Pages, o migrar a hosting con rewrites si se requiere HTTP 200 real.
-- [ ] Resolver `storeSlug` en cliente.
-- [ ] Cargar configuración de tienda con cache TTL.
-- [ ] Cargar categorías e items activos.
-- [ ] Renderizar template según `templateId`.
+- [x] Mantener fallback estático `/t.astro` + `404.html` para `/t/{storeSlug}` en GitHub Pages, o migrar a hosting con rewrites si se requiere HTTP 200 real.
+- [x] Resolver `storeSlug` en cliente.
+- [x] Cargar configuración de tienda con cache TTL.
+- [x] Cargar categorías e items activos.
+- [x] Renderizar template según `templateId`.
 - [ ] Mostrar contacto, horario y estado abierto/cerrado.
-- [ ] Agregar botón de WhatsApp.
+- [x] Agregar botón de WhatsApp.
 - [ ] Preparar SEO básico dinámico en cliente.
 
 **Entregable:** `/t/{storeSlug}` muestra menú o catálogo público desde Firestore.
@@ -436,7 +446,7 @@ src/
 
 **Objetivo:** el `storeadmin` gestiona su negocio sin ayuda técnica.
 
-- [ ] Validar acceso: `users/{uid}.role === 'storeadmin'` y `storeId` coincide.
+- [x] Validar acceso: `users/{uid}.role === 'storeadmin'` y `storeId` coincide.
 - [ ] CRUD categorías.
 - [ ] CRUD items/productos.
 - [ ] Activar/desactivar items sin borrar.
@@ -485,12 +495,12 @@ src/
 
 **Objetivo:** convertir la diferenciación visual en una ventaja comercial.
 
-- [ ] Crear `restaurant-classic`.
-- [ ] Crear `fast-food`.
-- [ ] Crear `product-catalog`.
-- [ ] Crear al menos un template estacional, por ejemplo `seasonal-christmas`.
+- [x] Crear `layout-minimal`.
+- [x] Crear `layout-natural`.
+- [x] Crear `layout-warm`.
+- [x] Crear `layout-elegant`.
 - [ ] Definir API común de props para templates: `store`, `categories`, `items`, `theme`.
-- [ ] Definir themes como tokens de color/estilo separados del template.
+- [x] Definir themes como tokens de color/estilo separados del template.
 
 **Entregable:** el producto puede vender variedad real, no solo cambios de color.
 

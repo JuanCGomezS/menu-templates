@@ -1,15 +1,30 @@
+export type TemplateComponent = 'minimal' | 'natural' | 'warm' | 'elegant';
+export type ThemeComponent =
+    | 'default'
+    | 'christmas'
+    | 'mothers-day'
+    | 'fathers-day'
+    | 'valentine'
+    | 'halloween'
+    | 'easter'
+    | 'independence'
+    | 'velitas';
+
 export interface TemplateConfig {
     id: string;
     name: string;
-    component: 'restaurant-classic' | 'fast-food' | 'product-catalog' | 'seasonal-christmas';
+    component: TemplateComponent;
     keywords: string[];
-    type: 'restaurant' | 'food_business' | 'product_store' | 'seasonal';
+    type: 'restaurant' | 'food_business' | 'product_store' | 'all';
     description?: string;
 }
 
 export interface ThemeConfig {
     id: string;
     name: string;
+    component: ThemeComponent;
+    keywords: string[];
+    description?: string;
     tokens: {
         accent: string;
         background: string;
@@ -19,139 +34,217 @@ export interface ThemeConfig {
 }
 
 export const TEMPLATES: Record<string, TemplateConfig> = {
-    DEFAULT: {
-        id: 'restaurant-classic',
-        name: 'Restaurante clásico',
-        component: 'restaurant-classic',
-        keywords: ['default', 'template-default', 'restaurant-classic'],
-        type: 'restaurant'
+    MINIMAL: {
+        id: 'layout-minimal',
+        name: 'Minimalista',
+        component: 'minimal',
+        keywords: ['layout-minimal', 'minimal', 'minimalista', 'template-default', 'restaurant-classic', 'default'],
+        type: 'all',
+        description: 'Diseño limpio y directo para menús que priorizan lectura rápida y navegación simple.',
     },
-    CHRISTMAS: {
-        id: 'seasonal-christmas',
-        name: 'Temporada navideña',
-        component: 'seasonal-christmas',
-        keywords: ['christmas', 'template-christmas', 'seasonal-christmas'],
-        type: 'seasonal'
+    NATURAL: {
+        id: 'layout-natural',
+        name: 'Natural',
+        component: 'natural',
+        keywords: ['layout-natural', 'natural', 'tropical', 'template-tropical'],
+        type: 'restaurant',
+        description: 'Diseño fresco y visual para cafés, comida saludable, jugos, brunch o productos artesanales.',
     },
-    FAST_FOOD: {
-        id: 'fast-food',
-        name: 'Comida rápida',
-        component: 'fast-food',
-        keywords: ['fast-food', 'quick-service', 'combo'],
-        type: 'food_business'
+    WARM: {
+        id: 'layout-warm',
+        name: 'Cálido',
+        component: 'warm',
+        keywords: ['layout-warm', 'warm', 'calido', 'colorful', 'template-colorful', 'fast-food'],
+        type: 'food_business',
+        description: 'Diseño expresivo y cercano para comida rápida, postres, promociones y negocios con tono familiar.',
     },
-    PRODUCT_CATALOG: {
-        id: 'product-catalog',
-        name: 'Catálogo de productos',
-        component: 'product-catalog',
-        keywords: ['product-catalog', 'catalog', 'products'],
-        type: 'product_store'
-    }
+    ELEGANT: {
+        id: 'layout-elegant',
+        name: 'Elegante',
+        component: 'elegant',
+        keywords: ['layout-elegant', 'elegant', 'elegante', 'template-elegant', 'product-catalog'],
+        type: 'all',
+        description: 'Diseño sobrio para restaurantes premium, catálogos cuidados o marcas con estética refinada.',
+    },
 };
 
 export const THEMES: Record<string, ThemeConfig> = {
     DEFAULT: {
         id: 'theme-default',
-        name: 'Predeterminado',
+        name: 'Default',
+        component: 'default',
+        keywords: ['theme-default', 'default', 'predeterminado'],
+        description: 'Ambientación base sin evento temporal.',
         tokens: {
             accent: '#f97316',
-            background: '#f9fafb',
+            background: '#fff8ef',
             surface: '#ffffff',
-            text: '#111827'
-        }
+            text: '#111827',
+        },
     },
-    DARK: {
-        id: 'theme-dark',
-        name: 'Oscuro',
+    CHRISTMAS: {
+        id: 'theme-christmas',
+        name: 'Navidad',
+        component: 'christmas',
+        keywords: ['theme-christmas', 'christmas', 'navidad', 'template-christmas', 'seasonal-christmas'],
+        description: 'Ambientación navideña para temporadas, combos y productos de regalo.',
         tokens: {
-            accent: '#fb923c',
-            background: '#111827',
-            surface: '#1f2937',
-            text: '#f9fafb'
-        }
-    },
-    TROPICAL: {
-        id: 'theme-tropical',
-        name: 'Tropical',
-        tokens: {
-            accent: '#14b8a6',
-            background: '#ecfeff',
+            accent: '#dc2626',
+            background: '#fff7ed',
             surface: '#ffffff',
-            text: '#134e4a'
-        }
+            text: '#14532d',
+        },
     },
-    ROMANTIC: {
-        id: 'theme-romantic',
-        name: 'Romántico',
+    MOTHERS_DAY: {
+        id: 'theme-mothers-day',
+        name: 'Día de la Madre',
+        component: 'mothers-day',
+        keywords: ['theme-mothers-day', 'mothers-day', 'madre', 'template-mothers-day'],
+        description: 'Ambientación emocional para fechas especiales, detalles, postres y regalos.',
         tokens: {
             accent: '#ec4899',
             background: '#fff1f2',
             surface: '#ffffff',
-            text: '#831843'
-        }
-    }
+            text: '#831843',
+        },
+    },
+    HALLOWEEN: {
+        id: 'theme-halloween',
+        name: 'Halloween',
+        component: 'halloween',
+        keywords: ['theme-halloween', 'halloween', 'template-halloween'],
+        description: 'Ambientación oscura y promocional para temporadas de Halloween.',
+        tokens: {
+            accent: '#f97316',
+            background: '#111827',
+            surface: '#1f2937',
+            text: '#f9fafb',
+        },
+    },
+    VALENTINE: {
+        id: 'theme-valentine',
+        name: 'San Valentín',
+        component: 'valentine',
+        keywords: ['theme-valentine', 'valentine', 'san-valentin', 'template-valentine', 'romantic', 'template-romantic'],
+        description: 'Ambientación romántica para regalos, cenas y promociones especiales.',
+        tokens: {
+            accent: '#db2777',
+            background: '#fff1f2',
+            surface: '#ffffff',
+            text: '#881337',
+        },
+    },
+    FATHERS_DAY: {
+        id: 'theme-fathers-day',
+        name: 'Día del Padre',
+        component: 'fathers-day',
+        keywords: ['theme-fathers-day', 'fathers-day', 'padre', 'template-fathers-day'],
+        description: 'Ambientación sobria para celebraciones, regalos y menús especiales de Día del Padre.',
+        tokens: {
+            accent: '#2563eb',
+            background: '#eff6ff',
+            surface: '#ffffff',
+            text: '#172554',
+        },
+    },
+    EASTER: {
+        id: 'theme-easter',
+        name: 'Pascua',
+        component: 'easter',
+        keywords: ['theme-easter', 'easter', 'pascua', 'template-easter'],
+        description: 'Ambientación suave para Pascua, postres, detalles y productos de temporada.',
+        tokens: {
+            accent: '#a855f7',
+            background: '#faf5ff',
+            surface: '#ffffff',
+            text: '#581c87',
+        },
+    },
+    INDEPENDENCE: {
+        id: 'theme-independence',
+        name: 'Independencia',
+        component: 'independence',
+        keywords: ['theme-independence', 'independence', 'independencia', 'template-independence'],
+        description: 'Ambientación patriótica para promociones y fechas nacionales.',
+        tokens: {
+            accent: '#eab308',
+            background: '#fefce8',
+            surface: '#ffffff',
+            text: '#1e3a8a',
+        },
+    },
+    VELITAS: {
+        id: 'theme-velitas',
+        name: 'Día de las Velitas',
+        component: 'velitas',
+        keywords: ['theme-velitas', 'velitas', 'template-velitas'],
+        description: 'Ambientación luminosa para temporada de velitas y celebraciones decembrinas.',
+        tokens: {
+            accent: '#d97706',
+            background: '#fffbeb',
+            surface: '#ffffff',
+            text: '#78350f',
+        },
+    },
 };
 
-/**
- * Obtiene la configuración de una plantilla por su ID
- */
 export function getTemplateById(id: string): TemplateConfig | null {
-    const template = Object.values(TEMPLATES).find(t => t.id === id);
-    return template || null;
+    return Object.values(TEMPLATES).find((template) => template.id === id) || null;
 }
 
-/**
- * Obtiene la configuración de una plantilla por su nombre
- */
-export function getTemplateByName(name: string): TemplateConfig | null {
-    const template = Object.values(TEMPLATES).find(
-        t => t.name.toLowerCase() === name.toLowerCase()
-    );
-    return template || null;
+export function getThemeById(id: string): ThemeConfig | null {
+    return Object.values(THEMES).find((theme) => theme.id === id) || null;
 }
 
-/**
- * Determina qué plantilla usar basándose en el templateId
- * Busca por ID exacto, nombre o palabras clave
- */
 export function resolveTemplate(templateId: string): TemplateConfig {
     const lowerId = templateId.toLowerCase();
-
     const byId = getTemplateById(templateId);
+
     if (byId) return byId;
 
     for (const template of Object.values(TEMPLATES)) {
-        if (template.keywords.some(keyword => lowerId.includes(keyword.toLowerCase()))) {
+        if (template.keywords.some((keyword) => lowerId.includes(keyword.toLowerCase()))) {
             return template;
         }
     }
 
-    return TEMPLATES.DEFAULT;
+    return TEMPLATES.MINIMAL;
 }
 
-/**
- * Obtiene el nombre del componente a usar para un templateId
- */
-export function getTemplateComponent(templateId: string): TemplateConfig['component'] {
+export function resolveTheme(themeId: string): ThemeConfig {
+    const lowerId = themeId.toLowerCase();
+    const byId = getThemeById(themeId);
+
+    if (byId) return byId;
+
+    for (const theme of Object.values(THEMES)) {
+        if (theme.keywords.some((keyword) => lowerId.includes(keyword.toLowerCase()))) {
+            return theme;
+        }
+    }
+
+    return THEMES.DEFAULT;
+}
+
+export function resolveStoreTheme(templateId: string, themeId?: string): ThemeConfig {
+    if (themeId?.trim()) {
+        return resolveTheme(themeId);
+    }
+
+    const legacyTemplateAsTheme = resolveTheme(templateId || '');
+    return legacyTemplateAsTheme.component === 'default' ? THEMES.DEFAULT : legacyTemplateAsTheme;
+}
+
+export function getTemplateComponent(templateId: string): TemplateComponent {
     return resolveTemplate(templateId).component;
 }
 
-/**
- * Obtiene todas las plantillas disponibles
- */
-export function getAllTemplates(): TemplateConfig[] {
-    return Object.values(TEMPLATES);
+export function getThemeComponent(themeId: string): ThemeComponent {
+    return resolveTheme(themeId).component;
 }
 
-/**
- * Obtiene plantillas por categoría (festividades o temáticas)
- */
-export function getTemplatesByCategory(category: 'festivities' | 'themes'): TemplateConfig[] {
-    const festivities = ['CHRISTMAS'];
-    const themes = ['DEFAULT', 'FAST_FOOD', 'PRODUCT_CATALOG'];
-
-    const keys = category === 'festivities' ? festivities : themes;
-    return keys.map(key => TEMPLATES[key]).filter(Boolean);
+export function getAllTemplates(): TemplateConfig[] {
+    return Object.values(TEMPLATES);
 }
 
 export function getAllThemes(): ThemeConfig[] {

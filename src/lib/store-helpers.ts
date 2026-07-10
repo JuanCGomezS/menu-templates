@@ -14,6 +14,8 @@ export interface PublicItem {
   order: number;
   stock?: number;
   trackStock?: boolean;
+  availableInStore?: boolean;
+  availableForDelivery?: boolean;
   variants?: Array<{ name: string; price?: number; stock?: number }>;
 }
 
@@ -36,6 +38,12 @@ export interface PublicStore {
   templateId: string;
   themeId?: string;
   template?: { id: string; name: string } | null;
+  capabilities?: {
+    inStoreOrdering?: boolean;
+    deliveryOrdering?: boolean;
+    stockControl?: boolean;
+    [key: string]: boolean | undefined;
+  };
   contact?: {
     whatsapp?: string;
     instagram?: string;
