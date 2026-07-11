@@ -478,10 +478,10 @@ src/
 
 **Objetivo:** permitir que clientes hagan pedidos desde la vista pública.
 
-- [ ] Agregar carrito simple en cliente.
-- [ ] Pedido en tienda: nombre + teléfono + notas.
-- [ ] Pedido a domicilio: dirección + teléfono + notas.
-- [ ] Crear documento en `stores/{storeId}/orders`.
+- [x] Agregar carrito simple en cliente.
+- [x] Pedido en tienda: nombre + teléfono + notas.
+- [x] Pedido a domicilio: dirección + teléfono + notas.
+- [x] Crear documento en `stores/{storeId}/orders`.
 - [ ] Panel admin muestra pedidos pendientes.
 - [ ] Cambiar estados: pendiente → aceptado → preparando → listo/entregado/cancelado.
 - [ ] Notificación manual por WhatsApp como primer paso.

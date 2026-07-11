@@ -1,12 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { formatDayName, formatPrice, sortScheduleDays } from '../../lib/utils';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { getPublicStoreBySlug } from '../../lib/public-store-data';
 import { getTemplateComponent, resolveStoreTheme, type TemplateComponent, type ThemeConfig } from '../../lib/templates';
 import { withBasePath } from '../../lib/base-path';
+import { db } from '../../lib/firebase';
 import type { PublicCategory, PublicItem, PublicStore } from '../../lib/store-helpers';
 
 type StoreData = PublicStore;
 type ScheduleEntry = [string, string];
+
+interface CartLine {
+  item: PublicItem;
+  quantity: number;
+}
+
+type OrderType = 'in_store' | 'delivery';
 
 interface Props {
   slug: string;
@@ -17,6 +26,7 @@ interface StoreViewProps {
   schedule: ScheduleEntry[];
   theme: ThemeConfig;
   isOpen: boolean | null;
+  onAddToCart: (item: PublicItem) => void;
 }
 
 const layoutRenderers: Record<TemplateComponent, (props: StoreViewProps) => JSX.Element> = {
@@ -126,15 +136,37 @@ function setCanonical(href: string) {
 }
 
 export function PublicStoreTemplateView({ store }: { store: StoreData }) {
+  const [cart, setCart] = useState<CartLine[]>([]);
   const template = getTemplateComponent(store.templateId || '');
   const theme = resolveStoreTheme(store.templateId || '', store.themeId);
   const schedule = store.schedule ? sortScheduleDays(store.schedule) : [];
   const isOpen = getCurrentOpenStatus(store.schedule);
   const Layout = layoutRenderers[template] || MinimalLayout;
 
+  const addToCart = (item: PublicItem) => {
+    setCart((current) => {
+      const existing = current.find((line) => line.item.id === item.id);
+
+      if (existing) {
+        return current.map((line) => line.item.id === item.id ? { ...line, quantity: line.quantity + 1 } : line);
+      }
+
+      return [...current, { item, quantity: 1 }];
+    });
+  };
+
+  const updateQuantity = (itemId: string, quantity: number) => {
+    setCart((current) => current
+      .map((line) => line.item.id === itemId ? { ...line, quantity: Math.max(0, quantity) } : line)
+      .filter((line) => line.quantity > 0));
+  };
+
+  const clearCart = () => setCart([]);
+
   return (
     <ThemeFrame theme={theme}>
-      <Layout store={store} schedule={schedule} theme={theme} isOpen={isOpen} />
+      <Layout store={store} schedule={schedule} theme={theme} isOpen={isOpen} onAddToCart={addToCart} />
+      <OrderCart store={store} cart={cart} onUpdateQuantity={updateQuantity} onClear={clearCart} />
     </ThemeFrame>
   );
 }
@@ -178,7 +210,7 @@ function ThemeFrame({ theme, children }: { theme: ThemeConfig; children: React.R
 }
 
 function MinimalLayout(props: StoreViewProps) {
-  const { store, schedule, theme, isOpen } = props;
+  const { store, schedule, theme, isOpen, onAddToCart } = props;
 
   return (
     <main className="min-h-screen bg-[#f7f3ea] text-stone-950">
@@ -189,7 +221,7 @@ function MinimalLayout(props: StoreViewProps) {
             <p className="text-xs font-black uppercase tracking-[0.32em] text-stone-500">Carta de productos</p>
             <span className="font-serif text-4xl italic text-stone-300">Menu</span>
           </div>
-          <CategoryList store={store} variant="minimal" />
+          <CategoryList store={store} variant="minimal" onAddToCart={onAddToCart} />
         </section>
         <aside className="space-y-4">
           <ContactActions store={store} />
@@ -202,7 +234,7 @@ function MinimalLayout(props: StoreViewProps) {
 }
 
 function NaturalLayout(props: StoreViewProps) {
-  const { store, schedule, theme, isOpen } = props;
+  const { store, schedule, theme, isOpen, onAddToCart } = props;
 
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_12%_8%,rgba(187,247,208,0.78),transparent_30%),radial-gradient(circle_at_88%_18%,rgba(254,215,170,0.72),transparent_28%),linear-gradient(135deg,#f7fee7,#fff7ed_58%,#ecfdf5)] text-emerald-950">
@@ -218,7 +250,7 @@ function NaturalLayout(props: StoreViewProps) {
             <ContactActions store={store} variant="natural" />
             <ScheduleCard schedule={schedule} variant="natural" />
           </aside>
-          <CategoryList store={store} variant="natural" />
+          <CategoryList store={store} variant="natural" onAddToCart={onAddToCart} />
         </div>
       </div>
       <StoreFooter store={store} />
@@ -227,7 +259,7 @@ function NaturalLayout(props: StoreViewProps) {
 }
 
 function WarmLayout(props: StoreViewProps) {
-  const { store, schedule, theme, isOpen } = props;
+  const { store, schedule, theme, isOpen, onAddToCart } = props;
   const featured = getFeaturedItems(store);
 
   return (
@@ -236,7 +268,7 @@ function WarmLayout(props: StoreViewProps) {
       <div className="mx-auto max-w-6xl px-4 py-8">
         {featured.length > 0 && <FeaturedStrip store={store} items={featured} />}
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_18rem]">
-          <CategoryList store={store} variant="warm" />
+          <CategoryList store={store} variant="warm" onAddToCart={onAddToCart} />
           <aside className="space-y-4">
             <ContactActions store={store} variant="warm" />
             <ScheduleCard schedule={schedule} variant="warm" />
@@ -249,7 +281,7 @@ function WarmLayout(props: StoreViewProps) {
 }
 
 function ElegantLayout(props: StoreViewProps) {
-  const { store, schedule, theme, isOpen } = props;
+  const { store, schedule, theme, isOpen, onAddToCart } = props;
 
   return (
     <main className="min-h-screen bg-[#241209] text-amber-50">
@@ -259,7 +291,7 @@ function ElegantLayout(props: StoreViewProps) {
           <ContactActions store={store} variant="elegant" />
           <ScheduleCard schedule={schedule} variant="elegant" />
         </div>
-        <CategoryList store={store} variant="elegant" />
+        <CategoryList store={store} variant="elegant" onAddToCart={onAddToCart} />
       </div>
       <StoreFooter store={store} />
     </main>
@@ -353,7 +385,7 @@ function MenuPoster({ variant, store }: { variant: 'minimal' | 'natural' | 'warm
   );
 }
 
-function CategoryList({ store, variant }: { store: StoreData; variant: 'minimal' | 'natural' | 'warm' | 'elegant' }) {
+function CategoryList({ store, variant, onAddToCart }: { store: StoreData; variant: 'minimal' | 'natural' | 'warm' | 'elegant'; onAddToCart: (item: PublicItem) => void }) {
   if (!store.categories.length) {
     return <EmptyMenu />;
   }
@@ -383,7 +415,7 @@ function CategorySection({ store, category, variant }: { store: StoreData; categ
       </div>
       {category.items.length ? (
         <div className={variant === 'minimal' || variant === 'elegant' ? 'grid gap-3' : 'grid gap-4 md:grid-cols-2'}>
-          {category.items.map((item) => <MenuItemCard key={item.id} item={item} store={store} variant={variant} />)}
+          {category.items.map((item) => <MenuItemCard key={item.id} item={item} store={store} variant={variant} onAddToCart={onAddToCart} />)}
         </div>
       ) : (
         <p className="rounded-2xl border border-dashed border-gray-300 p-6 text-center text-gray-500">No hay productos en esta categoría</p>
@@ -392,7 +424,7 @@ function CategorySection({ store, category, variant }: { store: StoreData; categ
   );
 }
 
-function MenuItemCard({ item, store, variant }: { item: PublicItem; store: StoreData; variant: 'minimal' | 'natural' | 'warm' | 'elegant' }) {
+function MenuItemCard({ item, store, variant, onAddToCart }: { item: PublicItem; store: StoreData; variant: 'minimal' | 'natural' | 'warm' | 'elegant'; onAddToCart: (item: PublicItem) => void }) {
   const soldOut = item.trackStock && typeof item.stock === 'number' && item.stock <= 0;
   const base = 'border p-4 transition-transform transition-shadow hover:-translate-y-0.5 hover:shadow-lg motion-reduce:transform-none motion-reduce:transition-none';
   const variants = {
@@ -401,6 +433,7 @@ function MenuItemCard({ item, store, variant }: { item: PublicItem; store: Store
     warm: 'rounded-[1.75rem] border-orange-300 bg-[#1b1b1b] text-white shadow-[0_16px_50px_rgba(0,0,0,0.25)]',
     elegant: 'rounded-none border-x-0 border-b-0 border-t-amber-100/20 bg-transparent px-0 py-5 text-amber-50 shadow-none hover:translate-y-0 hover:shadow-none',
   };
+  const orderingEnabled = store.capabilities?.inStoreOrdering || store.capabilities?.deliveryOrdering;
   const priceClass = variant === 'warm'
     ? 'bg-orange-500 text-white'
     : variant === 'elegant'
@@ -418,11 +451,128 @@ function MenuItemCard({ item, store, variant }: { item: PublicItem; store: Store
           {item.description && <p className="mt-1 break-words text-sm leading-6 opacity-75">{item.description}</p>}
           {soldOut && <p className="mt-2 text-sm font-bold text-red-600">Agotado</p>}
         </div>
-        <span className={`shrink-0 rounded-full px-3 py-1 text-sm font-black ${priceClass}`}>
-          {formatPrice(item.price, store.currency)}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <span className={`rounded-full px-3 py-1 text-sm font-black ${priceClass}`}>
+            {formatPrice(item.price, store.currency)}
+          </span>
+          {orderingEnabled && !soldOut && (
+            <button type="button" onClick={() => onAddToCart(item)} className="rounded-full bg-white px-3 py-1 text-xs font-black text-gray-950 shadow-sm ring-1 ring-black/10 transition hover:-translate-y-0.5">
+              Agregar
+            </button>
+          )}
+        </div>
       </div>
     </article>
+  );
+}
+
+function OrderCart({ store, cart, onUpdateQuantity, onClear }: {
+  store: StoreData;
+  cart: CartLine[];
+  onUpdateQuantity: (itemId: string, quantity: number) => void;
+  onClear: () => void;
+}) {
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [notes, setNotes] = useState('');
+  const [type, setType] = useState<OrderType>(store.capabilities?.inStoreOrdering ? 'in_store' : 'delivery');
+  const [submitting, setSubmitting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const total = useMemo(() => cart.reduce((sum, line) => sum + line.item.price * line.quantity, 0), [cart]);
+  const orderingEnabled = store.capabilities?.inStoreOrdering || store.capabilities?.deliveryOrdering;
+
+  if (!orderingEnabled || cart.length === 0) return null;
+
+  const submitOrder = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError(null);
+    setMessage(null);
+
+    if (!customerName.trim() || !customerPhone.trim()) {
+      setError('Nombre y teléfono son obligatorios.');
+      return;
+    }
+
+    if (type === 'delivery' && !deliveryAddress.trim()) {
+      setError('La dirección es obligatoria para domicilio.');
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      await addDoc(collection(db, 'stores', store.id, 'orders'), {
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        type,
+        status: 'pending',
+        items: cart.map((line) => ({
+          itemId: line.item.id,
+          name: line.item.name,
+          price: line.item.price,
+          quantity: line.quantity,
+          subtotal: line.item.price * line.quantity,
+        })),
+        total,
+        deliveryAddress: type === 'delivery' ? deliveryAddress.trim() : '',
+        notes: notes.trim(),
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      setCustomerName('');
+      setCustomerPhone('');
+      setDeliveryAddress('');
+      setNotes('');
+      onClear();
+      setMessage('Pedido enviado. La tienda lo revisará en breve.');
+    } catch (err) {
+      console.error('Error al crear pedido:', err);
+      setError('No pudimos enviar el pedido. Intenta de nuevo o contacta por WhatsApp.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <aside className="fixed inset-x-3 bottom-3 z-40 mx-auto max-w-3xl rounded-[1.5rem] border border-gray-200 bg-white p-4 text-gray-950 shadow-2xl shadow-black/20 md:bottom-5">
+      <form onSubmit={submitOrder} className="grid gap-4 md:grid-cols-[1fr_1fr] md:items-end">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">Tu pedido</p>
+          <div className="mt-2 max-h-32 space-y-2 overflow-auto pr-1 text-sm">
+            {cart.map((line) => (
+              <div key={line.item.id} className="flex items-center justify-between gap-3">
+                <span className="min-w-0 truncate font-semibold">{line.item.name}</span>
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => onUpdateQuantity(line.item.id, line.quantity - 1)} className="h-7 w-7 rounded-full bg-gray-100 font-black">−</button>
+                  <span className="w-5 text-center font-black">{line.quantity}</span>
+                  <button type="button" onClick={() => onUpdateQuantity(line.item.id, line.quantity + 1)} className="h-7 w-7 rounded-full bg-gray-100 font-black">+</button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-lg font-black">Total: {formatPrice(total, store.currency)}</p>
+          {message && <p className="mt-2 rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-700">{message}</p>}
+          {error && <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{error}</p>}
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          <select value={type} onChange={(event) => setType(event.target.value as OrderType)} className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold outline-none focus:border-orange-500">
+            {store.capabilities?.inStoreOrdering && <option value="in_store">En tienda</option>}
+            {store.capabilities?.deliveryOrdering && <option value="delivery">Domicilio</option>}
+          </select>
+          <input value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="Nombre" className="rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-orange-500" required />
+          <input value={customerPhone} onChange={(event) => setCustomerPhone(event.target.value)} placeholder="Teléfono" className="rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-orange-500" required />
+          <input value={deliveryAddress} onChange={(event) => setDeliveryAddress(event.target.value)} placeholder="Dirección domicilio" className="rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-orange-500 disabled:opacity-50" disabled={type !== 'delivery'} required={type === 'delivery'} />
+          <input value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Notas" className="rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-orange-500 sm:col-span-2" />
+          <button type="submit" disabled={submitting} className="rounded-xl bg-orange-600 px-4 py-3 text-sm font-black text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2">
+            {submitting ? 'Enviando…' : 'Enviar pedido'}
+          </button>
+        </div>
+      </form>
+    </aside>
   );
 }
 
