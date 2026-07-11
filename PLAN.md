@@ -484,7 +484,7 @@ src/
 - [x] Crear documento en `stores/{storeId}/orders`.
 - [x] Panel admin muestra pedidos pendientes.
 - [x] Cambiar estados: pendiente → aceptado → preparando → listo/entregado/cancelado.
-- [ ] Notificación manual por WhatsApp como primer paso.
+- [x] Notificación manual por WhatsApp como primer paso.
 
 **Entregable:** cliente crea pedido y la tienda lo gestiona desde su panel.
 
@@ -496,9 +496,9 @@ src/
 
 - [x] Campo `trackStock` por item.
 - [x] Campo `stock` por item o variante.
-- [ ] Descontar stock al aceptar pedido, no necesariamente al crearlo.
-- [ ] Evitar aceptar pedidos con stock insuficiente.
-- [ ] Mostrar “agotado” en catálogo público.
+- [x] Descontar stock al aceptar pedido, no necesariamente al crearlo.
+- [x] Evitar aceptar pedidos con stock insuficiente.
+- [x] Mostrar “agotado” en catálogo público.
 - [x] Permitir ajuste manual de stock desde admin.
 
 **Entregable:** tiendas tipo catálogo pueden controlar disponibilidad sin sistema complejo de inventario.
@@ -528,7 +528,7 @@ src/
 - [x] Error states claros.
 - [ ] Métricas básicas: pedidos del día, productos más pedidos, visitas estimadas.
 - [x] Auditoría de lecturas Firestore.
-- [x] Revisión de reglas de seguridad.
+- [x] Revisión de reglas de seguridad y doble check de roles/páginas/accesos.
 - [ ] Deploy final verificado.
 
 ---

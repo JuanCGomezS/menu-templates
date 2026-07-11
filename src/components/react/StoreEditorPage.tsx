@@ -393,10 +393,12 @@ export default function StoreEditorPage() {
   const [productDrafts, setProductDrafts] = useState<ProductDraft[]>([]);
   const [orders, setOrders] = useState<OrderDraft[]>([]);
   const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   const templates = useMemo(() => getAllTemplates(), []);
   const themes = useMemo(() => getAllThemes(), []);
   const designPreviewStore = useMemo(() => makePreviewStore(form, categoryDrafts, productDrafts), [form, categoryDrafts, productDrafts]);
+  const visibleTabs = useMemo(() => TABS.filter((tab) => isSuperAdmin || tab.id !== 'superadmin'), [isSuperAdmin]);
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (user) => {
@@ -406,15 +408,25 @@ export default function StoreEditorPage() {
       }
 
       const profile = await getUserProfile(user);
+      const userIsSuperAdmin = profile?.role === ROLES.SUPERADMIN;
+      const userIsStoreAdmin = profile?.role === ROLES.STOREADMIN && Boolean(profile.storeId);
 
-      if (profile?.role !== ROLES.SUPERADMIN) {
+      if (!userIsSuperAdmin && !userIsStoreAdmin) {
         setStatus('denied');
         return;
       }
 
-      const storeId = new URLSearchParams(window.location.search).get('storeId');
+      setIsSuperAdmin(userIsSuperAdmin);
+
+      const requestedStoreId = new URLSearchParams(window.location.search).get('storeId');
+      const storeId = userIsSuperAdmin ? requestedStoreId : profile?.storeId;
 
       if (!storeId) {
+        if (!userIsSuperAdmin) {
+          setStatus('denied');
+          return;
+        }
+
         setMode('create');
         setForm(emptyForm());
         setCategoryDrafts([]);
@@ -721,7 +733,7 @@ export default function StoreEditorPage() {
 
     try {
       const payload = makeStorePayload({ ...form, slug });
-      const storeAdmin = await getStoreAdminUserId(form.storeAdminEmail);
+      const storeAdmin = isSuperAdmin ? await getStoreAdminUserId(form.storeAdminEmail) : null;
       const storeRef = mode === 'edit' && form.id ? doc(db, 'stores', form.id) : doc(collection(db, 'stores'));
       const storeId = storeRef.id;
       const previousOwnerRef = storeAdmin && mode === 'edit' && form.ownerUid && form.ownerUid !== storeAdmin.userId
@@ -844,9 +856,11 @@ export default function StoreEditorPage() {
       {error && <Messaging message={error} tone="error" onClose={() => setError(null)} />}
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <a href={withBasePath('/admin')} className="rounded-xl border border-gray-300 px-4 py-2 font-bold text-gray-700 transition hover:border-gray-950">
-          Volver al listado
-        </a>
+        {isSuperAdmin && (
+          <a href={withBasePath('/admin')} className="rounded-xl border border-gray-300 px-4 py-2 font-bold text-gray-700 transition hover:border-gray-950">
+            Volver al listado
+          </a>
+        )}
         {mode === 'edit' && (
           <>
             {form.slug && (
@@ -854,9 +868,11 @@ export default function StoreEditorPage() {
                 Ver tienda
               </a>
             )}
-            <a href={withBasePath('/admin/store/')} className="rounded-xl bg-gray-950 px-4 py-2 font-bold text-white transition hover:bg-gray-800">
-              Crear otra tienda
-            </a>
+            {isSuperAdmin && (
+              <a href={withBasePath('/admin/store/')} className="rounded-xl bg-gray-950 px-4 py-2 font-bold text-white transition hover:bg-gray-800">
+                Crear otra tienda
+              </a>
+            )}
           </>
         )}
       </div>
@@ -866,7 +882,7 @@ export default function StoreEditorPage() {
       <form onSubmit={handleSubmit} className="mt-6 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-200">
         <div className="border-b border-gray-200 bg-gray-50/80 px-4 py-3">
           <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Secciones de configuración de tienda">
-            {TABS.map((tab) => (
+            {visibleTabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
@@ -880,7 +896,7 @@ export default function StoreEditorPage() {
               </button>
             ))}
           </div>
-          <p className="mt-2 text-sm text-gray-500">{TABS.find((tab) => tab.id === activeTab)?.description}</p>
+          <p className="mt-2 text-sm text-gray-500">{visibleTabs.find((tab) => tab.id === activeTab)?.description}</p>
         </div>
 
         <div className="p-5">

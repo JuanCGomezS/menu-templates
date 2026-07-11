@@ -22,7 +22,13 @@ export default function StoreAdminPanel({ slug }: { slug: string }) {
 
       if (profile?.role === ROLES.SUPERADMIN) {
         const store = await getStoreForAdminBySlug(slug);
-        setStatus(store ? 'allowed' : 'not-found');
+
+        if (!store) {
+          setStatus('not-found');
+          return;
+        }
+
+        window.location.assign(withBasePath(`/admin/store/?storeId=${store.id}`));
         return;
       }
 
@@ -45,7 +51,12 @@ export default function StoreAdminPanel({ slug }: { slug: string }) {
 
       const isMatchingStoreAdmin = profile.storeId === store.id && store.slug === slug;
 
-      setStatus(isMatchingStoreAdmin ? 'allowed' : 'denied');
+      if (!isMatchingStoreAdmin) {
+        setStatus('denied');
+        return;
+      }
+
+      window.location.assign(withBasePath(`/admin/store/?storeId=${store.id}`));
     });
   }, [slug]);
 
@@ -65,7 +76,7 @@ export default function StoreAdminPanel({ slug }: { slug: string }) {
 
   return (
     <StoreAdminShell title="Panel de tienda en preparación">
-      <p className="mt-3 text-gray-600">La tienda <strong>{slug}</strong> ya tiene ruta protegida. El CRUD de categorías, productos y pedidos queda para la siguiente etapa.</p>
+      <p className="mt-3 text-gray-600">Redirigiendo al editor protegido de la tienda <strong>{slug}</strong>…</p>
     </StoreAdminShell>
   );
 }
