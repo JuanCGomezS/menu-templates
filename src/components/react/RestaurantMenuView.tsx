@@ -409,6 +409,9 @@ function MenuItemCard({ item, store, variant }: { item: PublicItem; store: Store
 
   return (
     <article className={`${base} ${variants[variant]} ${soldOut ? 'opacity-60' : ''}`}>
+      {item.imageUrl && (
+        <img src={item.imageUrl} alt={item.name} className="mb-4 h-40 w-full rounded-2xl object-cover" loading="lazy" />
+      )}
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h3 className={`break-words ${variant === 'elegant' ? 'font-serif text-xl italic' : 'font-black'}`}>{item.name}</h3>

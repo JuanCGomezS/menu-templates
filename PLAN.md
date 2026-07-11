@@ -464,7 +464,7 @@ src/
 - [x] CRUD categorías.
 - [x] CRUD items/productos.
 - [x] Activar/desactivar items sin borrar.
-- [ ] Subir imágenes a Firebase Storage.
+- [x] Subir imágenes a Firebase Storage.
 - [x] Cambiar template.
 - [x] Cambiar theme básico.
 - [x] Editar horario, contacto, dirección y redes.
@@ -522,7 +522,7 @@ src/
 
 ### Etapa 8 — Pulido comercial y técnico
 
-- [ ] Generación de QR por tienda.
+- [x] Generación de QR por tienda.
 - [x] PWA básica para acceso rápido desde celular.
 - [ ] Skeletons/loading states.
 - [x] Error states claros.

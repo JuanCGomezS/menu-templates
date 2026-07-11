@@ -1,8 +1,10 @@
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, getDoc, getDocs, limit, query, serverTimestamp, writeBatch, where } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
-import { auth, db } from '../../lib/firebase';
+import QRCode from 'qrcode';
+import { auth, db, storage } from '../../lib/firebase';
 import { getUserProfile, ROLES } from '../../lib/auth';
 import { clearPublicStoreCache } from '../../lib/public-store-data';
 import type { PublicStore } from '../../lib/store-helpers';
@@ -94,6 +96,8 @@ interface ProductDraft {
   order: string;
   trackStock: boolean;
   stock: string;
+  imageUrl: string;
+  imageFile?: File;
   availableInStore: boolean;
   availableForDelivery: boolean;
 }
@@ -310,6 +314,7 @@ function createProductDraft(categoryId: string, order: number): ProductDraft {
     order: String(order),
     trackStock: false,
     stock: '0',
+    imageUrl: '',
     availableInStore: true,
     availableForDelivery: true,
   };
@@ -345,6 +350,11 @@ function makeStorePayload(form: StoreFormState) {
     schedule: form.schedule,
     updatedAt: serverTimestamp(),
   };
+}
+
+function getPublicStoreUrl(slug: string) {
+  if (typeof window === 'undefined') return withBasePath(`/t/${slug}`);
+  return new URL(withBasePath(`/t/${slug}`), window.location.origin).toString();
 }
 
 export default function StoreEditorPage() {
@@ -470,6 +480,7 @@ export default function StoreEditorPage() {
         order: String(data.order ?? 0),
         trackStock: data.trackStock === true,
         stock: String(data.stock ?? 0),
+        imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : '',
         availableInStore: data.availableInStore !== false,
         availableForDelivery: data.availableForDelivery !== false,
       };
@@ -537,6 +548,25 @@ export default function StoreEditorPage() {
     }
   };
 
+  const uploadProductImages = async (storeId: string, products: Array<ProductDraft & { price: number; order: number; stock: number }>) => {
+    return Promise.all(products.map(async (product) => {
+      if (!product.imageFile) return product;
+
+      const extension = product.imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const imageRef = ref(storage, `stores/${storeId}/items/${product.id}/${Date.now()}.${extension}`);
+      const snapshot = await uploadBytes(imageRef, product.imageFile, {
+        contentType: product.imageFile.type || 'image/jpeg',
+        customMetadata: {
+          storeId,
+          itemId: product.id,
+        },
+      });
+      const imageUrl = await getDownloadURL(snapshot.ref);
+
+      return { ...product, imageUrl, imageFile: undefined };
+    }));
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
@@ -578,6 +608,13 @@ export default function StoreEditorPage() {
       return;
     }
 
+    const imageCount = productsToSave.filter((product) => product.imageFile || product.imageUrl).length;
+
+    if (imageCount > toPositiveNumber(form.maxImages, 30)) {
+      setError('La tienda supera el límite de imágenes configurado.');
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -596,12 +633,13 @@ export default function StoreEditorPage() {
         getDocs(collection(db, 'stores', storeId, 'categories')),
         getDocs(collection(db, 'stores', storeId, 'items')),
       ]);
+      const productsWithImages = await uploadProductImages(storeId, productsToSave);
 
       const batch = writeBatch(db);
       batch.set(storeRef, mode === 'create' ? { ...payload, createdAt: serverTimestamp() } : payload, { merge: true });
 
       const savedCategoryIds = new Set(categoriesToSave.map((category) => category.id));
-      const savedProductIds = new Set(productsToSave.map((product) => product.id));
+      const savedProductIds = new Set(productsWithImages.map((product) => product.id));
 
       existingCategoriesSnapshot.docs.forEach((categoryDoc) => {
         if (!savedCategoryIds.has(categoryDoc.id)) {
@@ -624,12 +662,13 @@ export default function StoreEditorPage() {
         }, { merge: true });
       });
 
-      productsToSave.forEach((product) => {
+      productsWithImages.forEach((product) => {
         batch.set(doc(db, 'stores', storeId, 'items', product.id), {
           categoryId: product.categoryId,
           name: product.name,
           description: product.description,
           price: product.price,
+          imageUrl: product.imageUrl || '',
           active: product.active,
           order: product.order,
           ...(form.stockControl ? { trackStock: product.trackStock, stock: product.trackStock ? product.stock : 0 } : {}),
@@ -676,7 +715,7 @@ export default function StoreEditorPage() {
       setMode('edit');
       setForm({ ...form, id: storeId, slug, storeAdminEmail: '', ownerUid: storeAdmin?.userId || form.ownerUid });
       setCategoryDrafts(categoriesToSave.map((category) => ({ ...category, order: String(category.order) })));
-      setProductDrafts(productsToSave.map((product) => ({ ...product, price: String(product.price), order: String(product.order), stock: String(product.stock) })));
+      setProductDrafts(productsWithImages.map((product) => ({ ...product, imageFile: undefined, price: String(product.price), order: String(product.order), stock: String(product.stock) })));
       setIsDirty(false);
       window.history.replaceState(null, '', withBasePath(`/admin/store/?storeId=${storeId}`));
       setMessageTone('done');
@@ -719,6 +758,8 @@ export default function StoreEditorPage() {
           </>
         )}
       </div>
+
+      {mode === 'edit' && form.slug && <StoreQrCard slug={form.slug} storeName={form.name || 'tienda'} />}
 
       <form onSubmit={handleSubmit} className="mt-6 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-200">
         <div className="border-b border-gray-200 bg-gray-50/80 px-4 py-3">
@@ -836,6 +877,7 @@ export default function StoreEditorPage() {
                                 <div className="grid gap-3 lg:grid-cols-[1fr_1fr_8rem_6rem_auto] lg:items-end">
                                   <Field label="Producto"><input value={product.name} onChange={(event) => updateProduct(product.id, 'name', event.target.value)} className={COMPACT_INPUT_CLASS} placeholder="Ej. Plato especial" /></Field>
                                   <Field label="Descripción"><input value={product.description} onChange={(event) => updateProduct(product.id, 'description', event.target.value)} className={COMPACT_INPUT_CLASS} placeholder="Descripción corta" /></Field>
+                                  <Field label="Imagen"><input type="file" accept="image/*" onChange={(event) => updateProduct(product.id, 'imageFile', event.target.files?.[0])} className="block w-full text-xs text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-950 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white" />{product.imageUrl && <a href={product.imageUrl} target="_blank" rel="noreferrer" className="mt-1 block truncate text-xs font-semibold text-orange-700">Imagen actual</a>}</Field>
                                   <Field label="Precio"><input type="number" inputMode="decimal" min="0" step="0.01" value={product.price} onChange={(event) => updateProduct(product.id, 'price', event.target.value)} className={COMPACT_INPUT_CLASS} /></Field>
                                   <Field label="Orden"><input type="number" inputMode="numeric" value={product.order} onChange={(event) => updateProduct(product.id, 'order', event.target.value)} className={COMPACT_INPUT_CLASS} /></Field>
                                   <button type="button" onClick={() => removeProduct(product.id)} className="rounded-xl border border-red-200 px-3 py-2 text-sm font-bold text-red-700 transition hover:bg-red-50">
@@ -910,6 +952,70 @@ export default function StoreEditorPage() {
   );
 }
 
+function StoreQrCard({ slug, storeName }: { slug: string; storeName: string }) {
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const publicUrl = getPublicStoreUrl(slug);
+  const safeStoreName = normalizeSlug(storeName) || slug;
+
+  useEffect(() => {
+    let cancelled = false;
+    setQrError(null);
+    setQrDataUrl(null);
+
+    QRCode.toDataURL(publicUrl, {
+      errorCorrectionLevel: 'M',
+      margin: 2,
+      width: 320,
+      color: {
+        dark: '#111827',
+        light: '#ffffff',
+      },
+    })
+      .then((dataUrl) => {
+        if (!cancelled) setQrDataUrl(dataUrl);
+      })
+      .catch((error) => {
+        console.error('Error generando QR:', error);
+        if (!cancelled) setQrError('No pudimos generar el QR de esta tienda.');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [publicUrl]);
+
+  return (
+    <section className="mt-6 grid gap-5 rounded-2xl border border-orange-100 bg-white p-5 shadow-sm md:grid-cols-[auto_1fr] md:items-center">
+      <div className="flex h-40 w-40 items-center justify-center rounded-2xl border border-gray-200 bg-gray-50 p-3">
+        {qrDataUrl ? (
+          <img src={qrDataUrl} alt={`QR público de ${storeName}`} className="h-full w-full object-contain" />
+        ) : (
+          <div className="text-center text-xs font-semibold text-gray-500">{qrError || 'Generando QR…'}</div>
+        )}
+      </div>
+
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.24em] text-orange-600">QR de tienda</p>
+        <h2 className="mt-2 text-2xl font-black text-gray-950">Listo para imprimir o compartir</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">Este QR apunta a la URL pública de la tienda. Úsalo en mesa, vitrina, redes o empaques.</p>
+        <a href={publicUrl} target="_blank" rel="noreferrer" className="mt-3 block break-all text-sm font-semibold text-orange-700 hover:text-orange-900">
+          {publicUrl}
+        </a>
+        {qrDataUrl && (
+          <a
+            href={qrDataUrl}
+            download={`qr-${safeStoreName}.png`}
+            className="mt-4 inline-flex rounded-xl bg-gray-950 px-4 py-2 text-sm font-bold text-white transition hover:bg-gray-800"
+          >
+            Descargar QR PNG
+          </a>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function DesignPreview({ store }: { store: PublicStore }) {
   return (
     <section
@@ -949,6 +1055,7 @@ function makePreviewStore(form: StoreFormState, categories: CategoryDraft[], pro
           name: product.name.trim(),
           description: product.description.trim(),
           price: toOptionalNumber(product.price),
+          imageUrl: product.imageFile ? URL.createObjectURL(product.imageFile) : product.imageUrl,
           active: product.active,
           order: toOptionalNumber(product.order || String(productIndex)),
           ...(form.stockControl ? { trackStock: product.trackStock, stock: product.trackStock ? toOptionalNumber(product.stock) : 0 } : {}),
