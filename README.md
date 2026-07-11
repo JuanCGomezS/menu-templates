@@ -9,8 +9,23 @@ Proyecto Astro publicado en GitHub Pages con Firebase como backend gratuito. La 
 | `npm install` | Instala dependencias. |
 | `npm run dev` | Levanta el entorno local. |
 | `npm run build` | Genera el sitio estático. |
+| `npm run check` | Ejecuta el gate mínimo actual del proyecto. |
 | `npm run seed:store` | Crea la tienda demo `store_cafe_bella_vista` con Firebase Admin SDK. |
 | `npm run seed:auth` | Crea o actualiza usuarios demo con Firebase Admin SDK. |
+| `npm run migrate:stores` | Copia datos legacy desde `restaurants` hacia `stores`. |
+| `npm run promote:superadmin` | Promueve un correo a rol `superadmin`. |
+
+## Arquitectura de vibe coding
+
+El repo incluye una capa de trabajo para agentes y devs:
+
+- `AGENTS.md`: reglas operativas del repo, rama base, restricciones y checklist antes de PR.
+- `docs/vibe-coding/README.md`: visión del flujo de vibe coding controlado.
+- `docs/vibe-coding/skills/best-practices.md`: buenas prácticas técnicas para Astro, React, Firebase y GitHub Pages.
+- `docs/vibe-coding/skills/interface-design.md`: criterios de UI, layouts, themes, responsive y estados visuales.
+- `docs/vibe-coding/skills/feature-slicing.md`: cómo partir features grandes en cortes pequeños y verificables.
+
+Antes de implementar una feature, revisá el playbook más cercano y actualizá `PLAN.md` si el estado del producto cambia.
 
 ## Configuración pública de Firebase
 

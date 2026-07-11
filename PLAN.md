@@ -376,6 +376,20 @@ src/
 
 ## 9) Etapas de desarrollo
 
+### Etapa -1 — Arquitectura de vibe coding
+
+**Objetivo:** crear una capa de trabajo para que el desarrollo asistido por agentes sea rápido, consistente y seguro.
+
+- [x] Crear `AGENTS.md` con reglas operativas del repo, rama base y checklist antes de PR.
+- [x] Crear playbook de buenas prácticas para Astro, React, Firebase y GitHub Pages.
+- [x] Crear playbook de diseño de interfaces, layouts, themes y estados visuales.
+- [x] Crear playbook para partir features grandes en cortes pequeños y verificables.
+- [x] Alinear README con los scripts administrativos existentes.
+
+**Entregable:** agentes y devs tienen instrucciones locales para construir sin desordenar arquitectura, UI ni costos de Firebase.
+
+---
+
 ### Etapa 0 — Setup técnico
 
 **Objetivo:** proyecto listo para desarrollar y desplegar gratis.
