@@ -1020,11 +1020,18 @@ export default function StoreEditorPage() {
                             <p className="mt-3 text-lg font-black text-gray-950">Total: {formatPrice(order.total || 0, form.currency)}</p>
                           </div>
 
-                          <Field label="Estado">
-                            <select value={order.status || 'pending'} disabled={updatingOrderId === order.id} onChange={(event) => updateOrderStatus(order.id, event.target.value as OrderStatus)} className={COMPACT_INPUT_CLASS}>
-                              {ORDER_STATUSES.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
-                            </select>
-                          </Field>
+                          <div className="space-y-3">
+                            <Field label="Estado">
+                              <select value={order.status || 'pending'} disabled={updatingOrderId === order.id} onChange={(event) => updateOrderStatus(order.id, event.target.value as OrderStatus)} className={COMPACT_INPUT_CLASS}>
+                                {ORDER_STATUSES.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
+                              </select>
+                            </Field>
+                            {getOrderWhatsappHref(order) && (
+                              <a href={getOrderWhatsappHref(order) || '#'} target="_blank" rel="noreferrer" className="block rounded-xl bg-[#25D366] px-4 py-2 text-center text-sm font-black text-white transition hover:-translate-y-0.5">
+                                Avisar por WhatsApp
+                              </a>
+                            )}
+                          </div>
                         </div>
                       </article>
                     ))}
@@ -1225,6 +1232,21 @@ function makePreviewStore(form: StoreFormState, categories: CategoryDraft[], pro
       })),
     })),
   };
+}
+
+function getOrderWhatsappHref(order: OrderDraft) {
+  const phone = (order.customerPhone || '').replace(/[^0-9]/g, '');
+
+  if (!phone) return null;
+
+  const statusLabel = ORDER_STATUSES.find((status) => status.value === order.status)?.label || 'Pendiente';
+  const summary = [
+    `Hola ${order.customerName || ''}`.trim(),
+    `Tu pedido está en estado: ${statusLabel}.`,
+    order.total ? `Total: ${order.total}` : null,
+  ].filter(Boolean).join('\n');
+
+  return `https://wa.me/${phone}?text=${encodeURIComponent(summary)}`;
 }
 
 function SectionTitle({ title, eyebrow }: { title: string; eyebrow?: string }) {
