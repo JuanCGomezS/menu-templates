@@ -5,6 +5,7 @@ interface Props {
 
 const { title = "Sin título" } = Astro.props;
 const faviconUrl = `${import.meta.env.BASE_URL}icon.png`;
+const swUrl = `${import.meta.env.BASE_URL}sw.js`;
 ---
 <!doctype html>
 <html lang="es">
@@ -18,7 +19,22 @@ const faviconUrl = `${import.meta.env.BASE_URL}icon.png`;
 		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 		<link href="https://fonts.googleapis.com/css2?family=Material+Icons+Outlined&display=swap" rel="stylesheet" />
 		<title>{title}</title>
-	</head>
+	
+    <link rel="manifest" href={`${import.meta.env.BASE_URL}manifest.webmanifest`} />
+    <meta name="theme-color" content="#f97316" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Menu Templates" />
+  
+    <script define:vars={{ swUrl }}>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register(swUrl).catch(() => {
+            // PWA support is optional; registration errors should not block the app.
+          });
+        });
+      }
+    </script>
+  </head>
 	<body class="m-0 w-full h-full font-sans antialiased bg-gray-50">
 		<slot />
 	</body>

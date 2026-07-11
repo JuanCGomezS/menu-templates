@@ -523,7 +523,7 @@ src/
 ### Etapa 8 — Pulido comercial y técnico
 
 - [ ] Generación de QR por tienda.
-- [ ] PWA básica para acceso rápido desde celular.
+- [x] PWA básica para acceso rápido desde celular.
 - [ ] Skeletons/loading states.
 - [x] Error states claros.
 - [ ] Métricas básicas: pedidos del día, productos más pedidos, visitas estimadas.
