@@ -1,5 +1,5 @@
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, writeBatch, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, increment, limit, orderBy, query, serverTimestamp, writeBatch, where } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
@@ -96,7 +96,7 @@ interface OrderDraft {
   total?: number;
   deliveryAddress?: string;
   notes?: string;
-  items?: Array<{ name?: string; quantity?: number; price?: number; subtotal?: number }>;
+  items?: Array<{ itemId?: string; name?: string; quantity?: number; price?: number; subtotal?: number }>;
 }
 
 interface ProductDraft {
@@ -574,7 +574,39 @@ export default function StoreEditorPage() {
     setMessage(null);
 
     try {
+      const currentOrder = orders.find((order) => order.id === orderId);
+      const shouldDiscountStock = status === 'accepted' && currentOrder?.status !== 'accepted';
       const batch = writeBatch(db);
+
+      if (shouldDiscountStock) {
+        const orderItems = currentOrder?.items || [];
+
+        for (const item of orderItems) {
+          if (!item.itemId) continue;
+
+          const itemRef = doc(db, 'stores', form.id, 'items', item.itemId);
+          const itemSnapshot = await getDoc(itemRef);
+
+          if (!itemSnapshot.exists()) continue;
+
+          const itemData = itemSnapshot.data();
+          const quantity = item.quantity || 1;
+
+          if (itemData.trackStock === true) {
+            const currentStock = typeof itemData.stock === 'number' ? itemData.stock : 0;
+
+            if (currentStock < quantity) {
+              throw new Error(`Stock insuficiente para ${item.name || 'un producto'}.`);
+            }
+
+            batch.update(itemRef, {
+              stock: increment(-quantity),
+              updatedAt: serverTimestamp(),
+            });
+          }
+        }
+      }
+
       batch.update(doc(db, 'stores', form.id, 'orders', orderId), {
         status,
         updatedAt: serverTimestamp(),
@@ -582,10 +614,10 @@ export default function StoreEditorPage() {
       await batch.commit();
       setOrders((current) => current.map((order) => order.id === orderId ? { ...order, status } : order));
       setMessageTone('done');
-      setMessage('Estado del pedido actualizado.');
+      setMessage(shouldDiscountStock ? 'Pedido aceptado y stock actualizado.' : 'Estado del pedido actualizado.');
     } catch (err) {
       console.error('Error al actualizar pedido:', err);
-      setError('No pudimos actualizar el pedido. Revisa permisos e intenta de nuevo.');
+      setError(err instanceof Error ? err.message : 'No pudimos actualizar el pedido. Revisa permisos e intenta de nuevo.');
     } finally {
       setUpdatingOrderId(null);
     }
