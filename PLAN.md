@@ -527,7 +527,7 @@ src/
 - [ ] Skeletons/loading states.
 - [x] Error states claros.
 - [ ] Métricas básicas: pedidos del día, productos más pedidos, visitas estimadas.
-- [ ] Auditoría de lecturas Firestore.
+- [x] Auditoría de lecturas Firestore.
 - [x] Revisión de reglas de seguridad.
 - [ ] Deploy final verificado.
 
