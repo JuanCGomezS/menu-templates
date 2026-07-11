@@ -66,11 +66,63 @@ export default function RestaurantMenuView({ slug }: Props) {
     };
   }, [slug]);
 
+  useEffect(() => {
+    if (!store) return;
+    updateClientSeo(store);
+  }, [store]);
+
   if (loading) return <LoadingState />;
   if (error) return <ErrorState message={error} />;
   if (!store) return null;
 
   return <PublicStoreTemplateView store={store} />;
+}
+
+function updateClientSeo(store: StoreData) {
+  if (typeof document === 'undefined') return;
+
+  const title = `${store.name} · Menú y catálogo`;
+  const descriptionParts = [
+    store.type === 'product_store' ? 'Catálogo de productos' : 'Menú digital',
+    store.contact?.address,
+    store.contact?.whatsapp ? 'contacto por WhatsApp' : null,
+  ].filter(Boolean);
+  const description = `${title}. ${descriptionParts.join(' · ')}.`;
+
+  document.title = title;
+  setMeta('description', description);
+  setMeta('og:title', title, 'property');
+  setMeta('og:description', description, 'property');
+  setMeta('twitter:title', title);
+  setMeta('twitter:description', description);
+
+  const canonicalPath = withBasePath(`/t/${store.slug || store.id}`);
+  const canonicalUrl = new URL(canonicalPath, window.location.origin).toString();
+  setCanonical(canonicalUrl);
+}
+
+function setMeta(name: string, content: string, attr: 'name' | 'property' = 'name') {
+  let element = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${name}"]`);
+
+  if (!element) {
+    element = document.createElement('meta');
+    element.setAttribute(attr, name);
+    document.head.appendChild(element);
+  }
+
+  element.content = content;
+}
+
+function setCanonical(href: string) {
+  let element = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+
+  if (!element) {
+    element = document.createElement('link');
+    element.rel = 'canonical';
+    document.head.appendChild(element);
+  }
+
+  element.href = href;
 }
 
 export function PublicStoreTemplateView({ store }: { store: StoreData }) {

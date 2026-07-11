@@ -5,6 +5,10 @@ import AppHeader from "../components/react/AppHeader";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 const path = (route: string) => `${basePath}${route}`;
+const whatsappNumber = import.meta.env.PUBLIC_WHATSAPP_NUMBER?.replace(/\D/g, "") || "";
+const whatsappHref = whatsappNumber
+  ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent("Hola, quiero conocer Menu Templates para mi negocio")}`
+  : "#contact";
 ---
 
 <Layout title="Menu Templates - Menús y catálogos multi-tienda">
@@ -29,11 +33,11 @@ const path = (route: string) => `${basePath}${route}`;
             <a href={path("/login")} class="rounded-full bg-orange-600 px-7 py-4 text-center font-bold text-white shadow-xl shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-orange-700">
               Entrar al sistema
             </a>
-            <a href="#templates" class="rounded-full bg-gray-950 px-7 py-4 text-center font-bold text-white shadow-xl shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-gray-800">
-              Explorar plantillas
+            <a href="#pricing" class="rounded-full bg-gray-950 px-7 py-4 text-center font-bold text-white shadow-xl shadow-orange-200 transition hover:-translate-y-0.5 hover:bg-gray-800">
+              Ver planes
             </a>
-            <a href="#platform" class="rounded-full border border-gray-300 bg-white px-7 py-4 text-center font-bold text-gray-950 transition hover:-translate-y-0.5 hover:border-gray-950">
-              Ver modelo de plataforma
+            <a href={whatsappHref} class="rounded-full border border-gray-300 bg-white px-7 py-4 text-center font-bold text-gray-950 transition hover:-translate-y-0.5 hover:border-gray-950" target={whatsappNumber ? "_blank" : undefined} rel={whatsappNumber ? "noreferrer" : undefined}>
+              Hablar por WhatsApp
             </a>
           </div>
 
@@ -116,13 +120,80 @@ const path = (route: string) => `${basePath}${route}`;
       <div class="mx-auto w-full max-w-6xl rounded-[2rem] bg-gray-950 p-8 text-white shadow-2xl shadow-gray-950/20 md:p-12">
         <p class="text-sm font-bold uppercase tracking-[0.25em] text-orange-300">Plantillas, no solo cambios de color</p>
         <div class="mt-6 grid gap-8 lg:grid-cols-[0.8fr_1.2fr]">
-          <h2 class="text-4xl font-black tracking-tight md:text-5xl">Cada tipo de negocio necesita una estructura distinta.</h2>
-          <div class="grid gap-4 sm:grid-cols-2">
-            <div class="rounded-3xl bg-white/10 p-5">Restaurante clásico</div>
-            <div class="rounded-3xl bg-white/10 p-5">Comida rápida</div>
-            <div class="rounded-3xl bg-white/10 p-5">Catálogo de productos</div>
-            <div class="rounded-3xl bg-white/10 p-5">Temporada navideña</div>
+          <div>
+            <h2 class="text-4xl font-black tracking-tight md:text-5xl">Cada tipo de negocio necesita una estructura distinta.</h2>
+            <p class="mt-5 text-lg leading-8 text-white/70">Los layouts cambian la experiencia: lectura rápida, vitrina natural, promociones cálidas o presentación elegante. Los themes cambian la temporada sin duplicar código.</p>
           </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="rounded-3xl bg-white/10 p-5"><span class="text-2xl">▦</span><p class="mt-3 font-black">Minimalista</p><p class="mt-2 text-sm leading-6 text-white/65">Lectura rápida para cartas claras.</p></div>
+            <div class="rounded-3xl bg-white/10 p-5"><span class="text-2xl">🌿</span><p class="mt-3 font-black">Natural</p><p class="mt-2 text-sm leading-6 text-white/65">Cafés, brunch y productos frescos.</p></div>
+            <div class="rounded-3xl bg-white/10 p-5"><span class="text-2xl">🔥</span><p class="mt-3 font-black">Cálido</p><p class="mt-2 text-sm leading-6 text-white/65">Promos, combos y negocios familiares.</p></div>
+            <div class="rounded-3xl bg-white/10 p-5"><span class="text-2xl">✦</span><p class="mt-3 font-black">Elegante</p><p class="mt-2 text-sm leading-6 text-white/65">Marcas premium y catálogos cuidados.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="pricing" class="relative px-6 py-20 md:py-24">
+      <div class="absolute inset-0 bg-[linear-gradient(180deg,#fff4df_0%,#fffdf8_54%,#fff8ef_100%)]"></div>
+      <div class="relative mx-auto max-w-6xl">
+        <div class="mx-auto max-w-3xl text-center">
+          <p class="text-sm font-semibold uppercase tracking-[0.35em] text-orange-600">Planes iniciales</p>
+          <h2 class="mt-5 text-4xl font-black tracking-tight text-gray-950 sm:text-5xl">Empieza simple y escala cuando el negocio lo pida.</h2>
+          <p class="mx-auto mt-5 max-w-2xl text-lg leading-8 text-gray-700">Precios pensados para validar clientes sin infraestructura costosa. Los límites pueden ajustarse desde el panel superadmin.</p>
+        </div>
+
+        <div class="mt-12 grid gap-6 lg:grid-cols-3">
+          <article class="rounded-[2rem] border border-orange-100 bg-white p-8 shadow-xl shadow-orange-100/50">
+            <p class="text-sm font-black uppercase tracking-[0.25em] text-orange-600">Prueba</p>
+            <h3 class="mt-4 text-3xl font-black text-gray-950">Free trial</h3>
+            <p class="mt-3 text-gray-600">Ideal para montar una tienda demo y validar el menú con QR.</p>
+            <p class="mt-8 text-4xl font-black">$0 <span class="text-base font-semibold text-gray-500">inicial</span></p>
+            <ul class="mt-8 space-y-3 text-sm leading-6 text-gray-700">
+              <li>✔ Menú o catálogo público</li>
+              <li>✔ Plantilla y theme configurables</li>
+              <li>✔ Productos y categorías base</li>
+            </ul>
+          </article>
+
+          <article class="relative rounded-[2rem] border-2 border-orange-500 bg-gray-950 p-8 text-white shadow-2xl shadow-orange-200">
+            <span class="absolute right-6 top-6 rounded-full bg-orange-500 px-3 py-1 text-xs font-black uppercase tracking-[0.18em]">Recomendado</span>
+            <p class="text-sm font-black uppercase tracking-[0.25em] text-orange-300">Operación</p>
+            <h3 class="mt-4 text-3xl font-black">Standard</h3>
+            <p class="mt-3 text-white/70">Para negocios que necesitan administrar carta, contacto, horarios y disponibilidad.</p>
+            <p class="mt-8 text-4xl font-black">A definir <span class="text-base font-semibold text-white/50">/ mes</span></p>
+            <ul class="mt-8 space-y-3 text-sm leading-6 text-white/80">
+              <li>✔ Panel de administración de tienda</li>
+              <li>✔ Límites comerciales configurables</li>
+              <li>✔ Preparado para pedidos manuales</li>
+            </ul>
+          </article>
+
+          <article class="rounded-[2rem] border border-orange-100 bg-white p-8 shadow-xl shadow-orange-100/50">
+            <p class="text-sm font-black uppercase tracking-[0.25em] text-orange-600">Crecimiento</p>
+            <h3 class="mt-4 text-3xl font-black text-gray-950">Plus</h3>
+            <p class="mt-3 text-gray-600">Para tiendas con más productos, stock, temporadas y necesidades de catálogo.</p>
+            <p class="mt-8 text-4xl font-black">A definir <span class="text-base font-semibold text-gray-500">/ mes</span></p>
+            <ul class="mt-8 space-y-3 text-sm leading-6 text-gray-700">
+              <li>✔ Mayor capacidad de productos</li>
+              <li>✔ Themes por temporada</li>
+              <li>✔ Base para métricas y QR por tienda</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact" class="px-6 py-20">
+      <div class="mx-auto grid max-w-6xl gap-8 rounded-[2rem] bg-orange-600 p-8 text-white shadow-2xl shadow-orange-200 md:grid-cols-[1fr_auto] md:items-center md:p-12">
+        <div>
+          <p class="text-sm font-black uppercase tracking-[0.25em] text-orange-100">Siguiente paso</p>
+          <h2 class="mt-4 text-4xl font-black tracking-tight md:text-5xl">Convierte una tienda real en tu primera demo vendible.</h2>
+          <p class="mt-5 max-w-2xl text-lg leading-8 text-orange-50">Crea la tienda, carga productos, elige layout/theme y comparte el enlace por QR o WhatsApp.</p>
+        </div>
+        <div class="flex flex-col gap-3 sm:flex-row md:flex-col">
+          <a href={path('/login')} class="rounded-full bg-white px-7 py-4 text-center font-black text-orange-700 transition hover:-translate-y-0.5 hover:bg-orange-50">Entrar al sistema</a>
+          <a href={whatsappHref} target={whatsappNumber ? "_blank" : undefined} rel={whatsappNumber ? "noreferrer" : undefined} class="rounded-full border border-white/40 px-7 py-4 text-center font-black text-white transition hover:-translate-y-0.5 hover:bg-white/10">Hablar por WhatsApp</a>
         </div>
       </div>
     </section>
