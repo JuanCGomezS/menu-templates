@@ -528,7 +528,7 @@ src/
 - [x] Error states claros.
 - [ ] Métricas básicas: pedidos del día, productos más pedidos, visitas estimadas.
 - [ ] Auditoría de lecturas Firestore.
-- [ ] Revisión de reglas de seguridad.
+- [x] Revisión de reglas de seguridad.
 - [ ] Deploy final verificado.
 
 ---
