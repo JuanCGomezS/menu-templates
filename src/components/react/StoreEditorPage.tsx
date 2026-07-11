@@ -1,8 +1,10 @@
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, doc, getDoc, getDocs, limit, query, serverTimestamp, writeBatch, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, increment, limit, orderBy, query, serverTimestamp, writeBatch, where } from 'firebase/firestore';
+import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
-import { auth, db } from '../../lib/firebase';
+import QRCode from 'qrcode';
+import { auth, db, storage } from '../../lib/firebase';
 import { getUserProfile, ROLES } from '../../lib/auth';
 import { clearPublicStoreCache } from '../../lib/public-store-data';
 import type { PublicStore } from '../../lib/store-helpers';
@@ -16,8 +18,9 @@ import { PublicStoreTemplateView } from './RestaurantMenuView';
 type StoreType = 'restaurant' | 'food_business' | 'product_store';
 type PlanType = 'free_trial' | 'standard' | 'plus' | 'premium';
 type Currency = 'COP' | 'USD' | 'EUR';
+type OrderStatus = 'pending' | 'accepted' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
 type EditorMode = 'create' | 'edit';
-type TabId = 'general' | 'design' | 'operation' | 'products' | 'superadmin';
+type TabId = 'general' | 'design' | 'operation' | 'products' | 'orders' | 'superadmin';
 
 interface StoreData {
   id: string;
@@ -84,6 +87,19 @@ interface CategoryDraft {
   order: string;
 }
 
+interface OrderDraft {
+  id: string;
+  customerName?: string;
+  customerPhone?: string;
+  type?: 'in_store' | 'delivery';
+  status?: OrderStatus;
+  total?: number;
+  deliveryAddress?: string;
+  notes?: string;
+  createdAtMs?: number;
+  items?: Array<{ itemId?: string; name?: string; quantity?: number; price?: number; subtotal?: number }>;
+}
+
 interface ProductDraft {
   id: string;
   categoryId: string;
@@ -94,6 +110,8 @@ interface ProductDraft {
   order: string;
   trackStock: boolean;
   stock: string;
+  imageUrl: string;
+  imageFile?: File;
   availableInStore: boolean;
   availableForDelivery: boolean;
 }
@@ -112,12 +130,21 @@ const PLANS: Array<{ value: PlanType; label: string }> = [
 ];
 
 const CURRENCIES: Currency[] = ['COP', 'USD', 'EUR'];
+const ORDER_STATUSES: Array<{ value: OrderStatus; label: string }> = [
+  { value: 'pending', label: 'Pendiente' },
+  { value: 'accepted', label: 'Aceptado' },
+  { value: 'preparing', label: 'Preparando' },
+  { value: 'ready', label: 'Listo' },
+  { value: 'delivered', label: 'Entregado' },
+  { value: 'cancelled', label: 'Cancelado' },
+];
 
 const TABS: Array<{ id: TabId; label: string; description: string }> = [
   { id: 'general', label: 'Datos principales', description: 'Información editable por la tienda.' },
   { id: 'design', label: 'Diseño', description: 'Template y apariencia pública.' },
   { id: 'operation', label: 'Operación', description: 'Contacto, domicilio y horarios.' },
   { id: 'products', label: 'Productos', description: 'Categorías, productos y stock.' },
+  { id: 'orders', label: 'Pedidos', description: 'Pedidos activos creados desde la tienda pública.' },
   { id: 'superadmin', label: 'Superadmin', description: 'Plan, límites, slug y control interno.' },
 ];
 
@@ -310,6 +337,7 @@ function createProductDraft(categoryId: string, order: number): ProductDraft {
     order: String(order),
     trackStock: false,
     stock: '0',
+    imageUrl: '',
     availableInStore: true,
     availableForDelivery: true,
   };
@@ -347,6 +375,11 @@ function makeStorePayload(form: StoreFormState) {
   };
 }
 
+function getPublicStoreUrl(slug: string) {
+  if (typeof window === 'undefined') return withBasePath(`/t/${slug}`);
+  return new URL(withBasePath(`/t/${slug}`), window.location.origin).toString();
+}
+
 export default function StoreEditorPage() {
   const [status, setStatus] = useState<'loading' | 'allowed' | 'denied'>('loading');
   const [mode, setMode] = useState<EditorMode>('create');
@@ -359,10 +392,15 @@ export default function StoreEditorPage() {
   const [isDirty, setIsDirty] = useState(false);
   const [categoryDrafts, setCategoryDrafts] = useState<CategoryDraft[]>([]);
   const [productDrafts, setProductDrafts] = useState<ProductDraft[]>([]);
+  const [orders, setOrders] = useState<OrderDraft[]>([]);
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   const templates = useMemo(() => getAllTemplates(), []);
   const themes = useMemo(() => getAllThemes(), []);
   const designPreviewStore = useMemo(() => makePreviewStore(form, categoryDrafts, productDrafts), [form, categoryDrafts, productDrafts]);
+  const orderMetrics = useMemo(() => getOrderMetrics(orders), [orders]);
+  const visibleTabs = useMemo(() => TABS.filter((tab) => isSuperAdmin || tab.id !== 'superadmin'), [isSuperAdmin]);
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (user) => {
@@ -372,19 +410,30 @@ export default function StoreEditorPage() {
       }
 
       const profile = await getUserProfile(user);
+      const userIsSuperAdmin = profile?.role === ROLES.SUPERADMIN;
+      const userIsStoreAdmin = profile?.role === ROLES.STOREADMIN && Boolean(profile.storeId);
 
-      if (profile?.role !== ROLES.SUPERADMIN) {
+      if (!userIsSuperAdmin && !userIsStoreAdmin) {
         setStatus('denied');
         return;
       }
 
-      const storeId = new URLSearchParams(window.location.search).get('storeId');
+      setIsSuperAdmin(userIsSuperAdmin);
+
+      const requestedStoreId = new URLSearchParams(window.location.search).get('storeId');
+      const storeId = userIsSuperAdmin ? requestedStoreId : profile?.storeId;
 
       if (!storeId) {
+        if (!userIsSuperAdmin) {
+          setStatus('denied');
+          return;
+        }
+
         setMode('create');
         setForm(emptyForm());
         setCategoryDrafts([]);
         setProductDrafts([]);
+        setOrders([]);
         setIsDirty(false);
         setStatus('allowed');
         return;
@@ -401,7 +450,7 @@ export default function StoreEditorPage() {
 
         setMode('edit');
         setForm(formFromStore({ id: snapshot.id, ...snapshot.data() } as StoreData));
-        await loadStoreProducts(snapshot.id);
+        await Promise.all([loadStoreProducts(snapshot.id), loadStoreOrders(snapshot.id)]);
         setIsDirty(false);
         setStatus('allowed');
       } catch (err) {
@@ -470,10 +519,32 @@ export default function StoreEditorPage() {
         order: String(data.order ?? 0),
         trackStock: data.trackStock === true,
         stock: String(data.stock ?? 0),
+        imageUrl: typeof data.imageUrl === 'string' ? data.imageUrl : '',
         availableInStore: data.availableInStore !== false,
         availableForDelivery: data.availableForDelivery !== false,
       };
     }).sort((a, b) => toOptionalNumber(a.order) - toOptionalNumber(b.order)));
+  };
+
+  const loadStoreOrders = async (storeId: string) => {
+    const ordersQuery = query(collection(db, 'stores', storeId, 'orders'), orderBy('createdAt', 'desc'), limit(50));
+    const snapshot = await getDocs(ordersQuery);
+
+    setOrders(snapshot.docs.map((orderDoc) => {
+      const data = orderDoc.data();
+      return {
+        id: orderDoc.id,
+        customerName: typeof data.customerName === 'string' ? data.customerName : '',
+        customerPhone: typeof data.customerPhone === 'string' ? data.customerPhone : '',
+        type: data.type === 'delivery' ? 'delivery' : 'in_store',
+        status: ORDER_STATUSES.some((status) => status.value === data.status) ? data.status : 'pending',
+        total: typeof data.total === 'number' ? data.total : 0,
+        deliveryAddress: typeof data.deliveryAddress === 'string' ? data.deliveryAddress : '',
+        notes: typeof data.notes === 'string' ? data.notes : '',
+        createdAtMs: typeof data.createdAt?.toMillis === 'function' ? data.createdAt.toMillis() : undefined,
+        items: Array.isArray(data.items) ? data.items : [],
+      };
+    }));
   };
 
   const addCategory = () => {
@@ -510,6 +581,63 @@ export default function StoreEditorPage() {
     setIsDirty(true);
   };
 
+  const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+    if (!form.id) return;
+
+    setUpdatingOrderId(orderId);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const currentOrder = orders.find((order) => order.id === orderId);
+      const shouldDiscountStock = status === 'accepted' && currentOrder?.status !== 'accepted';
+      const batch = writeBatch(db);
+
+      if (shouldDiscountStock) {
+        const orderItems = currentOrder?.items || [];
+
+        for (const item of orderItems) {
+          if (!item.itemId) continue;
+
+          const itemRef = doc(db, 'stores', form.id, 'items', item.itemId);
+          const itemSnapshot = await getDoc(itemRef);
+
+          if (!itemSnapshot.exists()) continue;
+
+          const itemData = itemSnapshot.data();
+          const quantity = item.quantity || 1;
+
+          if (itemData.trackStock === true) {
+            const currentStock = typeof itemData.stock === 'number' ? itemData.stock : 0;
+
+            if (currentStock < quantity) {
+              throw new Error(`Stock insuficiente para ${item.name || 'un producto'}.`);
+            }
+
+            batch.update(itemRef, {
+              stock: increment(-quantity),
+              updatedAt: serverTimestamp(),
+            });
+          }
+        }
+      }
+
+      batch.update(doc(db, 'stores', form.id, 'orders', orderId), {
+        status,
+        updatedAt: serverTimestamp(),
+      });
+      await batch.commit();
+      setOrders((current) => current.map((order) => order.id === orderId ? { ...order, status } : order));
+      setMessageTone('done');
+      setMessage(shouldDiscountStock ? 'Pedido aceptado y stock actualizado.' : 'Estado del pedido actualizado.');
+    } catch (err) {
+      console.error('Error al actualizar pedido:', err);
+      setError(err instanceof Error ? err.message : 'No pudimos actualizar el pedido. Revisa permisos e intenta de nuevo.');
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
   const getStoreAdminUserId = async (email: string) => {
     const trimmedEmail = email.trim();
     const normalizedEmail = trimmedEmail.toLowerCase();
@@ -535,6 +663,25 @@ export default function StoreEditorPage() {
     if (!snapshot.empty && snapshot.docs[0].id !== currentStoreId) {
       throw new Error('Ya existe una tienda con ese slug. Usa otro slug antes de guardar.');
     }
+  };
+
+  const uploadProductImages = async (storeId: string, products: Array<ProductDraft & { price: number; order: number; stock: number }>) => {
+    return Promise.all(products.map(async (product) => {
+      if (!product.imageFile) return product;
+
+      const extension = product.imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const imageRef = ref(storage, `stores/${storeId}/items/${product.id}/${Date.now()}.${extension}`);
+      const snapshot = await uploadBytes(imageRef, product.imageFile, {
+        contentType: product.imageFile.type || 'image/jpeg',
+        customMetadata: {
+          storeId,
+          itemId: product.id,
+        },
+      });
+      const imageUrl = await getDownloadURL(snapshot.ref);
+
+      return { ...product, imageUrl, imageFile: undefined };
+    }));
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -578,11 +725,18 @@ export default function StoreEditorPage() {
       return;
     }
 
+    const imageCount = productsToSave.filter((product) => product.imageFile || product.imageUrl).length;
+
+    if (imageCount > toPositiveNumber(form.maxImages, 30)) {
+      setError('La tienda supera el límite de imágenes configurado.');
+      return;
+    }
+
     setSaving(true);
 
     try {
       const payload = makeStorePayload({ ...form, slug });
-      const storeAdmin = await getStoreAdminUserId(form.storeAdminEmail);
+      const storeAdmin = isSuperAdmin ? await getStoreAdminUserId(form.storeAdminEmail) : null;
       const storeRef = mode === 'edit' && form.id ? doc(db, 'stores', form.id) : doc(collection(db, 'stores'));
       const storeId = storeRef.id;
       const previousOwnerRef = storeAdmin && mode === 'edit' && form.ownerUid && form.ownerUid !== storeAdmin.userId
@@ -596,12 +750,13 @@ export default function StoreEditorPage() {
         getDocs(collection(db, 'stores', storeId, 'categories')),
         getDocs(collection(db, 'stores', storeId, 'items')),
       ]);
+      const productsWithImages = await uploadProductImages(storeId, productsToSave);
 
       const batch = writeBatch(db);
       batch.set(storeRef, mode === 'create' ? { ...payload, createdAt: serverTimestamp() } : payload, { merge: true });
 
       const savedCategoryIds = new Set(categoriesToSave.map((category) => category.id));
-      const savedProductIds = new Set(productsToSave.map((product) => product.id));
+      const savedProductIds = new Set(productsWithImages.map((product) => product.id));
 
       existingCategoriesSnapshot.docs.forEach((categoryDoc) => {
         if (!savedCategoryIds.has(categoryDoc.id)) {
@@ -624,12 +779,13 @@ export default function StoreEditorPage() {
         }, { merge: true });
       });
 
-      productsToSave.forEach((product) => {
+      productsWithImages.forEach((product) => {
         batch.set(doc(db, 'stores', storeId, 'items', product.id), {
           categoryId: product.categoryId,
           name: product.name,
           description: product.description,
           price: product.price,
+          imageUrl: product.imageUrl || '',
           active: product.active,
           order: product.order,
           ...(form.stockControl ? { trackStock: product.trackStock, stock: product.trackStock ? product.stock : 0 } : {}),
@@ -676,7 +832,7 @@ export default function StoreEditorPage() {
       setMode('edit');
       setForm({ ...form, id: storeId, slug, storeAdminEmail: '', ownerUid: storeAdmin?.userId || form.ownerUid });
       setCategoryDrafts(categoriesToSave.map((category) => ({ ...category, order: String(category.order) })));
-      setProductDrafts(productsToSave.map((product) => ({ ...product, price: String(product.price), order: String(product.order), stock: String(product.stock) })));
+      setProductDrafts(productsWithImages.map((product) => ({ ...product, imageFile: undefined, price: String(product.price), order: String(product.order), stock: String(product.stock) })));
       setIsDirty(false);
       window.history.replaceState(null, '', withBasePath(`/admin/store/?storeId=${storeId}`));
       setMessageTone('done');
@@ -703,9 +859,11 @@ export default function StoreEditorPage() {
       {error && <Messaging message={error} tone="error" onClose={() => setError(null)} />}
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <a href={withBasePath('/admin')} className="rounded-xl border border-gray-300 px-4 py-2 font-bold text-gray-700 transition hover:border-gray-950">
-          Volver al listado
-        </a>
+        {isSuperAdmin && (
+          <a href={withBasePath('/admin')} className="rounded-xl border border-gray-300 px-4 py-2 font-bold text-gray-700 transition hover:border-gray-950">
+            Volver al listado
+          </a>
+        )}
         {mode === 'edit' && (
           <>
             {form.slug && (
@@ -713,17 +871,21 @@ export default function StoreEditorPage() {
                 Ver tienda
               </a>
             )}
-            <a href={withBasePath('/admin/store/')} className="rounded-xl bg-gray-950 px-4 py-2 font-bold text-white transition hover:bg-gray-800">
-              Crear otra tienda
-            </a>
+            {isSuperAdmin && (
+              <a href={withBasePath('/admin/store/')} className="rounded-xl bg-gray-950 px-4 py-2 font-bold text-white transition hover:bg-gray-800">
+                Crear otra tienda
+              </a>
+            )}
           </>
         )}
       </div>
 
+      {mode === 'edit' && form.slug && <StoreQrCard slug={form.slug} storeName={form.name || 'tienda'} />}
+
       <form onSubmit={handleSubmit} className="mt-6 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-200">
         <div className="border-b border-gray-200 bg-gray-50/80 px-4 py-3">
           <div className="flex gap-2 overflow-x-auto pb-1" role="tablist" aria-label="Secciones de configuración de tienda">
-            {TABS.map((tab) => (
+            {visibleTabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
@@ -737,7 +899,7 @@ export default function StoreEditorPage() {
               </button>
             ))}
           </div>
-          <p className="mt-2 text-sm text-gray-500">{TABS.find((tab) => tab.id === activeTab)?.description}</p>
+          <p className="mt-2 text-sm text-gray-500">{visibleTabs.find((tab) => tab.id === activeTab)?.description}</p>
         </div>
 
         <div className="p-5">
@@ -836,6 +998,7 @@ export default function StoreEditorPage() {
                                 <div className="grid gap-3 lg:grid-cols-[1fr_1fr_8rem_6rem_auto] lg:items-end">
                                   <Field label="Producto"><input value={product.name} onChange={(event) => updateProduct(product.id, 'name', event.target.value)} className={COMPACT_INPUT_CLASS} placeholder="Ej. Plato especial" /></Field>
                                   <Field label="Descripción"><input value={product.description} onChange={(event) => updateProduct(product.id, 'description', event.target.value)} className={COMPACT_INPUT_CLASS} placeholder="Descripción corta" /></Field>
+                                  <Field label="Imagen"><input type="file" accept="image/*" onChange={(event) => updateProduct(product.id, 'imageFile', event.target.files?.[0])} className="block w-full text-xs text-gray-600 file:mr-3 file:rounded-lg file:border-0 file:bg-gray-950 file:px-3 file:py-2 file:text-xs file:font-bold file:text-white" />{product.imageUrl && <a href={product.imageUrl} target="_blank" rel="noreferrer" className="mt-1 block truncate text-xs font-semibold text-orange-700">Imagen actual</a>}</Field>
                                   <Field label="Precio"><input type="number" inputMode="decimal" min="0" step="0.01" value={product.price} onChange={(event) => updateProduct(product.id, 'price', event.target.value)} className={COMPACT_INPUT_CLASS} /></Field>
                                   <Field label="Orden"><input type="number" inputMode="numeric" value={product.order} onChange={(event) => updateProduct(product.id, 'order', event.target.value)} className={COMPACT_INPUT_CLASS} /></Field>
                                   <button type="button" onClick={() => removeProduct(product.id)} className="rounded-xl border border-red-200 px-3 py-2 text-sm font-bold text-red-700 transition hover:bg-red-50">
@@ -865,6 +1028,82 @@ export default function StoreEditorPage() {
                         </section>
                       );
                     })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'orders' && (
+            <div id="store-editor-orders" role="tabpanel">
+              <div className="mt-4 space-y-4">
+                <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4 text-sm leading-6 text-orange-950">
+                  <p className="font-black">Pedidos activos</p>
+                  <p>Muestra los últimos 50 pedidos creados desde la tienda pública. Para el MVP, el cambio de estado es manual.</p>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-3">
+                  <MetricCard label="Pedidos de hoy" value={String(orderMetrics.todayCount)} />
+                  <MetricCard label="Ventas de hoy" value={formatPrice(orderMetrics.todayRevenue, form.currency)} />
+                  <MetricCard label="Pedidos activos" value={String(orderMetrics.activeCount)} />
+                </div>
+
+                {orderMetrics.topProducts.length > 0 && (
+                  <div className="rounded-2xl border border-gray-200 bg-white p-4 text-sm shadow-sm">
+                    <p className="font-black text-gray-950">Productos más pedidos</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {orderMetrics.topProducts.map((product) => (
+                        <span key={product.name} className="rounded-full bg-gray-100 px-3 py-1 font-bold text-gray-700">{product.name} · {product.quantity}</span>
+                      ))}
+                    </div>
+                    <p className="mt-3 text-xs leading-5 text-gray-500">Métricas calculadas sobre los últimos 50 pedidos ya cargados; no generan lecturas adicionales en Firebase.</p>
+                  </div>
+                )}
+
+                {orders.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-sm leading-6 text-gray-600">
+                    Todavía no hay pedidos para esta tienda.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {orders.map((order) => (
+                      <article key={order.id} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-start">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-black text-gray-950">{order.customerName || 'Cliente sin nombre'}</p>
+                              <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-bold text-gray-600">{order.type === 'delivery' ? 'Domicilio' : 'En tienda'}</span>
+                              <span className="rounded-full bg-orange-50 px-2 py-1 text-xs font-bold text-orange-700">{ORDER_STATUSES.find((status) => status.value === order.status)?.label || 'Pendiente'}</span>
+                            </div>
+                            <p className="mt-1 text-sm text-gray-600">Tel: {order.customerPhone || 'Sin teléfono'}</p>
+                            {order.deliveryAddress && <p className="mt-1 text-sm text-gray-600">Dirección: {order.deliveryAddress}</p>}
+                            {order.notes && <p className="mt-1 text-sm text-gray-600">Notas: {order.notes}</p>}
+                            <ul className="mt-3 space-y-1 text-sm text-gray-700">
+                              {(order.items || []).map((item, index) => (
+                                <li key={`${order.id}-${index}`} className="flex justify-between gap-3">
+                                  <span>{item.quantity || 1}× {item.name || 'Producto'}</span>
+                                  <span className="font-semibold">{formatPrice(item.subtotal || ((item.price || 0) * (item.quantity || 1)), form.currency)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                            <p className="mt-3 text-lg font-black text-gray-950">Total: {formatPrice(order.total || 0, form.currency)}</p>
+                          </div>
+
+                          <div className="space-y-3">
+                            <Field label="Estado">
+                              <select value={order.status || 'pending'} disabled={updatingOrderId === order.id} onChange={(event) => updateOrderStatus(order.id, event.target.value as OrderStatus)} className={COMPACT_INPUT_CLASS}>
+                                {ORDER_STATUSES.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
+                              </select>
+                            </Field>
+                            {getOrderWhatsappHref(order) && (
+                              <a href={getOrderWhatsappHref(order) || '#'} target="_blank" rel="noreferrer" className="block rounded-xl bg-[#25D366] px-4 py-2 text-center text-sm font-black text-white transition hover:-translate-y-0.5">
+                                Avisar por WhatsApp
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </article>
+                    ))}
                   </div>
                 )}
               </div>
@@ -910,6 +1149,94 @@ export default function StoreEditorPage() {
   );
 }
 
+function getOrderMetrics(orders: OrderDraft[]) {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const startMs = startOfToday.getTime();
+  const activeStatuses: OrderStatus[] = ['pending', 'accepted', 'preparing', 'ready'];
+  const todayOrders = orders.filter((order) => (order.createdAtMs || 0) >= startMs);
+  const productTotals = new Map<string, { name: string; quantity: number }>();
+
+  orders.forEach((order) => {
+    (order.items || []).forEach((item) => {
+      const name = item.name || 'Producto';
+      const current = productTotals.get(name) || { name, quantity: 0 };
+      productTotals.set(name, { name, quantity: current.quantity + (item.quantity || 1) });
+    });
+  });
+
+  return {
+    todayCount: todayOrders.length,
+    todayRevenue: todayOrders.reduce((sum, order) => sum + (order.total || 0), 0),
+    activeCount: orders.filter((order) => activeStatuses.includes(order.status || 'pending')).length,
+    topProducts: Array.from(productTotals.values()).sort((a, b) => b.quantity - a.quantity).slice(0, 3),
+  };
+}
+
+function StoreQrCard({ slug, storeName }: { slug: string; storeName: string }) {
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const publicUrl = getPublicStoreUrl(slug);
+  const safeStoreName = normalizeSlug(storeName) || slug;
+
+  useEffect(() => {
+    let cancelled = false;
+    setQrError(null);
+    setQrDataUrl(null);
+
+    QRCode.toDataURL(publicUrl, {
+      errorCorrectionLevel: 'M',
+      margin: 2,
+      width: 320,
+      color: {
+        dark: '#111827',
+        light: '#ffffff',
+      },
+    })
+      .then((dataUrl) => {
+        if (!cancelled) setQrDataUrl(dataUrl);
+      })
+      .catch((error) => {
+        console.error('Error generando QR:', error);
+        if (!cancelled) setQrError('No pudimos generar el QR de esta tienda.');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [publicUrl]);
+
+  return (
+    <section className="mt-6 grid gap-5 rounded-2xl border border-orange-100 bg-white p-5 shadow-sm md:grid-cols-[auto_1fr] md:items-center">
+      <div className="flex h-40 w-40 items-center justify-center rounded-2xl border border-gray-200 bg-gray-50 p-3">
+        {qrDataUrl ? (
+          <img src={qrDataUrl} alt={`QR público de ${storeName}`} className="h-full w-full object-contain" />
+        ) : (
+          <div className="text-center text-xs font-semibold text-gray-500">{qrError || 'Generando QR…'}</div>
+        )}
+      </div>
+
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.24em] text-orange-600">QR de tienda</p>
+        <h2 className="mt-2 text-2xl font-black text-gray-950">Listo para imprimir o compartir</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">Este QR apunta a la URL pública de la tienda. Úsalo en mesa, vitrina, redes o empaques.</p>
+        <a href={publicUrl} target="_blank" rel="noreferrer" className="mt-3 block break-all text-sm font-semibold text-orange-700 hover:text-orange-900">
+          {publicUrl}
+        </a>
+        {qrDataUrl && (
+          <a
+            href={qrDataUrl}
+            download={`qr-${safeStoreName}.png`}
+            className="mt-4 inline-flex rounded-xl bg-gray-950 px-4 py-2 text-sm font-bold text-white transition hover:bg-gray-800"
+          >
+            Descargar QR PNG
+          </a>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function DesignPreview({ store }: { store: PublicStore }) {
   return (
     <section
@@ -949,6 +1276,7 @@ function makePreviewStore(form: StoreFormState, categories: CategoryDraft[], pro
           name: product.name.trim(),
           description: product.description.trim(),
           price: toOptionalNumber(product.price),
+          imageUrl: product.imageFile ? URL.createObjectURL(product.imageFile) : product.imageUrl,
           active: product.active,
           order: toOptionalNumber(product.order || String(productIndex)),
           ...(form.stockControl ? { trackStock: product.trackStock, stock: product.trackStock ? toOptionalNumber(product.stock) : 0 } : {}),
@@ -999,11 +1327,35 @@ function makePreviewStore(form: StoreFormState, categories: CategoryDraft[], pro
   };
 }
 
+function getOrderWhatsappHref(order: OrderDraft) {
+  const phone = (order.customerPhone || '').replace(/[^0-9]/g, '');
+
+  if (!phone) return null;
+
+  const statusLabel = ORDER_STATUSES.find((status) => status.value === order.status)?.label || 'Pendiente';
+  const summary = [
+    `Hola ${order.customerName || ''}`.trim(),
+    `Tu pedido está en estado: ${statusLabel}.`,
+    order.total ? `Total: ${order.total}` : null,
+  ].filter(Boolean).join('\n');
+
+  return `https://wa.me/${phone}?text=${encodeURIComponent(summary)}`;
+}
+
 function SectionTitle({ title, eyebrow }: { title: string; eyebrow?: string }) {
   return (
     <div className="mt-8 first:mt-0">
       {eyebrow && <p className="text-xs font-black uppercase tracking-[0.24em] text-orange-600">{eyebrow}</p>}
       <h2 className="mt-1 text-lg font-black text-gray-950">{title}</h2>
+    </div>
+  );
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">{label}</p>
+      <p className="mt-2 text-2xl font-black text-gray-950">{value}</p>
     </div>
   );
 }

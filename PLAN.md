@@ -376,6 +376,20 @@ src/
 
 ## 9) Etapas de desarrollo
 
+### Etapa -1 — Arquitectura de vibe coding
+
+**Objetivo:** crear una capa de trabajo para que el desarrollo asistido por agentes sea rápido, consistente y seguro.
+
+- [x] Crear `AGENTS.md` con reglas operativas del repo, rama base y checklist antes de PR.
+- [x] Crear playbook de buenas prácticas para Astro, React, Firebase y GitHub Pages.
+- [x] Crear playbook de diseño de interfaces, layouts, themes y estados visuales.
+- [x] Crear playbook para partir features grandes en cortes pequeños y verificables.
+- [x] Alinear README con los scripts administrativos existentes.
+
+**Entregable:** agentes y devs tienen instrucciones locales para construir sin desordenar arquitectura, UI ni costos de Firebase.
+
+---
+
 ### Etapa 0 — Setup técnico
 
 **Objetivo:** proyecto listo para desarrollar y desplegar gratis.
@@ -400,8 +414,8 @@ src/
 - [x] Hero con propuesta de valor: menús, catálogos y pedidos para tiendas.
 - [x] Sección de beneficios para restaurantes y emprendimientos.
 - [x] Sección de templates reales, explicando diferencia con themes.
-- [ ] Sección de precios/planes iniciales.
-- [ ] CTA por WhatsApp/contacto.
+- [x] Sección de precios/planes iniciales.
+- [x] CTA por WhatsApp/contacto.
 - [x] Footer con información básica.
 
 **Entregable:** landing estática responsive lista para mostrar a posibles clientes.
@@ -434,9 +448,9 @@ src/
 - [x] Cargar configuración de tienda con cache TTL.
 - [x] Cargar categorías e items activos.
 - [x] Renderizar template según `templateId`.
-- [ ] Mostrar contacto, horario y estado abierto/cerrado.
+- [x] Mostrar contacto, horario y estado abierto/cerrado.
 - [x] Agregar botón de WhatsApp.
-- [ ] Preparar SEO básico dinámico en cliente.
+- [x] Preparar SEO básico dinámico en cliente.
 
 **Entregable:** `/t/{storeSlug}` muestra menú o catálogo público desde Firestore.
 
@@ -447,14 +461,14 @@ src/
 **Objetivo:** el `storeadmin` gestiona su negocio sin ayuda técnica.
 
 - [x] Validar acceso: `users/{uid}.role === 'storeadmin'` y `storeId` coincide.
-- [ ] CRUD categorías.
-- [ ] CRUD items/productos.
-- [ ] Activar/desactivar items sin borrar.
-- [ ] Subir imágenes a Firebase Storage.
-- [ ] Cambiar template.
-- [ ] Cambiar theme básico.
-- [ ] Editar horario, contacto, dirección y redes.
-- [ ] Invalidar cache específico al guardar cambios.
+- [x] CRUD categorías.
+- [x] CRUD items/productos.
+- [x] Activar/desactivar items sin borrar.
+- [x] Subir imágenes a Firebase Storage.
+- [x] Cambiar template.
+- [x] Cambiar theme básico.
+- [x] Editar horario, contacto, dirección y redes.
+- [x] Invalidar cache específico al guardar cambios.
 
 **Entregable:** una tienda puede mantener su menú/catálogo desde el panel.
 
@@ -464,13 +478,13 @@ src/
 
 **Objetivo:** permitir que clientes hagan pedidos desde la vista pública.
 
-- [ ] Agregar carrito simple en cliente.
-- [ ] Pedido en tienda: nombre + teléfono + notas.
-- [ ] Pedido a domicilio: dirección + teléfono + notas.
-- [ ] Crear documento en `stores/{storeId}/orders`.
-- [ ] Panel admin muestra pedidos pendientes.
-- [ ] Cambiar estados: pendiente → aceptado → preparando → listo/entregado/cancelado.
-- [ ] Notificación manual por WhatsApp como primer paso.
+- [x] Agregar carrito simple en cliente.
+- [x] Pedido en tienda: nombre + teléfono + notas.
+- [x] Pedido a domicilio: dirección + teléfono + notas.
+- [x] Crear documento en `stores/{storeId}/orders`.
+- [x] Panel admin muestra pedidos pendientes.
+- [x] Cambiar estados: pendiente → aceptado → preparando → listo/entregado/cancelado.
+- [x] Notificación manual por WhatsApp como primer paso.
 
 **Entregable:** cliente crea pedido y la tienda lo gestiona desde su panel.
 
@@ -480,12 +494,12 @@ src/
 
 **Objetivo:** controlar disponibilidad de productos cuando aplique.
 
-- [ ] Campo `trackStock` por item.
-- [ ] Campo `stock` por item o variante.
-- [ ] Descontar stock al aceptar pedido, no necesariamente al crearlo.
-- [ ] Evitar aceptar pedidos con stock insuficiente.
-- [ ] Mostrar “agotado” en catálogo público.
-- [ ] Permitir ajuste manual de stock desde admin.
+- [x] Campo `trackStock` por item.
+- [x] Campo `stock` por item o variante.
+- [x] Descontar stock al aceptar pedido, no necesariamente al crearlo.
+- [x] Evitar aceptar pedidos con stock insuficiente.
+- [x] Mostrar “agotado” en catálogo público.
+- [x] Permitir ajuste manual de stock desde admin.
 
 **Entregable:** tiendas tipo catálogo pueden controlar disponibilidad sin sistema complejo de inventario.
 
@@ -499,7 +513,7 @@ src/
 - [x] Crear `layout-natural`.
 - [x] Crear `layout-warm`.
 - [x] Crear `layout-elegant`.
-- [ ] Definir API común de props para templates: `store`, `categories`, `items`, `theme`.
+- [x] Definir API común de props para templates: `store`, `categories`, `items`, `theme`.
 - [x] Definir themes como tokens de color/estilo separados del template.
 
 **Entregable:** el producto puede vender variedad real, no solo cambios de color.
@@ -508,13 +522,14 @@ src/
 
 ### Etapa 8 — Pulido comercial y técnico
 
-- [ ] Generación de QR por tienda.
-- [ ] PWA básica para acceso rápido desde celular.
-- [ ] Skeletons/loading states.
-- [ ] Error states claros.
-- [ ] Métricas básicas: pedidos del día, productos más pedidos, visitas estimadas.
-- [ ] Auditoría de lecturas Firestore.
-- [ ] Revisión de reglas de seguridad.
+- [x] Generación de QR por tienda.
+- [x] PWA básica para acceso rápido desde celular.
+- [x] Skeletons/loading states.
+- [x] Error states claros.
+- [x] Métricas básicas sin lecturas extra: pedidos del día y productos más pedidos desde los pedidos ya cargados.
+- [ ] Visitas estimadas sin riesgo de cuota: pendiente de decidir entre analytics externo, contador agregado diario o no medir en MVP.
+- [x] Auditoría de lecturas Firestore.
+- [x] Revisión de reglas de seguridad y doble check de roles/páginas/accesos.
 - [ ] Deploy final verificado.
 
 ---

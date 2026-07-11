@@ -1,0 +1,27 @@
+{
+  "name": "Menu Templates",
+  "short_name": "MenuTemplates",
+  "description": "Menús y catálogos multi-tienda para negocios.",
+  "start_url": "/menu-templates/",
+  "scope": "/menu-templates/",
+  "display": "standalone",
+  "background_color": "#fff8ef",
+  "theme_color": "#f97316",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/menu-templates/icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/menu-templates/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["business", "food", "shopping"],
+  "lang": "es-CO"
+}
