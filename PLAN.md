@@ -482,8 +482,8 @@ src/
 - [x] Pedido en tienda: nombre + teléfono + notas.
 - [x] Pedido a domicilio: dirección + teléfono + notas.
 - [x] Crear documento en `stores/{storeId}/orders`.
-- [ ] Panel admin muestra pedidos pendientes.
-- [ ] Cambiar estados: pendiente → aceptado → preparando → listo/entregado/cancelado.
+- [x] Panel admin muestra pedidos pendientes.
+- [x] Cambiar estados: pendiente → aceptado → preparando → listo/entregado/cancelado.
 - [ ] Notificación manual por WhatsApp como primer paso.
 
 **Entregable:** cliente crea pedido y la tienda lo gestiona desde su panel.

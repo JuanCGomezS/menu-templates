@@ -1,5 +1,5 @@
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, doc, getDoc, getDocs, limit, query, serverTimestamp, writeBatch, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, orderBy, query, serverTimestamp, writeBatch, where } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
@@ -18,8 +18,9 @@ import { PublicStoreTemplateView } from './RestaurantMenuView';
 type StoreType = 'restaurant' | 'food_business' | 'product_store';
 type PlanType = 'free_trial' | 'standard' | 'plus' | 'premium';
 type Currency = 'COP' | 'USD' | 'EUR';
+type OrderStatus = 'pending' | 'accepted' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
 type EditorMode = 'create' | 'edit';
-type TabId = 'general' | 'design' | 'operation' | 'products' | 'superadmin';
+type TabId = 'general' | 'design' | 'operation' | 'products' | 'orders' | 'superadmin';
 
 interface StoreData {
   id: string;
@@ -86,6 +87,18 @@ interface CategoryDraft {
   order: string;
 }
 
+interface OrderDraft {
+  id: string;
+  customerName?: string;
+  customerPhone?: string;
+  type?: 'in_store' | 'delivery';
+  status?: OrderStatus;
+  total?: number;
+  deliveryAddress?: string;
+  notes?: string;
+  items?: Array<{ name?: string; quantity?: number; price?: number; subtotal?: number }>;
+}
+
 interface ProductDraft {
   id: string;
   categoryId: string;
@@ -116,12 +129,21 @@ const PLANS: Array<{ value: PlanType; label: string }> = [
 ];
 
 const CURRENCIES: Currency[] = ['COP', 'USD', 'EUR'];
+const ORDER_STATUSES: Array<{ value: OrderStatus; label: string }> = [
+  { value: 'pending', label: 'Pendiente' },
+  { value: 'accepted', label: 'Aceptado' },
+  { value: 'preparing', label: 'Preparando' },
+  { value: 'ready', label: 'Listo' },
+  { value: 'delivered', label: 'Entregado' },
+  { value: 'cancelled', label: 'Cancelado' },
+];
 
 const TABS: Array<{ id: TabId; label: string; description: string }> = [
   { id: 'general', label: 'Datos principales', description: 'Información editable por la tienda.' },
   { id: 'design', label: 'Diseño', description: 'Template y apariencia pública.' },
   { id: 'operation', label: 'Operación', description: 'Contacto, domicilio y horarios.' },
   { id: 'products', label: 'Productos', description: 'Categorías, productos y stock.' },
+  { id: 'orders', label: 'Pedidos', description: 'Pedidos activos creados desde la tienda pública.' },
   { id: 'superadmin', label: 'Superadmin', description: 'Plan, límites, slug y control interno.' },
 ];
 
@@ -369,6 +391,8 @@ export default function StoreEditorPage() {
   const [isDirty, setIsDirty] = useState(false);
   const [categoryDrafts, setCategoryDrafts] = useState<CategoryDraft[]>([]);
   const [productDrafts, setProductDrafts] = useState<ProductDraft[]>([]);
+  const [orders, setOrders] = useState<OrderDraft[]>([]);
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
 
   const templates = useMemo(() => getAllTemplates(), []);
   const themes = useMemo(() => getAllThemes(), []);
@@ -395,6 +419,7 @@ export default function StoreEditorPage() {
         setForm(emptyForm());
         setCategoryDrafts([]);
         setProductDrafts([]);
+        setOrders([]);
         setIsDirty(false);
         setStatus('allowed');
         return;
@@ -411,7 +436,7 @@ export default function StoreEditorPage() {
 
         setMode('edit');
         setForm(formFromStore({ id: snapshot.id, ...snapshot.data() } as StoreData));
-        await loadStoreProducts(snapshot.id);
+        await Promise.all([loadStoreProducts(snapshot.id), loadStoreOrders(snapshot.id)]);
         setIsDirty(false);
         setStatus('allowed');
       } catch (err) {
@@ -487,6 +512,26 @@ export default function StoreEditorPage() {
     }).sort((a, b) => toOptionalNumber(a.order) - toOptionalNumber(b.order)));
   };
 
+  const loadStoreOrders = async (storeId: string) => {
+    const ordersQuery = query(collection(db, 'stores', storeId, 'orders'), orderBy('createdAt', 'desc'), limit(50));
+    const snapshot = await getDocs(ordersQuery);
+
+    setOrders(snapshot.docs.map((orderDoc) => {
+      const data = orderDoc.data();
+      return {
+        id: orderDoc.id,
+        customerName: typeof data.customerName === 'string' ? data.customerName : '',
+        customerPhone: typeof data.customerPhone === 'string' ? data.customerPhone : '',
+        type: data.type === 'delivery' ? 'delivery' : 'in_store',
+        status: ORDER_STATUSES.some((status) => status.value === data.status) ? data.status : 'pending',
+        total: typeof data.total === 'number' ? data.total : 0,
+        deliveryAddress: typeof data.deliveryAddress === 'string' ? data.deliveryAddress : '',
+        notes: typeof data.notes === 'string' ? data.notes : '',
+        items: Array.isArray(data.items) ? data.items : [],
+      };
+    }));
+  };
+
   const addCategory = () => {
     setCategoryDrafts((current) => [...current, createCategoryDraft(current.length)]);
     setIsDirty(true);
@@ -519,6 +564,31 @@ export default function StoreEditorPage() {
   const removeProduct = (id: string) => {
     setProductDrafts((current) => current.filter((product) => product.id !== id));
     setIsDirty(true);
+  };
+
+  const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+    if (!form.id) return;
+
+    setUpdatingOrderId(orderId);
+    setError(null);
+    setMessage(null);
+
+    try {
+      const batch = writeBatch(db);
+      batch.update(doc(db, 'stores', form.id, 'orders', orderId), {
+        status,
+        updatedAt: serverTimestamp(),
+      });
+      await batch.commit();
+      setOrders((current) => current.map((order) => order.id === orderId ? { ...order, status } : order));
+      setMessageTone('done');
+      setMessage('Estado del pedido actualizado.');
+    } catch (err) {
+      console.error('Error al actualizar pedido:', err);
+      setError('No pudimos actualizar el pedido. Revisa permisos e intenta de nuevo.');
+    } finally {
+      setUpdatingOrderId(null);
+    }
   };
 
   const getStoreAdminUserId = async (email: string) => {
@@ -907,6 +977,57 @@ export default function StoreEditorPage() {
                         </section>
                       );
                     })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'orders' && (
+            <div id="store-editor-orders" role="tabpanel">
+              <div className="mt-4 space-y-4">
+                <div className="rounded-2xl border border-orange-100 bg-orange-50 p-4 text-sm leading-6 text-orange-950">
+                  <p className="font-black">Pedidos activos</p>
+                  <p>Muestra los últimos 50 pedidos creados desde la tienda pública. Para el MVP, el cambio de estado es manual.</p>
+                </div>
+
+                {orders.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-sm leading-6 text-gray-600">
+                    Todavía no hay pedidos para esta tienda.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {orders.map((order) => (
+                      <article key={order.id} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-start">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="font-black text-gray-950">{order.customerName || 'Cliente sin nombre'}</p>
+                              <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-bold text-gray-600">{order.type === 'delivery' ? 'Domicilio' : 'En tienda'}</span>
+                              <span className="rounded-full bg-orange-50 px-2 py-1 text-xs font-bold text-orange-700">{ORDER_STATUSES.find((status) => status.value === order.status)?.label || 'Pendiente'}</span>
+                            </div>
+                            <p className="mt-1 text-sm text-gray-600">Tel: {order.customerPhone || 'Sin teléfono'}</p>
+                            {order.deliveryAddress && <p className="mt-1 text-sm text-gray-600">Dirección: {order.deliveryAddress}</p>}
+                            {order.notes && <p className="mt-1 text-sm text-gray-600">Notas: {order.notes}</p>}
+                            <ul className="mt-3 space-y-1 text-sm text-gray-700">
+                              {(order.items || []).map((item, index) => (
+                                <li key={`${order.id}-${index}`} className="flex justify-between gap-3">
+                                  <span>{item.quantity || 1}× {item.name || 'Producto'}</span>
+                                  <span className="font-semibold">{formatPrice(item.subtotal || ((item.price || 0) * (item.quantity || 1)), form.currency)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                            <p className="mt-3 text-lg font-black text-gray-950">Total: {formatPrice(order.total || 0, form.currency)}</p>
+                          </div>
+
+                          <Field label="Estado">
+                            <select value={order.status || 'pending'} disabled={updatingOrderId === order.id} onChange={(event) => updateOrderStatus(order.id, event.target.value as OrderStatus)} className={COMPACT_INPUT_CLASS}>
+                              {ORDER_STATUSES.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
+                            </select>
+                          </Field>
+                        </div>
+                      </article>
+                    ))}
                   </div>
                 )}
               </div>
