@@ -96,6 +96,7 @@ interface OrderDraft {
   total?: number;
   deliveryAddress?: string;
   notes?: string;
+  createdAtMs?: number;
   items?: Array<{ itemId?: string; name?: string; quantity?: number; price?: number; subtotal?: number }>;
 }
 
@@ -398,6 +399,7 @@ export default function StoreEditorPage() {
   const templates = useMemo(() => getAllTemplates(), []);
   const themes = useMemo(() => getAllThemes(), []);
   const designPreviewStore = useMemo(() => makePreviewStore(form, categoryDrafts, productDrafts), [form, categoryDrafts, productDrafts]);
+  const orderMetrics = useMemo(() => getOrderMetrics(orders), [orders]);
   const visibleTabs = useMemo(() => TABS.filter((tab) => isSuperAdmin || tab.id !== 'superadmin'), [isSuperAdmin]);
 
   useEffect(() => {
@@ -539,6 +541,7 @@ export default function StoreEditorPage() {
         total: typeof data.total === 'number' ? data.total : 0,
         deliveryAddress: typeof data.deliveryAddress === 'string' ? data.deliveryAddress : '',
         notes: typeof data.notes === 'string' ? data.notes : '',
+        createdAtMs: typeof data.createdAt?.toMillis === 'function' ? data.createdAt.toMillis() : undefined,
         items: Array.isArray(data.items) ? data.items : [],
       };
     }));
@@ -1039,6 +1042,24 @@ export default function StoreEditorPage() {
                   <p>Muestra los últimos 50 pedidos creados desde la tienda pública. Para el MVP, el cambio de estado es manual.</p>
                 </div>
 
+                <div className="grid gap-3 md:grid-cols-3">
+                  <MetricCard label="Pedidos de hoy" value={String(orderMetrics.todayCount)} />
+                  <MetricCard label="Ventas de hoy" value={formatPrice(orderMetrics.todayRevenue, form.currency)} />
+                  <MetricCard label="Pedidos activos" value={String(orderMetrics.activeCount)} />
+                </div>
+
+                {orderMetrics.topProducts.length > 0 && (
+                  <div className="rounded-2xl border border-gray-200 bg-white p-4 text-sm shadow-sm">
+                    <p className="font-black text-gray-950">Productos más pedidos</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {orderMetrics.topProducts.map((product) => (
+                        <span key={product.name} className="rounded-full bg-gray-100 px-3 py-1 font-bold text-gray-700">{product.name} · {product.quantity}</span>
+                      ))}
+                    </div>
+                    <p className="mt-3 text-xs leading-5 text-gray-500">Métricas calculadas sobre los últimos 50 pedidos ya cargados; no generan lecturas adicionales en Firebase.</p>
+                  </div>
+                )}
+
                 {orders.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-sm leading-6 text-gray-600">
                     Todavía no hay pedidos para esta tienda.
@@ -1126,6 +1147,30 @@ export default function StoreEditorPage() {
       </form>
     </EditorShell>
   );
+}
+
+function getOrderMetrics(orders: OrderDraft[]) {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const startMs = startOfToday.getTime();
+  const activeStatuses: OrderStatus[] = ['pending', 'accepted', 'preparing', 'ready'];
+  const todayOrders = orders.filter((order) => (order.createdAtMs || 0) >= startMs);
+  const productTotals = new Map<string, { name: string; quantity: number }>();
+
+  orders.forEach((order) => {
+    (order.items || []).forEach((item) => {
+      const name = item.name || 'Producto';
+      const current = productTotals.get(name) || { name, quantity: 0 };
+      productTotals.set(name, { name, quantity: current.quantity + (item.quantity || 1) });
+    });
+  });
+
+  return {
+    todayCount: todayOrders.length,
+    todayRevenue: todayOrders.reduce((sum, order) => sum + (order.total || 0), 0),
+    activeCount: orders.filter((order) => activeStatuses.includes(order.status || 'pending')).length,
+    topProducts: Array.from(productTotals.values()).sort((a, b) => b.quantity - a.quantity).slice(0, 3),
+  };
 }
 
 function StoreQrCard({ slug, storeName }: { slug: string; storeName: string }) {
@@ -1302,6 +1347,15 @@ function SectionTitle({ title, eyebrow }: { title: string; eyebrow?: string }) {
     <div className="mt-8 first:mt-0">
       {eyebrow && <p className="text-xs font-black uppercase tracking-[0.24em] text-orange-600">{eyebrow}</p>}
       <h2 className="mt-1 text-lg font-black text-gray-950">{title}</h2>
+    </div>
+  );
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+      <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">{label}</p>
+      <p className="mt-2 text-2xl font-black text-gray-950">{value}</p>
     </div>
   );
 }

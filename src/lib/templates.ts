@@ -1,3 +1,5 @@
+import type { PublicCategory, PublicItem, PublicStore } from './store-helpers';
+
 export type TemplateComponent = 'minimal' | 'natural' | 'warm' | 'elegant';
 export type ThemeComponent =
     | 'default'
@@ -249,4 +251,30 @@ export function getAllTemplates(): TemplateConfig[] {
 
 export function getAllThemes(): ThemeConfig[] {
     return Object.values(THEMES);
+}
+
+
+export interface TemplateViewModel {
+    store: PublicStore;
+    categories: PublicCategory[];
+    items: PublicItem[];
+    theme: ThemeConfig;
+    template: TemplateConfig;
+    currency: PublicStore['currency'];
+    capabilities: PublicStore['capabilities'];
+}
+
+export function createTemplateViewModel(store: PublicStore): TemplateViewModel {
+    const template = resolveTemplate(store.templateId || '');
+    const theme = resolveStoreTheme(store.templateId || '', store.themeId);
+
+    return {
+        store,
+        categories: store.categories,
+        items: store.categories.flatMap((category) => category.items),
+        theme,
+        template,
+        currency: store.currency,
+        capabilities: store.capabilities,
+    };
 }

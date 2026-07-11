@@ -513,7 +513,7 @@ src/
 - [x] Crear `layout-natural`.
 - [x] Crear `layout-warm`.
 - [x] Crear `layout-elegant`.
-- [ ] Definir API común de props para templates: `store`, `categories`, `items`, `theme`.
+- [x] Definir API común de props para templates: `store`, `categories`, `items`, `theme`.
 - [x] Definir themes como tokens de color/estilo separados del template.
 
 **Entregable:** el producto puede vender variedad real, no solo cambios de color.
@@ -524,9 +524,10 @@ src/
 
 - [x] Generación de QR por tienda.
 - [x] PWA básica para acceso rápido desde celular.
-- [ ] Skeletons/loading states.
+- [x] Skeletons/loading states.
 - [x] Error states claros.
-- [ ] Métricas básicas: pedidos del día, productos más pedidos, visitas estimadas.
+- [x] Métricas básicas sin lecturas extra: pedidos del día y productos más pedidos desde los pedidos ya cargados.
+- [ ] Visitas estimadas sin riesgo de cuota: pendiente de decidir entre analytics externo, contador agregado diario o no medir en MVP.
 - [x] Auditoría de lecturas Firestore.
 - [x] Revisión de reglas de seguridad y doble check de roles/páginas/accesos.
 - [ ] Deploy final verificado.

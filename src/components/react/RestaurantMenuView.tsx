@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { formatDayName, formatPrice, sortScheduleDays } from '../../lib/utils';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { getPublicStoreBySlug } from '../../lib/public-store-data';
-import { getTemplateComponent, resolveStoreTheme, type TemplateComponent, type ThemeConfig } from '../../lib/templates';
+import { createTemplateViewModel, getTemplateComponent, type TemplateComponent, type TemplateViewModel, type ThemeConfig } from '../../lib/templates';
 import { withBasePath } from '../../lib/base-path';
 import { db } from '../../lib/firebase';
 import type { PublicCategory, PublicItem, PublicStore } from '../../lib/store-helpers';
@@ -23,6 +23,7 @@ interface Props {
 
 interface StoreViewProps {
   store: StoreData;
+  view: TemplateViewModel;
   schedule: ScheduleEntry[];
   theme: ThemeConfig;
   isOpen: boolean | null;
@@ -137,8 +138,9 @@ function setCanonical(href: string) {
 
 export function PublicStoreTemplateView({ store }: { store: StoreData }) {
   const [cart, setCart] = useState<CartLine[]>([]);
+  const view = createTemplateViewModel(store);
   const template = getTemplateComponent(store.templateId || '');
-  const theme = resolveStoreTheme(store.templateId || '', store.themeId);
+  const theme = view.theme;
   const schedule = store.schedule ? sortScheduleDays(store.schedule) : [];
   const isOpen = getCurrentOpenStatus(store.schedule);
   const Layout = layoutRenderers[template] || MinimalLayout;
@@ -165,7 +167,7 @@ export function PublicStoreTemplateView({ store }: { store: StoreData }) {
 
   return (
     <ThemeFrame theme={theme}>
-      <Layout store={store} schedule={schedule} theme={theme} isOpen={isOpen} onAddToCart={addToCart} />
+      <Layout store={store} view={view} schedule={schedule} theme={theme} isOpen={isOpen} onAddToCart={addToCart} />
       <OrderCart store={store} cart={cart} onUpdateQuantity={updateQuantity} onClear={clearCart} />
     </ThemeFrame>
   );
@@ -173,12 +175,30 @@ export function PublicStoreTemplateView({ store }: { store: StoreData }) {
 
 function LoadingState() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="text-center" role="status" aria-live="polite">
-        <div aria-hidden="true" className="mx-auto mb-4 h-16 w-16 animate-spin rounded-full border-b-4 border-t-4 border-orange-500 motion-reduce:animate-none" />
-        <p className="text-xl text-gray-600">Cargando tienda…</p>
+    <main className="min-h-screen overflow-hidden bg-[#fff8ef] px-4 py-8 text-gray-950" role="status" aria-live="polite">
+      <div className="mx-auto max-w-6xl">
+        <div className="grid gap-8 rounded-[2.5rem] border border-orange-100 bg-white/80 p-6 shadow-xl md:p-8 lg:grid-cols-[1fr_22rem]">
+          <div>
+            <div className="h-5 w-40 animate-pulse rounded-full bg-orange-100 motion-reduce:animate-none" />
+            <div className="mt-6 h-14 w-3/4 animate-pulse rounded-2xl bg-gray-200 motion-reduce:animate-none" />
+            <div className="mt-4 h-5 w-1/2 animate-pulse rounded-full bg-gray-100 motion-reduce:animate-none" />
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              {[0, 1, 2, 3].map((item) => (
+                <div key={item} className="rounded-2xl border border-gray-100 bg-white p-4">
+                  <div className="h-4 w-2/3 animate-pulse rounded bg-gray-200 motion-reduce:animate-none" />
+                  <div className="mt-3 h-3 w-full animate-pulse rounded bg-gray-100 motion-reduce:animate-none" />
+                  <div className="mt-4 h-7 w-24 animate-pulse rounded-full bg-orange-100 motion-reduce:animate-none" />
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="hidden rounded-[2rem] bg-gradient-to-br from-orange-100 to-amber-50 p-5 md:block">
+            <div className="aspect-square animate-pulse rounded-[1.75rem] bg-white/70 motion-reduce:animate-none" />
+            <p className="mt-5 text-sm font-black uppercase tracking-[0.24em] text-orange-600">Cargando tienda…</p>
+          </div>
+        </div>
       </div>
-    </div>
+    </main>
   );
 }
 
@@ -393,13 +413,13 @@ function CategoryList({ store, variant, onAddToCart }: { store: StoreData; varia
   return (
     <div className="space-y-10">
       {store.categories.map((category) => (
-        <CategorySection key={category.id} store={store} category={category} variant={variant} />
+        <CategorySection key={category.id} store={store} category={category} variant={variant} onAddToCart={onAddToCart} />
       ))}
     </div>
   );
 }
 
-function CategorySection({ store, category, variant }: { store: StoreData; category: PublicCategory; variant: 'minimal' | 'natural' | 'warm' | 'elegant' }) {
+function CategorySection({ store, category, variant, onAddToCart }: { store: StoreData; category: PublicCategory; variant: 'minimal' | 'natural' | 'warm' | 'elegant'; onAddToCart: (item: PublicItem) => void }) {
   const headingClass = {
     minimal: 'border-b border-stone-300 pb-3 text-stone-950',
     natural: 'rounded-[1.5rem] border border-white/80 bg-white/80 px-4 py-3 text-emerald-950 shadow-sm ring-1 ring-emerald-100 backdrop-blur',
