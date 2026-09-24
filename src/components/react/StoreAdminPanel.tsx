@@ -5,7 +5,7 @@ import type React from 'react';
 import { getUserProfile, ROLES } from '../../lib/auth';
 import { auth } from '../../lib/firebase';
 import { getStoreForAdminById, getStoreForAdminBySlug } from '../../lib/public-store-data';
-import { getHistoricalOrdersForStore, getOrdersForStoreDay, updateOrderStatus, type OrderStatus, type StoreOrder } from '../../lib/orders';
+import { getHistoricalOrdersForStore, getOrdersForStoreDay, transitionOrderStatus, type OrderStatus, type StoreOrder } from '../../lib/orders';
 import { formatPrice } from '../../lib/utils';
 import { withBasePath } from '../../lib/base-path';
 import AppFooter from './AppFooter';
@@ -113,7 +113,7 @@ function OrdersQueue({ store }: { store: StoreAccess }) {
   const changeStatus = async (order: StoreOrder, nextStatus: OrderStatus) => {
     try {
       setUpdatingId(order.id);
-      await updateOrderStatus(store.id, order.id, nextStatus);
+      await transitionOrderStatus(store.id, order.id, nextStatus);
       setOrders((current) => current.map((item) => item.id === order.id ? { ...item, status: nextStatus } : item));
     } catch (error) {
       console.error('No se pudo actualizar el pedido:', error);

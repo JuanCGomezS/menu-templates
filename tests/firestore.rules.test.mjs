@@ -41,6 +41,7 @@ function publicOrder(overrides = {}) {
     customerPhone: '+57 300 123 4567',
     type: 'in_store',
     tableNumber: 12,
+    clientRequestId: 'public-order-request',
     status: 'pending',
     items: [{ itemId: 'item-1', name: 'Hamburguesa', quantity: 1, price: 18000 }],
     total: 18000,

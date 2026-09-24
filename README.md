@@ -203,3 +203,9 @@ Al ingresar como `storeadmin`, `/t/{slug}/admin` abre directamente la cola de pe
 La cola consulta solo `stores/{storeId}/orders` dentro de un rango explícito de inicio/fin del día local, ordena por `createdAt`, limita cada página a 25 documentos y permite cargar la página siguiente. Desde allí se puede atender el pedido con las transiciones pendiente → aceptado → preparando → listo → entregado, o cancelarlo.
 
 La pestaña **Estadísticas** incluye un calendario nativo para un día o un rango de hasta 31 días. Muestra pedidos, ventas (sin cancelados) y productos destacados, y conserva el mismo límite/paginación de 25 documentos. El índice compuesto `orders(status, createdAt desc)` está en `firestore.indexes.json` para la cola de pedidos activos; desplegalo junto a reglas e índices con `firebase deploy --only firestore`.
+
+## Pedido público y stock
+
+El carrito público puede minimizarse sin perder sus productos. Antes de agregar o confirmar, valida la modalidad configurada en la tienda, la disponibilidad del producto y el stock visible. La confirmación queda bloqueada mientras se envía y usa un identificador único por intento para evitar duplicados; ante un error conserva el carrito para reintentar.
+
+La atención administrativa usa `transitionOrderStatus`: al aceptar, una transacción comprueba disponibilidad y descuenta stock de los productos que lo controlan; al cancelar un pedido aceptado, preparando o listo, la misma transacción lo repone. No se descuenta en la creación pública ni se repone después de entregarlo.

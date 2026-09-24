@@ -1,4 +1,4 @@
-import { addDoc, collection, getDocs, limit, orderBy, query, serverTimestamp, startAfter, Timestamp, updateDoc, doc, where, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { collection, doc, getDocs, limit, orderBy, query, runTransaction, serverTimestamp, setDoc, startAfter, Timestamp, where, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 
 export const ORDER_MODES = ['in_store', 'delivery'] as const;
@@ -41,8 +41,10 @@ export function validatePublicOrder(input: PublicOrderInput, capabilities: Order
 }
 
 /** Writes only an already validated, normalized public order. */
-export async function createPublicOrder(storeId: string, order: PublicOrderInput) {
-  return addDoc(collection(db, 'stores', storeId, 'orders'), { ...order, status: 'pending', createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+export async function createPublicOrder(storeId: string, order: PublicOrderInput, clientRequestId: string) {
+  if (!/^[a-zA-Z0-9_-]{8,100}$/.test(clientRequestId)) throw new Error('El identificador de pedido no es válido.');
+  // A stable id makes a retry idempotent and prevents duplicate submits from a double click.
+  return setDoc(doc(db, 'stores', storeId, 'orders', clientRequestId), { ...order, clientRequestId, status: 'pending', createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
 }
 
 export interface StoreOrder {
@@ -54,7 +56,7 @@ export interface StoreOrder {
   deliveryAddress?: string;
   status?: OrderStatus;
   total?: number;
-  items?: Array<{ name?: string; quantity?: number }>;
+  items?: Array<{ itemId?: string; name?: string; quantity?: number; price?: number }>;
   createdAt?: Timestamp;
 }
 
@@ -136,8 +138,47 @@ export async function getOrdersForStoreDay(storeId: string, timeZone: string, cu
   return { orders: snapshot.docs.map((orderDoc) => ({ id: orderDoc.id, ...orderDoc.data() } as StoreOrder)), cursor: snapshot.docs.at(-1) || null };
 }
 
-export async function updateOrderStatus(storeId: string, orderId: string, status: OrderStatus) {
-  await updateDoc(doc(db, 'stores', storeId, 'orders', orderId), { status, updatedAt: serverTimestamp() });
+const STATUS_TRANSITIONS: Partial<Record<OrderStatus, OrderStatus[]>> = {
+  pending: ['accepted', 'cancelled'],
+  accepted: ['preparing', 'cancelled'],
+  preparing: ['ready', 'cancelled'],
+  ready: ['delivered', 'cancelled'],
+};
+
+/**
+ * Applies an operational status change atomically. Stock is deducted only on
+ * acceptance and restored only when an accepted/prepared/ready order is cancelled.
+ */
+export async function transitionOrderStatus(storeId: string, orderId: string, nextStatus: OrderStatus) {
+  await runTransaction(db, async (transaction) => {
+    const orderRef = doc(db, 'stores', storeId, 'orders', orderId);
+    const orderSnapshot = await transaction.get(orderRef);
+    if (!orderSnapshot.exists()) throw new Error('El pedido ya no existe.');
+    const order = orderSnapshot.data() as StoreOrder;
+    if (!order.status || !STATUS_TRANSITIONS[order.status]?.includes(nextStatus)) throw new Error('La transición de estado no está permitida.');
+    const orderItems = order.items || [];
+    const itemSnapshots = await Promise.all(orderItems.map((item) => transaction.get(doc(db, 'stores', storeId, 'items', item.itemId || ''))));
+
+    for (let index = 0; index < itemSnapshots.length; index += 1) {
+      const item = itemSnapshots[index].data();
+      const orderItem = orderItems[index];
+      if (!item || !Number.isInteger(orderItem.quantity) || orderItem.quantity < 1) throw new Error('El pedido contiene un producto inválido.');
+      if (nextStatus === 'accepted') {
+        const availableForMode = order.type === 'delivery' ? item.availableForDelivery !== false : item.availableInStore !== false;
+        if (item.active === false || !availableForMode) throw new Error(`El producto ${item.name || orderItem.name || ''} ya no está disponible.`);
+        if (item.trackStock === true && (!Number.isInteger(item.stock) || item.stock < orderItem.quantity)) throw new Error(`No hay stock suficiente para ${item.name || orderItem.name || ''}.`);
+      }
+    }
+
+    const restoresStock = nextStatus === 'cancelled' && ['accepted', 'preparing', 'ready'].includes(order.status);
+    if (nextStatus === 'accepted' || restoresStock) {
+      itemSnapshots.forEach((snapshot, index) => {
+        const item = snapshot.data();
+        if (item?.trackStock === true) transaction.update(snapshot.ref, { stock: item.stock + (restoresStock ? orderItems[index].quantity : -orderItems[index].quantity), updatedAt: serverTimestamp() });
+      });
+    }
+    transaction.update(orderRef, { status: nextStatus, updatedAt: serverTimestamp() });
+  });
 }
 
 /** Legacy bounded active-orders query retained for existing integrations. */

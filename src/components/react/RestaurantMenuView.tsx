@@ -4,6 +4,7 @@ import { getPublicStoreBySlug } from '../../lib/public-store-data';
 import { getTemplateComponent, resolveStoreTheme, type TemplateComponent, type ThemeConfig } from '../../lib/templates';
 import { withBasePath } from '../../lib/base-path';
 import type { PublicCategory, PublicItem, PublicStore } from '../../lib/store-helpers';
+import { PublicOrderCartProvider, usePublicOrderCart } from './PublicOrderCart';
 
 type StoreData = PublicStore;
 type ScheduleEntry = [string, string];
@@ -80,11 +81,10 @@ export function PublicStoreTemplateView({ store }: { store: StoreData }) {
   const isOpen = getCurrentOpenStatus(store.schedule);
   const Layout = layoutRenderers[template] || MinimalLayout;
 
-  return (
-    <ThemeFrame theme={theme}>
-      <Layout store={store} schedule={schedule} theme={theme} isOpen={isOpen} />
-    </ThemeFrame>
-  );
+  const content = <ThemeFrame theme={theme}><Layout store={store} schedule={schedule} theme={theme} isOpen={isOpen} /></ThemeFrame>;
+  return store.capabilities?.inStoreOrdering || store.capabilities?.deliveryOrdering
+    ? <PublicOrderCartProvider store={store}>{content}</PublicOrderCartProvider>
+    : content;
 }
 
 function LoadingState() {
@@ -341,6 +341,7 @@ function CategorySection({ store, category, variant }: { store: StoreData; categ
 }
 
 function MenuItemCard({ item, store, variant }: { item: PublicItem; store: StoreData; variant: 'minimal' | 'natural' | 'warm' | 'elegant' }) {
+  const { addItem } = usePublicOrderCart();
   const soldOut = item.trackStock && typeof item.stock === 'number' && item.stock <= 0;
   const base = 'border p-4 transition-transform transition-shadow hover:-translate-y-0.5 hover:shadow-lg motion-reduce:transform-none motion-reduce:transition-none';
   const variants = {
@@ -363,9 +364,12 @@ function MenuItemCard({ item, store, variant }: { item: PublicItem; store: Store
           {item.description && <p className="mt-1 break-words text-sm leading-6 opacity-75">{item.description}</p>}
           {soldOut && <p className="mt-2 text-sm font-bold text-red-600">Agotado</p>}
         </div>
-        <span className={`shrink-0 rounded-full px-3 py-1 text-sm font-black ${priceClass}`}>
-          {formatPrice(item.price, store.currency)}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <span className={`rounded-full px-3 py-1 text-sm font-black ${priceClass}`}>
+            {formatPrice(item.price, store.currency)}
+          </span>
+          {(store.capabilities?.inStoreOrdering || store.capabilities?.deliveryOrdering) && !soldOut && <button type="button" onClick={() => addItem(item)} className="rounded-lg border border-current px-2 py-1 text-xs font-bold">Agregar</button>}
+        </div>
       </div>
     </article>
   );
