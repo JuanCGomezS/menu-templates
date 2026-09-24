@@ -201,3 +201,5 @@ Usá `validatePublicOrder(input, store.capabilities)` desde `src/lib/orders.ts` 
 Al ingresar como `storeadmin`, `/t/{slug}/admin` abre directamente la cola de pedidos del día. La zona horaria IANA se configura en **Operación > Zona horaria de operación**; las tiendas existentes sin ese campo usan `America/Bogota` de forma compatible.
 
 La cola consulta solo `stores/{storeId}/orders` dentro de un rango explícito de inicio/fin del día local, ordena por `createdAt`, limita cada página a 25 documentos y permite cargar la página siguiente. Desde allí se puede atender el pedido con las transiciones pendiente → aceptado → preparando → listo → entregado, o cancelarlo.
+
+La pestaña **Estadísticas** incluye un calendario nativo para un día o un rango de hasta 31 días. Muestra pedidos, ventas (sin cancelados) y productos destacados, y conserva el mismo límite/paginación de 25 documentos. El índice compuesto `orders(status, createdAt desc)` está en `firestore.indexes.json` para la cola de pedidos activos; desplegalo junto a reglas e índices con `firebase deploy --only firestore`.

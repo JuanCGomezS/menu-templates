@@ -54,11 +54,13 @@ export interface StoreOrder {
   deliveryAddress?: string;
   status?: OrderStatus;
   total?: number;
+  items?: Array<{ name?: string; quantity?: number }>;
   createdAt?: Timestamp;
 }
 
 export interface OrdersPage { orders: StoreOrder[]; cursor: QueryDocumentSnapshot | null; }
 export interface DayRange { start: Date; end: Date; }
+export interface HistoricalOrdersPage extends OrdersPage { range: DayRange; }
 
 function localDateParts(date: Date, timeZone: string) {
   const parts = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date);
@@ -85,6 +87,39 @@ export function getStoreDayRange(timeZone = 'America/Bogota', now = new Date()):
   } catch {
     return getStoreDayRange('America/Bogota', now);
   }
+}
+
+function dateStringToParts(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) throw new Error('La fecha debe tener formato AAAA-MM-DD.');
+  const [year, month, day] = match.slice(1).map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) throw new Error('La fecha no es válida.');
+  return { year, month, day };
+}
+
+/** Returns an inclusive, bounded calendar range in the store's time zone. */
+export function getStoreDateRange(startDate: string, endDate: string, timeZone = 'America/Bogota'): DayRange {
+  const start = dateStringToParts(startDate);
+  const end = dateStringToParts(endDate);
+  const endUtcDate = new Date(Date.UTC(end.year, end.month - 1, end.day + 1));
+  const endNext = { year: endUtcDate.getUTCFullYear(), month: endUtcDate.getUTCMonth() + 1, day: endUtcDate.getUTCDate() };
+  const range = { start: zonedMidnightToUtc(start, timeZone), end: zonedMidnightToUtc(endNext, timeZone) };
+  if (range.end <= range.start || range.end.getTime() - range.start.getTime() > 31 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000) throw new Error('Selecciona un rango entre 1 y 31 días.');
+  return range;
+}
+
+export async function getHistoricalOrdersForStore(storeId: string, startDate: string, endDate: string, timeZone: string, cursor?: QueryDocumentSnapshot | null): Promise<HistoricalOrdersPage> {
+  const range = getStoreDateRange(startDate, endDate, timeZone);
+  const snapshot = await getDocs(query(
+    collection(db, 'stores', storeId, 'orders'),
+    where('createdAt', '>=', Timestamp.fromDate(range.start)),
+    where('createdAt', '<', Timestamp.fromDate(range.end)),
+    orderBy('createdAt', 'desc'),
+    ...(cursor ? [startAfter(cursor)] : []),
+    limit(ADMIN_ORDER_LIMIT),
+  ));
+  return { orders: snapshot.docs.map((orderDoc) => ({ id: orderDoc.id, ...orderDoc.data() } as StoreOrder)), cursor: snapshot.docs.at(-1) || null, range };
 }
 
 /** Fetches one bounded, paginable queue page for the store's current local day. */
