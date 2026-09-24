@@ -99,6 +99,24 @@ test('storeadmin puede cargar pedidos activos únicamente de su tienda', async (
   await assertFails(getDocs(otherStoreOrders));
 });
 
+test('storeadmin no puede cambiar campos administrativos de su tienda', async () => {
+  await assertFails(
+    setDoc(doc(adminDb('admin-a'), 'stores', 'store-a'), { active: false }, { merge: true }),
+  );
+  await assertSucceeds(
+    setDoc(doc(adminDb('admin-a'), 'stores', 'store-a'), { name: 'Nuevo nombre' }, { merge: true }),
+  );
+});
+
+test('storeadmin solo puede actualizar el estado de un pedido', async () => {
+  await assertSucceeds(
+    setDoc(doc(adminDb('admin-a'), 'stores', 'store-a', 'orders', 'active-a'), { status: 'accepted' }, { merge: true }),
+  );
+  await assertFails(
+    setDoc(doc(adminDb('admin-a'), 'stores', 'store-a', 'orders', 'active-a'), { total: 1 }, { merge: true }),
+  );
+});
+
 test('un pedido público válido solo se crea en una tienda activa', async () => {
   await assertSucceeds(
     setDoc(doc(publicDb(), 'stores', 'store-a', 'orders', 'public-order'), publicOrder()),

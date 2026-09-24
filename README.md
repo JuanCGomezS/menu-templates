@@ -217,3 +217,7 @@ El editor usa cards de plantilla en lugar de renderizar una tienda completa dent
 ## Layouts y themes
 
 Las cuatro plantillas consumen el mismo `StoreContentModel` normalizado; cambian jerarquía, navegación, densidad y composición sin alterar los datos. Los themes solo inyectan tokens de paleta y contraste. La lista de comprobación móvil/escritorio, incluido carrito, carga, error y vacío, está en [`docs/visual-layout-checklist.md`](docs/visual-layout-checklist.md).
+
+## Release y rutas estáticas
+
+Usá `npm run verify` antes de publicar: ejecuta typecheck, pruebas de reglas con Emulator, build y validación de archivos estáticos. El workflow de `main` despliega coordinadamente Firestore Rules, índices y Storage Rules antes de GitHub Pages; requiere el secreto `FIREBASE_SERVICE_ACCOUNT`. La verificación de carga directa/refresh y el registro de evidencia de producción están en [`docs/release-checklist.md`](docs/release-checklist.md).

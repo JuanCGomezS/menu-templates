@@ -1,0 +1,34 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function userDoc() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid));
+    }
+    function isSuperAdmin() {
+      return signedIn() && userDoc().data.role == 'superadmin';
+    }
+    function isStoreAdminFor(storeId) {
+      return signedIn()
+        && userDoc().data.role == 'storeadmin'
+        && userDoc().data.storeId == storeId;
+    }
+    function activeStore(storeId) {
+      return firestore.exists(/databases/(default)/documents/stores/$(storeId))
+        && firestore.get(/databases/(default)/documents/stores/$(storeId)).data.active == true;
+    }
+
+    // Public assets are readable only for active stores; each admin can write
+    // only to their own store namespace. Limit files to 5 MiB images.
+    match /stores/{storeId}/{allPaths=**} {
+      allow read: if activeStore(storeId) || isStoreAdminFor(storeId) || isSuperAdmin();
+      allow create, update: if (isStoreAdminFor(storeId) || isSuperAdmin())
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+      allow delete: if isStoreAdminFor(storeId) || isSuperAdmin();
+    }
+
+    match /{allPaths=**} { allow read, write: if false; }
+  }
+}

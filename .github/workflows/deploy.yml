@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install
+      - run: npm ci
       - run: npm run build
         env:
           PUBLIC_FIREBASE_API_KEY: ${{ secrets.PUBLIC_FIREBASE_API_KEY }}
@@ -32,8 +32,22 @@ jobs:
         with:
           path: dist
 
-  deploy:
+  deploy-firebase:
     needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - run: npx firebase deploy --only firestore:rules,firestore:indexes,storage --project "${{ secrets.PUBLIC_FIREBASE_PROJECT_ID }}"
+
+  deploy:
+    needs: [build, deploy-firebase]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/deploy-pages@v4

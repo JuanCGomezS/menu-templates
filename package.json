@@ -9,7 +9,10 @@
     "preview": "astro preview",
     "astro": "astro",
     "test:rules": "node --test tests/firestore.rules.test.mjs",
-    "test:emulator": "firebase emulators:exec --only firestore \"npm run test:rules\""
+    "test:emulator": "firebase emulators:exec --only firestore \"npm run test:rules\"",
+    "typecheck": "astro check",
+    "verify:routes": "node scripts/verify-static-routes.mjs",
+    "verify": "npm run typecheck && npm run test:emulator && npm run build && npm run verify:routes"
   },
   "dependencies": {
     "astro": "^5.16.7",

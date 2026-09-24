@@ -29,6 +29,29 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/stores/$(storeId)).data.active == true;
     }
 
+    function storeAdminChangesOnly(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    function isStoreAdminStoreUpdate(storeId) {
+      return isStoreAdminFor(storeId)
+        && storeAdminChangesOnly(['name', 'templateId', 'themeId', 'currency', 'contact', 'schedule', 'timeZone', 'updatedAt']);
+    }
+
+    function isStoreAdminCategoryWrite(storeId) {
+      return isStoreAdminFor(storeId)
+        && request.resource.data.keys().hasOnly(['name', 'order', 'active', 'createdAt', 'updatedAt']);
+    }
+
+    function isStoreAdminItemWrite(storeId) {
+      return isStoreAdminFor(storeId)
+        && request.resource.data.keys().hasOnly([
+          'categoryId', 'name', 'description', 'price', 'imageUrl', 'active', 'order',
+          'stock', 'trackStock', 'variants', 'availableInStore', 'availableForDelivery',
+          'createdAt', 'updatedAt'
+        ]);
+    }
+
     function hasValidPublicOrderBase() {
       return request.resource.data.keys().hasAll([
           'customerName', 'type', 'status', 'items', 'total', 'clientRequestId', 'createdAt', 'updatedAt'
@@ -130,27 +153,30 @@ service cloud.firestore {
 
     match /stores/{storeId} {
       allow read: if resource.data.active == true || isSuperAdmin() || isStoreAdminFor(storeId);
-      allow create, update, delete: if isSuperAdmin() || isStoreAdminFor(storeId);
+      allow create, delete: if isSuperAdmin();
+      allow update: if isSuperAdmin() || isStoreAdminStoreUpdate(storeId);
 
       match /categories/{categoryId} {
         allow read: if (storeIsActive(storeId) && resource.data.active == true) || isSuperAdmin() || isStoreAdminFor(storeId);
-        allow create, update, delete: if isSuperAdmin() || isStoreAdminFor(storeId);
+        allow create, update: if isSuperAdmin() || isStoreAdminCategoryWrite(storeId);
+        allow delete: if isSuperAdmin() || isStoreAdminFor(storeId);
       }
 
       match /items/{itemId} {
         allow read: if (storeIsActive(storeId) && resource.data.active == true) || isSuperAdmin() || isStoreAdminFor(storeId);
-        allow create, update, delete: if isSuperAdmin() || isStoreAdminFor(storeId);
+        allow create, update: if isSuperAdmin() || isStoreAdminItemWrite(storeId);
+        allow delete: if isSuperAdmin() || isStoreAdminFor(storeId);
       }
 
       match /orders/{orderId} {
         allow create: if isPublicOrderCreate(storeId);
         allow read: if isSuperAdmin() || isStoreAdminFor(storeId);
-        allow update: if isSuperAdmin() || isStoreAdminFor(storeId);
+        allow update: if isSuperAdmin() || (isStoreAdminFor(storeId) && storeAdminChangesOnly(['status', 'updatedAt']));
         allow delete: if isSuperAdmin();
       }
 
       match /{document=**} {
-        allow read, write: if isSuperAdmin() || isStoreAdminFor(storeId);
+        allow read, write: if isSuperAdmin();
       }
     }
 
