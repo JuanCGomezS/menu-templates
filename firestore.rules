@@ -29,35 +29,55 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/stores/$(storeId)).data.active == true;
     }
 
-    function isPublicOrderCreate(storeId) {
-      return storeIsActive(storeId)
-        && request.resource.data.keys().hasOnly([
-          'customerName',
-          'customerPhone',
-          'type',
-          'status',
-          'items',
-          'total',
-          'deliveryAddress',
-          'notes',
-          'createdAt',
-          'updatedAt'
+    function hasValidPublicOrderBase() {
+      return request.resource.data.keys().hasAll([
+          'customerName', 'type', 'status', 'items', 'total', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.customerName is string
         && request.resource.data.customerName.size() >= 2
         && request.resource.data.customerName.size() <= 80
-        && request.resource.data.customerPhone is string
-        && request.resource.data.customerPhone.size() >= 7
-        && request.resource.data.customerPhone.size() <= 30
-        && request.resource.data.type in ['in_store', 'delivery']
         && request.resource.data.status == 'pending'
         && request.resource.data.items is list
         && request.resource.data.items.size() > 0
         && request.resource.data.items.size() <= 40
         && request.resource.data.total is number
         && request.resource.data.total >= 0
+        && (!request.resource.data.keys().hasAny(['notes']) || (
+          request.resource.data.notes is string && request.resource.data.notes.size() <= 500
+        ))
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
+    }
+
+    function hasValidTableOrder(storeId) {
+      return get(/databases/$(database)/documents/stores/$(storeId)).data.capabilities.inStoreOrdering == true
+        && request.resource.data.keys().hasOnly([
+          'customerName', 'type', 'status', 'items', 'total', 'tableNumber', 'notes', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.type == 'in_store'
+        && request.resource.data.tableNumber is int
+        && request.resource.data.tableNumber >= 1
+        && request.resource.data.tableNumber <= 999;
+    }
+
+    function hasValidDeliveryOrder(storeId) {
+      return get(/databases/$(database)/documents/stores/$(storeId)).data.capabilities.deliveryOrdering == true
+        && request.resource.data.keys().hasOnly([
+          'customerName', 'customerPhone', 'type', 'status', 'items', 'total', 'deliveryAddress', 'notes', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.type == 'delivery'
+        && request.resource.data.customerPhone is string
+        && request.resource.data.customerPhone.size() >= 7
+        && request.resource.data.customerPhone.size() <= 30
+        && request.resource.data.deliveryAddress is string
+        && request.resource.data.deliveryAddress.size() >= 5
+        && request.resource.data.deliveryAddress.size() <= 200;
+    }
+
+    function isPublicOrderCreate(storeId) {
+      return storeIsActive(storeId)
+        && hasValidPublicOrderBase()
+        && (hasValidTableOrder(storeId) || hasValidDeliveryOrder(storeId));
     }
 
     function isCustomerSelfCreate(uid) {

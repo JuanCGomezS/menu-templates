@@ -189,3 +189,9 @@ npm run test:emulator
 ```
 
 El comando inicia únicamente Firestore Emulator, ejecuta `tests/firestore.rules.test.mjs` y lo detiene. La carga operativa del panel usa `stores/{storeId}/orders`, filtra estados activos, se limita a los últimos siete días y a 50 resultados; no consulta pedidos de todas las tiendas ni el historial completo.
+
+## Contrato de pedido público
+
+La modalidad `in_store` representa un pedido en mesa: exige `tableNumber` (entero de 1 a 999) y no admite teléfono ni dirección. La modalidad `delivery` exige `customerPhone` y `deliveryAddress`, y no admite `tableNumber`. Ambas requieren nombre, productos, total y estado inicial `pending`.
+
+Usá `validatePublicOrder(input, store.capabilities)` desde `src/lib/orders.ts` antes de llamar a `createPublicOrder`. La validación cliente normaliza los campos y las reglas de Firestore repiten el contrato, comprueban que la capacidad correspondiente de la tienda esté habilitada y bloquean campos cruzados. Los documentos de pedidos históricos permanecen legibles: sus campos de modalidad son opcionales al leerlos.

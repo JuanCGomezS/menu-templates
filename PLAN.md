@@ -224,12 +224,13 @@ stores/{storeId}/items/{itemId}
 
 stores/{storeId}/orders/{orderId}
   ├── customerName: string
-  ├── customerPhone: string
   ├── type: 'in_store' | 'delivery'
+  ├── tableNumber: number // requerido solo para in_store
+  ├── customerPhone: string // requerido solo para delivery
+  ├── deliveryAddress: string // requerido solo para delivery
   ├── status: 'pending' | 'accepted' | 'preparing' | 'ready' | 'delivered' | 'cancelled'
   ├── items: Array<{ itemId: string, name: string, quantity: number, price: number }>
   ├── total: number
-  ├── deliveryAddress?: string
   ├── notes?: string
   ├── createdAt: Timestamp
   └── updatedAt: Timestamp

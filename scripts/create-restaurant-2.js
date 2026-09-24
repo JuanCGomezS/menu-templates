@@ -55,6 +55,11 @@ async function seedStore() {
       maxCategories: 20,
       maxImages: 30
     },
+    capabilities: {
+      inStoreOrdering: true,
+      deliveryOrdering: true,
+      stockControl: false
+    },
     contact: {
       whatsapp: '+57 300 123 4567',
       instagram: '@cafebellavista',

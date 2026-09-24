@@ -29,11 +29,18 @@ function publicDb() {
   return testEnv.unauthenticatedContext().firestore();
 }
 
+function withoutField(data, field) {
+  const copy = { ...data };
+  delete copy[field];
+  return copy;
+}
+
 function publicOrder(overrides = {}) {
   return {
     customerName: 'Ana Pérez',
     customerPhone: '+57 300 123 4567',
     type: 'in_store',
+    tableNumber: 12,
     status: 'pending',
     items: [{ itemId: 'item-1', name: 'Hamburguesa', quantity: 1, price: 18000 }],
     total: 18000,
@@ -54,8 +61,8 @@ before(async () => {
   await testEnv.withSecurityRulesDisabled(async (context) => {
     const db = context.firestore();
     await Promise.all([
-      setDoc(doc(db, 'stores', 'store-a'), { active: true, slug: 'tienda-a' }),
-      setDoc(doc(db, 'stores', 'store-b'), { active: true, slug: 'tienda-b' }),
+      setDoc(doc(db, 'stores', 'store-a'), { active: true, slug: 'tienda-a', capabilities: { inStoreOrdering: true, deliveryOrdering: true } }),
+      setDoc(doc(db, 'stores', 'store-b'), { active: true, slug: 'tienda-b', capabilities: { inStoreOrdering: true, deliveryOrdering: true } }),
       setDoc(doc(db, 'users', 'admin-a'), { role: 'storeadmin', storeId: 'store-a' }),
       setDoc(doc(db, 'users', 'admin-b'), { role: 'storeadmin', storeId: 'store-b' }),
       setDoc(doc(db, 'users', 'superadmin'), { role: 'superadmin' }),
@@ -97,6 +104,61 @@ test('un pedido público válido solo se crea en una tienda activa', async () =>
   );
 });
 
+test('un domicilio público exige teléfono y dirección, y no permite mesa', async () => {
+  await assertSucceeds(
+    setDoc(
+      doc(publicDb(), 'stores', 'store-a', 'orders', 'delivery-order'),
+      withoutField(publicOrder({
+        type: 'delivery',
+        customerPhone: '+57 300 123 4567',
+        deliveryAddress: 'Calle 123 #45-67',
+      }), 'tableNumber'),
+    ),
+  );
+
+  await assertFails(
+    setDoc(
+      doc(publicDb(), 'stores', 'store-a', 'orders', 'invalid-delivery-order'),
+      withoutField(publicOrder({ type: 'delivery' }), 'tableNumber'),
+    ),
+  );
+});
+
+test('un pedido en mesa exige mesa y no permite datos de domicilio', async () => {
+  await assertFails(
+    setDoc(
+      doc(publicDb(), 'stores', 'store-a', 'orders', 'missing-table-order'),
+      withoutField(publicOrder(), 'tableNumber'),
+    ),
+  );
+  await assertFails(
+    setDoc(
+      doc(publicDb(), 'stores', 'store-a', 'orders', 'table-with-phone-order'),
+      publicOrder({ customerPhone: '+57 300 123 4567' }),
+    ),
+  );
+});
+
+test('la creación pública respeta las capacidades de la tienda', async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'stores', 'no-delivery-store'), {
+      active: true,
+      capabilities: { inStoreOrdering: true, deliveryOrdering: false },
+    });
+  });
+
+  await assertFails(
+    setDoc(
+      doc(publicDb(), 'stores', 'no-delivery-store', 'orders', 'blocked-delivery-order'),
+      withoutField(publicOrder({
+        type: 'delivery',
+        customerPhone: '+57 300 123 4567',
+        deliveryAddress: 'Calle 123 #45-67',
+      }), 'tableNumber'),
+    ),
+  );
+});
+
 test('la creación pública rechaza estados que no sean pending', async () => {
   await assertFails(
     setDoc(
@@ -108,7 +170,7 @@ test('la creación pública rechaza estados que no sean pending', async () => {
 
 test('la creación pública se bloquea para tiendas inactivas', async () => {
   await testEnv.withSecurityRulesDisabled(async (context) => {
-    await setDoc(doc(context.firestore(), 'stores', 'inactive-store'), { active: false });
+    await setDoc(doc(context.firestore(), 'stores', 'inactive-store'), { active: false, capabilities: { inStoreOrdering: true } });
   });
 
   await assertFails(
