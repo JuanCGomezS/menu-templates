@@ -177,3 +177,15 @@ role: 'storeadmin'
 storeId: '<id de tienda>'
 storeSlug: '<slug de tienda>'
 ```
+
+## Validación de pedidos con Firebase Emulator
+
+La base de la issue #3 queda aislada en los archivos de pedidos, reglas, índices y pruebas; no modifica datos productivos. Antes de comenzar un cambio de pedidos, verificá el estado local con `git status --short` y conservá los cambios ajenos en otro commit o stash.
+
+La prueba reproducible cubre la carga de pedidos del `storeadmin`, el aislamiento entre tiendas y la creación pública:
+
+```sh
+npm run test:emulator
+```
+
+El comando inicia únicamente Firestore Emulator, ejecuta `tests/firestore.rules.test.mjs` y lo detiene. La carga operativa del panel usa `stores/{storeId}/orders`, filtra estados activos, se limita a los últimos siete días y a 50 resultados; no consulta pedidos de todas las tiendas ni el historial completo.

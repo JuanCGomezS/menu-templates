@@ -4,12 +4,14 @@ import type React from 'react';
 import { getUserProfile, ROLES } from '../../lib/auth';
 import { auth } from '../../lib/firebase';
 import { getStoreForAdminById, getStoreForAdminBySlug } from '../../lib/public-store-data';
+import { getActiveOrdersForStore, type StoreOrder } from '../../lib/orders';
 import { withBasePath } from '../../lib/base-path';
 import AppFooter from './AppFooter';
 import AppHeader from './AppHeader';
 
 export default function StoreAdminPanel({ slug }: { slug: string }) {
   const [status, setStatus] = useState<'loading' | 'allowed' | 'denied' | 'not-found'>('loading');
+  const [storeId, setStoreId] = useState<string | null>(null);
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (user) => {
@@ -22,6 +24,7 @@ export default function StoreAdminPanel({ slug }: { slug: string }) {
 
       if (profile?.role === ROLES.SUPERADMIN) {
         const store = await getStoreForAdminBySlug(slug);
+        setStoreId(store?.id || null);
         setStatus(store ? 'allowed' : 'not-found');
         return;
       }
@@ -45,6 +48,7 @@ export default function StoreAdminPanel({ slug }: { slug: string }) {
 
       const isMatchingStoreAdmin = profile.storeId === store.id && store.slug === slug;
 
+      setStoreId(isMatchingStoreAdmin ? store.id : null);
       setStatus(isMatchingStoreAdmin ? 'allowed' : 'denied');
     });
   }, [slug]);
@@ -64,10 +68,33 @@ export default function StoreAdminPanel({ slug }: { slug: string }) {
   }
 
   return (
-    <StoreAdminShell title="Panel de tienda en preparación">
-      <p className="mt-3 text-gray-600">La tienda <strong>{slug}</strong> ya tiene ruta protegida. El CRUD de categorías, productos y pedidos queda para la siguiente etapa.</p>
+    <StoreAdminShell title="Panel de tienda">
+      <p className="mt-3 text-gray-600">Tienda <strong>{slug}</strong>.</p>
+      {storeId && <OrdersFeedback storeId={storeId} />}
     </StoreAdminShell>
   );
+}
+
+function OrdersFeedback({ storeId }: { storeId: string }) {
+  const [orders, setOrders] = useState<StoreOrder[]>([]);
+  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
+
+  useEffect(() => {
+    getActiveOrdersForStore(storeId)
+      .then((loadedOrders) => {
+        setOrders(loadedOrders);
+        setState('ready');
+      })
+      .catch((error) => {
+        console.error('No se pudieron cargar los pedidos activos:', error);
+        setState('error');
+      });
+  }, [storeId]);
+
+  if (state === 'loading') return <p className="mt-6 text-sm text-gray-500">Cargando pedidos activos…</p>;
+  if (state === 'error') return <p className="mt-6 text-sm text-red-600">No fue posible cargar los pedidos activos.</p>;
+
+  return <p className="mt-6 rounded-xl bg-orange-50 p-4 text-sm font-semibold text-orange-900">Pedidos activos recientes: {orders.length}</p>;
 }
 
 function StoreAdminShell({ title, children }: { title: string; children?: React.ReactNode }) {

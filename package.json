@@ -7,7 +7,9 @@
     "dev:clean": "rm -rf node_modules/.vite .astro && astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "test:rules": "node --test tests/firestore.rules.test.mjs",
+    "test:emulator": "firebase emulators:exec --only firestore \"npm run test:rules\""
   },
   "dependencies": {
     "astro": "^5.16.7",
@@ -19,6 +21,8 @@
   "devDependencies": {
     "@astrojs/react": "^5.0.7",
     "@astrojs/tailwind": "^5.1.0",
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "firebase-tools": "^14.21.0",
     "tailwindcss": "^3.4.1"
   }
 }
