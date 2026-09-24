@@ -37,6 +37,7 @@ export interface PublicStore {
   currency: Currency | string;
   templateId: string;
   themeId?: string;
+  timeZone?: string;
   template?: { id: string; name: string } | null;
   capabilities?: {
     inStoreOrdering?: boolean;

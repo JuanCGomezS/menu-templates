@@ -49,6 +49,7 @@ async function seedStore() {
     templateId,
     themeId: 'default',
     currency: 'COP',
+    timeZone: 'America/Bogota',
     plan: 'free_trial',
     limits: {
       maxProducts: 100,

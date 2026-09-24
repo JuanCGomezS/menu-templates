@@ -30,6 +30,7 @@ interface StoreData {
   themeId?: string;
   currency?: Currency;
   plan?: PlanType;
+  timeZone?: string;
   limits?: {
     maxProducts?: number;
     maxCategories?: number;
@@ -55,6 +56,7 @@ interface StoreFormState {
   themeId: string;
   currency: Currency;
   plan: PlanType;
+  timeZone: string;
   maxProducts: string;
   maxCategories: string;
   maxImages: string;
@@ -210,6 +212,7 @@ function emptyForm(): StoreFormState {
     themeId: 'theme-default',
     currency: 'COP',
     plan: 'free_trial',
+    timeZone: 'America/Bogota',
     maxProducts: '100',
     maxCategories: '20',
     maxImages: '30',
@@ -252,6 +255,7 @@ function formFromStore(store: StoreData): StoreFormState {
     themeId: resolvedTheme.id,
     currency: store.currency || defaults.currency,
     plan: store.plan || defaults.plan,
+    timeZone: store.timeZone || defaults.timeZone,
     maxProducts: String(store.limits?.maxProducts ?? defaults.maxProducts),
     maxCategories: String(store.limits?.maxCategories ?? defaults.maxCategories),
     maxImages: String(store.limits?.maxImages ?? defaults.maxImages),
@@ -326,6 +330,7 @@ function makeStorePayload(form: StoreFormState) {
     themeId: form.themeId,
     currency: form.currency,
     plan: form.plan,
+    timeZone: form.timeZone,
     limits: {
       maxProducts: toPositiveNumber(form.maxProducts, 100),
       maxCategories: toPositiveNumber(form.maxCategories, 20),
@@ -774,6 +779,7 @@ export default function StoreEditorPage() {
                 <Field label="Instagram"><input name="instagram" autoComplete="off" spellCheck={false} value={form.instagram} onChange={(event) => updateForm('instagram', event.target.value)} className={INPUT_CLASS} placeholder="Ej. @mitienda…" /></Field>
                 <Field label="Dirección"><input name="address" autoComplete="street-address" value={form.address} onChange={(event) => updateForm('address', event.target.value)} className={INPUT_CLASS} /></Field>
                 <Field label="Notas de domicilio"><input name="deliveryNotes" autoComplete="off" value={form.deliveryNotes} onChange={(event) => updateForm('deliveryNotes', event.target.value)} className={INPUT_CLASS} /></Field>
+                <Field label="Zona horaria de operación"><select name="timeZone" value={form.timeZone} onChange={(event) => updateForm('timeZone', event.target.value)} className={INPUT_CLASS}><option value="America/Bogota">Colombia (Bogotá)</option><option value="America/Mexico_City">México central</option><option value="America/Lima">Perú</option><option value="America/Santiago">Chile</option><option value="America/Argentina/Buenos_Aires">Argentina</option></select></Field>
               </div>
 
               <SectionTitle title="Horario" />

@@ -185,6 +185,7 @@ stores/{storeId}
   ├── templateId: string
   ├── themeId: string
   ├── currency: 'COP' | 'USD' | 'EUR'
+  ├── timeZone: IANA timezone (ej. 'America/Bogota')
   ├── plan: 'free_trial' | 'standard' | 'plus' | 'premium'
   ├── trialStartedAt: Timestamp
   ├── trialEndsAt: Timestamp
