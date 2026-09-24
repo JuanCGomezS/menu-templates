@@ -4,6 +4,7 @@ import { getPublicStoreBySlug } from '../../lib/public-store-data';
 import { getTemplateComponent, resolveStoreTheme, type TemplateComponent, type ThemeConfig } from '../../lib/templates';
 import { withBasePath } from '../../lib/base-path';
 import type { PublicCategory, PublicItem, PublicStore } from '../../lib/store-helpers';
+import { normalizeStoreContent, type StoreContentModel } from '../../lib/store-content';
 import { PublicOrderCartProvider, usePublicOrderCart } from './PublicOrderCart';
 
 type StoreData = PublicStore;
@@ -14,7 +15,7 @@ interface Props {
 }
 
 interface StoreViewProps {
-  store: StoreData;
+  store: StoreContentModel;
   schedule: ScheduleEntry[];
   theme: ThemeConfig;
   isOpen: boolean | null;
@@ -75,15 +76,16 @@ export default function RestaurantMenuView({ slug }: Props) {
 }
 
 export function PublicStoreTemplateView({ store }: { store: StoreData }) {
-  const template = getTemplateComponent(store.templateId || '');
-  const theme = resolveStoreTheme(store.templateId || '', store.themeId);
-  const schedule = store.schedule ? sortScheduleDays(store.schedule) : [];
-  const isOpen = getCurrentOpenStatus(store.schedule);
+  const contentModel = normalizeStoreContent(store);
+  const template = getTemplateComponent(contentModel.templateId || '');
+  const theme = resolveStoreTheme(contentModel.templateId || '', contentModel.themeId);
+  const schedule = contentModel.schedule ? sortScheduleDays(contentModel.schedule) : [];
+  const isOpen = getCurrentOpenStatus(contentModel.schedule);
   const Layout = layoutRenderers[template] || MinimalLayout;
 
-  const content = <ThemeFrame theme={theme}><Layout store={store} schedule={schedule} theme={theme} isOpen={isOpen} /></ThemeFrame>;
-  return store.capabilities?.inStoreOrdering || store.capabilities?.deliveryOrdering
-    ? <PublicOrderCartProvider store={store}>{content}</PublicOrderCartProvider>
+  const content = <ThemeFrame theme={theme}><Layout store={contentModel} schedule={schedule} theme={theme} isOpen={isOpen} /></ThemeFrame>;
+  return contentModel.capabilities?.inStoreOrdering || contentModel.capabilities?.deliveryOrdering
+    ? <PublicOrderCartProvider store={contentModel}>{content}</PublicOrderCartProvider>
     : content;
 }
 
@@ -118,6 +120,10 @@ function ThemeFrame({ theme, children }: { theme: ThemeConfig; children: React.R
         '--store-bg': theme.tokens.background,
         '--store-surface': theme.tokens.surface,
         '--store-text': theme.tokens.text,
+        '--store-muted': `color-mix(in srgb, ${theme.tokens.text} 62%, ${theme.tokens.background})`,
+        '--store-border': `color-mix(in srgb, ${theme.tokens.text} 18%, ${theme.tokens.surface})`,
+        '--store-accent-soft': `color-mix(in srgb, ${theme.tokens.accent} 14%, ${theme.tokens.surface})`,
+        '--store-on-accent': '#ffffff',
       } as React.CSSProperties}
     >
       {children}
@@ -126,11 +132,11 @@ function ThemeFrame({ theme, children }: { theme: ThemeConfig; children: React.R
 }
 
 function MinimalLayout(props: StoreViewProps) {
-  const { store, schedule, theme, isOpen } = props;
+  const { store, schedule, isOpen } = props;
 
   return (
-    <main className="min-h-screen bg-[#f7f3ea] text-stone-950">
-      <StoreHero store={store} theme={theme} isOpen={isOpen} align="left" variant="minimal" />
+    <main className="min-h-screen bg-[var(--store-bg)] text-[var(--store-text)]">
+      <StoreHero store={store} isOpen={isOpen} align="left" variant="minimal" />
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <section className="rounded-[2rem] border border-stone-300 bg-[#fffaf0] p-5 shadow-[0_24px_80px_rgba(41,37,36,0.10)] md:p-8">
           <div className="mb-8 flex items-center justify-between gap-4 border-b border-stone-300 pb-5">
@@ -150,11 +156,11 @@ function MinimalLayout(props: StoreViewProps) {
 }
 
 function NaturalLayout(props: StoreViewProps) {
-  const { store, schedule, theme, isOpen } = props;
+  const { store, schedule, isOpen } = props;
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_12%_8%,rgba(187,247,208,0.78),transparent_30%),radial-gradient(circle_at_88%_18%,rgba(254,215,170,0.72),transparent_28%),linear-gradient(135deg,#f7fee7,#fff7ed_58%,#ecfdf5)] text-emerald-950">
-      <StoreHero store={store} theme={theme} isOpen={isOpen} align="left" badge="Fresco · Natural · Artesanal" variant="natural" />
+    <main className="min-h-screen overflow-hidden bg-[var(--store-bg)] text-[var(--store-text)]">
+      <StoreHero store={store} isOpen={isOpen} align="left" badge="Fresco · Natural · Artesanal" variant="natural" />
       <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
         <div className="grid gap-6 lg:grid-cols-[19rem_1fr]">
           <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
@@ -175,12 +181,12 @@ function NaturalLayout(props: StoreViewProps) {
 }
 
 function WarmLayout(props: StoreViewProps) {
-  const { store, schedule, theme, isOpen } = props;
+  const { store, schedule, isOpen } = props;
   const featured = getFeaturedItems(store);
 
   return (
-    <main className="min-h-screen bg-[#111111] text-white">
-      <StoreHero store={store} theme={theme} isOpen={isOpen} align="center" badge="Promos · Combos · Favoritos" variant="warm" />
+    <main className="min-h-screen bg-[var(--store-text)] text-[var(--store-surface)]">
+      <StoreHero store={store} isOpen={isOpen} align="center" badge="Promos · Combos · Favoritos" variant="warm" />
       <div className="mx-auto max-w-6xl px-4 py-8">
         {featured.length > 0 && <FeaturedStrip store={store} items={featured} />}
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_18rem]">
@@ -197,11 +203,11 @@ function WarmLayout(props: StoreViewProps) {
 }
 
 function ElegantLayout(props: StoreViewProps) {
-  const { store, schedule, theme, isOpen } = props;
+  const { store, schedule, isOpen } = props;
 
   return (
-    <main className="min-h-screen bg-[#241209] text-amber-50">
-      <StoreHero store={store} theme={theme} isOpen={isOpen} align="center" badge="Selección especial" variant="elegant" />
+    <main className="min-h-screen bg-[var(--store-text)] text-[var(--store-surface)]">
+      <StoreHero store={store} isOpen={isOpen} align="center" badge="Selección especial" variant="elegant" />
       <div className="mx-auto max-w-6xl px-4 py-10">
         <div className="mb-8 grid gap-4 md:grid-cols-2">
           <ContactActions store={store} variant="elegant" />
@@ -214,15 +220,13 @@ function ElegantLayout(props: StoreViewProps) {
   );
 }
 
-function StoreHero({ store, theme, isOpen, align, badge, variant = 'minimal' }: {
+function StoreHero({ store, isOpen, align, badge, variant = 'minimal' }: {
   store: StoreData;
-  theme: ThemeConfig;
   isOpen: boolean | null;
   align: 'left' | 'center';
   badge?: string;
   variant?: 'minimal' | 'natural' | 'warm' | 'elegant';
 }) {
-  const themeBadge = getThemeBadge(theme);
   const isWarm = variant === 'warm';
   const isElegant = variant === 'elegant';
   const isNatural = variant === 'natural';
@@ -234,10 +238,7 @@ function StoreHero({ store, theme, isOpen, align, badge, variant = 'minimal' }: 
         <div aria-hidden="true" className="absolute right-0 top-10 h-64 w-64 rounded-full bg-orange-200/45 blur-3xl" />
         <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-8 rounded-[2.5rem] border border-white/80 bg-white/78 p-5 shadow-[0_28px_90px_rgba(6,78,59,0.14)] ring-1 ring-emerald-100/80 backdrop-blur md:p-8 lg:grid-cols-[1.02fr_0.98fr]">
           <div>
-            <div className="mb-5 flex flex-wrap gap-2">
-              <span className="rounded-full bg-emerald-950 px-3 py-1 text-xs font-black uppercase tracking-[0.2em] text-white">Plantilla Natural</span>
-              <span className="rounded-full bg-[var(--store-accent)] px-3 py-1 text-xs font-black uppercase tracking-[0.2em] text-white shadow-sm">{themeBadge || 'Tema base'}</span>
-            </div>
+            <div className="mb-5 flex flex-wrap gap-2"><span className="rounded-full bg-[var(--store-accent)] px-3 py-1 text-xs font-black uppercase tracking-[0.2em] text-[var(--store-on-accent)]">Plantilla Natural</span></div>
             {badge && <p className="mb-3 text-sm font-black uppercase tracking-[0.28em] text-[var(--store-accent)]">{badge}</p>}
             <h1 className="break-words text-5xl font-black leading-none tracking-tight text-emerald-950 [text-wrap:balance] md:text-7xl">{store.name}</h1>
             {store.contact?.address && <p className="mt-4 text-lg leading-7 text-emerald-900/70">📍 {store.contact.address}</p>}
@@ -259,11 +260,6 @@ function StoreHero({ store, theme, isOpen, align, badge, variant = 'minimal' }: 
       {isWarm && <div aria-hidden="true" className="absolute -right-32 top-10 h-80 w-80 rounded-full bg-orange-500/30 blur-3xl" />}
       {isNatural && <div aria-hidden="true" className="absolute -left-20 top-10 h-72 w-72 rounded-full bg-emerald-300/30 blur-3xl" />}
       {isElegant && <div aria-hidden="true" className="absolute inset-x-10 bottom-0 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" />}
-      {themeBadge && (
-        <div className="absolute right-4 top-6 rounded-full bg-[var(--store-accent)] px-3 py-1 text-sm font-black text-white shadow-sm">
-          {themeBadge}
-        </div>
-      )}
       <div className={`relative z-10 mx-auto grid max-w-6xl items-center gap-10 ${variant === 'minimal' ? 'lg:grid-cols-[1.05fr_0.95fr]' : 'lg:grid-cols-[0.95fr_1.05fr]'} ${align === 'center' ? 'text-center lg:text-left' : 'text-left'}`}>
         <div>
           {badge && <p className={`mb-4 text-sm font-black uppercase tracking-[0.28em] ${isWarm || isElegant ? 'text-orange-300' : 'text-[var(--store-accent)]'}`}>{badge}</p>}
@@ -455,21 +451,6 @@ function StoreFooter({ store }: { store: StoreData }) {
 
 function getFeaturedItems(store: StoreData): PublicItem[] {
   return store.categories.flatMap((category) => category.items).slice(0, 4);
-}
-
-function getThemeBadge(theme: ThemeConfig) {
-  const badges: Partial<Record<ThemeConfig['component'], string>> = {
-    christmas: '🎄 Navidad',
-    'mothers-day': '🌷 Día de la Madre',
-    halloween: '🎃 Halloween',
-    valentine: '💝 San Valentín',
-    'fathers-day': '⭐ Día del Padre',
-    easter: '🌼 Pascua',
-    independence: '🇨🇴 Temporada especial',
-    velitas: '🕯️ Velitas',
-  };
-
-  return badges[theme.component] || null;
 }
 
 function getCurrentOpenStatus(schedule: StoreData['schedule']): boolean | null {

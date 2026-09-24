@@ -213,3 +213,7 @@ La atención administrativa usa `transitionOrderStatus`: al aceptar, una transac
 ## Selector de plantillas
 
 El editor usa cards de plantilla en lugar de renderizar una tienda completa dentro del formulario. Cada card comunica su estructura y propósito, es seleccionable con teclado y lector de pantalla, y conserva los IDs canónicos al guardar. Los IDs heredados se resuelven de forma compatible mediante `resolveTemplate`.
+
+## Layouts y themes
+
+Las cuatro plantillas consumen el mismo `StoreContentModel` normalizado; cambian jerarquía, navegación, densidad y composición sin alterar los datos. Los themes solo inyectan tokens de paleta y contraste. La lista de comprobación móvil/escritorio, incluido carrito, carga, error y vacío, está en [`docs/visual-layout-checklist.md`](docs/visual-layout-checklist.md).
