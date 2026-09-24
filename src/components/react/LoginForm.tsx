@@ -91,7 +91,7 @@ async function redirectForUser(user: User) {
 }
 
 export default function LoginForm() {
-  const registeringRef = useRef(false);
+  const submittingRef = useRef(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -119,7 +119,7 @@ export default function LoginForm() {
             return;
           }
 
-          if (registeringRef.current) {
+          if (submittingRef.current) {
             return;
           }
 
@@ -147,14 +147,13 @@ export default function LoginForm() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    submittingRef.current = true;
     setSubmitting(true);
     setError(null);
     setMessage(null);
 
     try {
       if (mode === 'register') {
-        registeringRef.current = true;
-
         const [{ createUserWithEmailAndPassword }, { auth }] = await Promise.all([
           import('firebase/auth'),
           import('../../lib/firebase'),
@@ -163,6 +162,14 @@ export default function LoginForm() {
 
         await credential.user.getIdToken(true);
         await createCustomerProfile(credential.user);
+
+        const { getUserProfile } = await import('../../lib/auth');
+        const profile = await getUserProfile(credential.user, { forceRefresh: true });
+
+        if (!profile) {
+          setError(MISSING_PROFILE_MESSAGE);
+          return;
+        }
 
         setMessage('Cuenta creada correctamente. Tu rol inicial es cliente.');
         window.location.assign(withBasePath('/'));
@@ -183,7 +190,7 @@ export default function LoginForm() {
       console.error('Error de autenticación:', err);
       setError(getAuthErrorMessage(err, mode));
     } finally {
-      registeringRef.current = false;
+      submittingRef.current = false;
       setSubmitting(false);
       setLoading(false);
     }

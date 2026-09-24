@@ -133,6 +133,9 @@ const WEEK_DAYS = [
 
 const INPUT_CLASS = 'w-full rounded-xl border border-gray-300 px-3 py-2 outline-none transition focus-visible:border-orange-500 focus-visible:ring-2 focus-visible:ring-orange-100';
 const COMPACT_INPUT_CLASS = 'w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none transition focus-visible:border-orange-500 focus-visible:ring-2 focus-visible:ring-orange-100';
+const MAX_PRODUCT_IMAGE_BYTES = 2 * 1024 * 1024;
+const MAX_PRODUCT_IMAGE_MB = MAX_PRODUCT_IMAGE_BYTES / (1024 * 1024);
+const PRODUCT_IMAGE_ACCEPT = 'image/jpeg,image/png,image/webp';
 
 function createDefaultSchedule(): StoreFormState['schedule'] {
   return Object.fromEntries(
@@ -233,6 +236,14 @@ function createDraftId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function formatFileSize(bytes: number) {
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function isAllowedProductImage(file: File) {
+  return PRODUCT_IMAGE_ACCEPT.split(',').includes(file.type);
+}
+
 function createCategoryDraft(order: number): CategoryDraft {
   return {
     id: createDraftId('category'),
@@ -303,9 +314,20 @@ export default function StoreEditorPage() {
   const [isDirty, setIsDirty] = useState(false);
   const [categoryDrafts, setCategoryDrafts] = useState<CategoryDraft[]>([]);
   const [productDrafts, setProductDrafts] = useState<ProductDraft[]>([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<Record<string, string>>({});
+  const [orders, setOrders] = useState<OrderDraft[]>([]);
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   const templates = useMemo(() => getAllTemplates(), []);
   const themes = useMemo(() => getAllThemes(), []);
+  const designPreviewStore = useMemo(() => makePreviewStore(form, categoryDrafts, productDrafts, imagePreviewUrls), [form, categoryDrafts, productDrafts, imagePreviewUrls]);
+  const orderMetrics = useMemo(() => getOrderMetrics(orders), [orders]);
+  const visibleTabs = useMemo(() => TABS.filter((tab) => isSuperAdmin || tab.id !== 'superadmin'), [isSuperAdmin]);
+  const imagePreviewKey = useMemo(() => productDrafts
+    .filter((product) => product.imageFile)
+    .map((product) => `${product.id}:${product.imageFile?.name}:${product.imageFile?.size}:${product.imageFile?.lastModified}`)
+    .join('|'), [productDrafts]);
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (user) => {
@@ -365,6 +387,22 @@ export default function StoreEditorPage() {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty, saving]);
+
+  useEffect(() => {
+    const nextPreviewUrls = productDrafts.reduce<Record<string, string>>((previewUrls, product) => {
+      if (product.imageFile) {
+        previewUrls[product.id] = URL.createObjectURL(product.imageFile);
+      }
+
+      return previewUrls;
+    }, {});
+
+    setImagePreviewUrls(nextPreviewUrls);
+
+    return () => {
+      Object.values(nextPreviewUrls).forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [imagePreviewKey]);
 
   const updateForm = <K extends keyof StoreFormState>(key: K, value: StoreFormState[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -448,6 +486,27 @@ export default function StoreEditorPage() {
     setIsDirty(true);
   };
 
+  const updateProductImage = (id: string, file?: File) => {
+    setError(null);
+
+    if (!file) {
+      updateProduct(id, 'imageFile', undefined);
+      return;
+    }
+
+    if (!isAllowedProductImage(file)) {
+      setError('La imagen debe estar en formato JPG, PNG o WebP.');
+      return;
+    }
+
+    if (file.size > MAX_PRODUCT_IMAGE_BYTES) {
+      setError(`La imagen pesa ${formatFileSize(file.size)}. El máximo por producto es ${MAX_PRODUCT_IMAGE_MB} MB para cuidar el plan gratuito.`);
+      return;
+    }
+
+    updateProduct(id, 'imageFile', file);
+  };
+
   const removeProduct = (id: string) => {
     setProductDrafts((current) => current.filter((product) => product.id !== id));
     setIsDirty(true);
@@ -478,6 +537,33 @@ export default function StoreEditorPage() {
     if (!snapshot.empty && snapshot.docs[0].id !== currentStoreId) {
       throw new Error('Ya existe una tienda con ese slug. Usa otro slug antes de guardar.');
     }
+  };
+
+  const uploadProductImages = async (storeId: string, products: Array<ProductDraft & { price: number; order: number; stock: number }>) => {
+    return Promise.all(products.map(async (product) => {
+      if (!product.imageFile) return product;
+
+      if (!isAllowedProductImage(product.imageFile)) {
+        throw new Error(`La imagen de ${product.name || 'un producto'} debe estar en formato JPG, PNG o WebP.`);
+      }
+
+      if (product.imageFile.size > MAX_PRODUCT_IMAGE_BYTES) {
+        throw new Error(`La imagen de ${product.name || 'un producto'} pesa ${formatFileSize(product.imageFile.size)}. El máximo por producto es ${MAX_PRODUCT_IMAGE_MB} MB.`);
+      }
+
+      const extension = product.imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const imageRef = ref(storage, `stores/${storeId}/items/${product.id}/${Date.now()}.${extension}`);
+      const snapshot = await uploadBytes(imageRef, product.imageFile, {
+        contentType: product.imageFile.type || 'image/jpeg',
+        customMetadata: {
+          storeId,
+          itemId: product.id,
+        },
+      });
+      const imageUrl = await getDownloadURL(snapshot.ref);
+
+      return { ...product, imageUrl, imageFile: undefined };
+    }));
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -768,17 +854,43 @@ export default function StoreEditorPage() {
                           </div>
 
                           <div className="mt-4 space-y-3">
-                            {categoryProducts.map((product) => (
-                              <div key={product.id} className="rounded-xl border border-gray-100 bg-gray-50 p-3">
-                                <div className="grid gap-3 lg:grid-cols-[1fr_1fr_8rem_6rem_auto] lg:items-end">
-                                  <Field label="Producto"><input value={product.name} onChange={(event) => updateProduct(product.id, 'name', event.target.value)} className={COMPACT_INPUT_CLASS} placeholder="Ej. Plato especial" /></Field>
-                                  <Field label="Descripción"><input value={product.description} onChange={(event) => updateProduct(product.id, 'description', event.target.value)} className={COMPACT_INPUT_CLASS} placeholder="Descripción corta" /></Field>
-                                  <Field label="Precio"><input type="number" inputMode="decimal" min="0" step="0.01" value={product.price} onChange={(event) => updateProduct(product.id, 'price', event.target.value)} className={COMPACT_INPUT_CLASS} /></Field>
-                                  <Field label="Orden"><input type="number" inputMode="numeric" value={product.order} onChange={(event) => updateProduct(product.id, 'order', event.target.value)} className={COMPACT_INPUT_CLASS} /></Field>
-                                  <button type="button" onClick={() => removeProduct(product.id)} className="rounded-xl border border-red-200 px-3 py-2 text-sm font-bold text-red-700 transition hover:bg-red-50">
-                                    Quitar
-                                  </button>
-                                </div>
+                            {categoryProducts.map((product) => {
+                              const productImagePreview = imagePreviewUrls[product.id] || product.imageUrl;
+
+                              return (
+                                <div key={product.id} className="rounded-xl border border-gray-100 bg-gray-50 p-3">
+                                  <div className="grid gap-3 lg:grid-cols-[8rem_minmax(0,1fr)_minmax(0,1fr)_8rem_6rem_auto] lg:items-end">
+                                    <label className="group block cursor-pointer rounded-2xl focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-orange-500" aria-label={`Subir imagen de ${product.name || 'producto'}`}>
+                                      <span className="mb-1 block text-xs font-bold uppercase tracking-[0.16em] text-gray-500">Imagen</span>
+                                      <span className="flex aspect-square items-center justify-center overflow-hidden rounded-2xl border border-dashed border-orange-200 bg-white text-center text-orange-700 transition group-hover:border-orange-400 group-hover:bg-orange-50">
+                                        {productImagePreview ? (
+                                          <img src={productImagePreview} alt={product.name ? `Imagen de ${product.name}` : 'Imagen del producto'} className="h-full w-full object-cover" />
+                                        ) : (
+                                          <span className="px-3 text-xs font-black leading-5">
+                                            <span aria-hidden="true" className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-orange-100 text-lg">↑</span>
+                                            Subir foto
+                                          </span>
+                                        )}
+                                      </span>
+                                      <input
+                                        type="file"
+                                        accept={PRODUCT_IMAGE_ACCEPT}
+                                        onChange={(event) => {
+                                          updateProductImage(product.id, event.target.files?.[0]);
+                                          event.target.value = '';
+                                        }}
+                                        className="sr-only"
+                                      />
+                                      <span className="mt-1 block text-[0.68rem] font-semibold text-gray-500">JPG, PNG o WebP · máx. {MAX_PRODUCT_IMAGE_MB} MB</span>
+                                    </label>
+                                    <Field label="Producto"><input value={product.name} onChange={(event) => updateProduct(product.id, 'name', event.target.value)} className={COMPACT_INPUT_CLASS} placeholder="Ej. Plato especial" /></Field>
+                                    <Field label="Descripción"><input value={product.description} onChange={(event) => updateProduct(product.id, 'description', event.target.value)} className={COMPACT_INPUT_CLASS} placeholder="Descripción corta" /></Field>
+                                    <Field label="Precio"><input type="number" inputMode="decimal" min="0" step="0.01" value={product.price} onChange={(event) => updateProduct(product.id, 'price', event.target.value)} className={COMPACT_INPUT_CLASS} /></Field>
+                                    <Field label="Orden"><input type="number" inputMode="numeric" value={product.order} onChange={(event) => updateProduct(product.id, 'order', event.target.value)} className={COMPACT_INPUT_CLASS} /></Field>
+                                    <button type="button" onClick={() => removeProduct(product.id)} className="rounded-xl border border-red-200 px-3 py-2 text-sm font-bold text-red-700 transition hover:bg-red-50">
+                                      Quitar
+                                    </button>
+                                  </div>
 
                                 <div className="mt-3 flex flex-wrap gap-3 text-sm font-semibold text-gray-700">
                                   <label className="flex items-center gap-2"><input type="checkbox" checked={product.active} onChange={(event) => updateProduct(product.id, 'active', event.target.checked)} className="h-4 w-4 accent-orange-600" /> Visible</label>
@@ -792,8 +904,9 @@ export default function StoreEditorPage() {
                                     <Field label="Stock"><input type="number" inputMode="numeric" min="0" value={product.stock} disabled={!product.trackStock} onChange={(event) => updateProduct(product.id, 'stock', event.target.value)} className={COMPACT_INPUT_CLASS} /></Field>
                                   </div>
                                 )}
-                              </div>
-                            ))}
+                                </div>
+                              );
+                            })}
 
                             <button type="button" onClick={() => addProduct(category.id)} className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-bold text-gray-700 transition hover:border-gray-950">
                               Agregar producto
@@ -847,21 +960,197 @@ export default function StoreEditorPage() {
   );
 }
 
-function TemplateSelector({ templates, selectedId, onChange }: { templates: TemplateConfig[]; selectedId: string; onChange: (id: string) => void }) {
-  return <fieldset>
-    <legend className="text-sm font-semibold text-gray-700">Plantilla</legend>
-    <p className="mt-1 text-sm text-gray-500">Elegí la estructura visual. El tema cambia los colores sin cambiar el layout.</p>
-    <div className="mt-3 grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Plantilla de tienda">
-      {templates.map((template) => {
-        const selected = template.id === selectedId;
-        return <button key={template.id} type="button" role="radio" aria-checked={selected} onClick={() => onChange(template.id)} className={`rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 ${selected ? 'border-orange-600 bg-orange-50 ring-1 ring-orange-600' : 'border-gray-200 bg-white hover:border-orange-300'}`}>
-          <div className="flex items-start justify-between gap-3"><span className="text-lg font-black text-gray-950">{template.name}</span>{selected && <span className="rounded-full bg-orange-600 px-2 py-1 text-xs font-bold text-white">Seleccionada</span>}</div>
-          <p className="mt-2 text-sm leading-6 text-gray-600">{template.description}</p>
-          <p className="mt-3 text-xs font-bold uppercase tracking-wide text-orange-700">{template.component === 'minimal' ? 'Lectura directa · lista' : template.component === 'natural' ? 'Editorial · secciones' : template.component === 'warm' ? 'Promocional · destacados' : 'Premium · composición'}</p>
-        </button>;
-      })}
-    </div>
-  </fieldset>;
+function getOrderMetrics(orders: OrderDraft[]) {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const startMs = startOfToday.getTime();
+  const activeStatuses: OrderStatus[] = ['pending', 'accepted', 'preparing', 'ready'];
+  const todayOrders = orders.filter((order) => (order.createdAtMs || 0) >= startMs);
+  const productTotals = new Map<string, { name: string; quantity: number }>();
+
+  orders.forEach((order) => {
+    (order.items || []).forEach((item) => {
+      const name = item.name || 'Producto';
+      const current = productTotals.get(name) || { name, quantity: 0 };
+      productTotals.set(name, { name, quantity: current.quantity + (item.quantity || 1) });
+    });
+  });
+
+  return {
+    todayCount: todayOrders.length,
+    todayRevenue: todayOrders.reduce((sum, order) => sum + (order.total || 0), 0),
+    activeCount: orders.filter((order) => activeStatuses.includes(order.status || 'pending')).length,
+    topProducts: Array.from(productTotals.values()).sort((a, b) => b.quantity - a.quantity).slice(0, 3),
+  };
+}
+
+function StoreQrCard({ slug, storeName }: { slug: string; storeName: string }) {
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [qrError, setQrError] = useState<string | null>(null);
+  const publicUrl = getPublicStoreUrl(slug);
+  const safeStoreName = normalizeSlug(storeName) || slug;
+
+  useEffect(() => {
+    let cancelled = false;
+    setQrError(null);
+    setQrDataUrl(null);
+
+    QRCode.toDataURL(publicUrl, {
+      errorCorrectionLevel: 'M',
+      margin: 2,
+      width: 320,
+      color: {
+        dark: '#111827',
+        light: '#ffffff',
+      },
+    })
+      .then((dataUrl) => {
+        if (!cancelled) setQrDataUrl(dataUrl);
+      })
+      .catch((error) => {
+        console.error('Error generando QR:', error);
+        if (!cancelled) setQrError('No pudimos generar el QR de esta tienda.');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [publicUrl]);
+
+  return (
+    <section className="mt-6 grid gap-5 rounded-2xl border border-orange-100 bg-white p-5 shadow-sm md:grid-cols-[auto_1fr] md:items-center">
+      <div className="flex h-40 w-40 items-center justify-center rounded-2xl border border-gray-200 bg-gray-50 p-3">
+        {qrDataUrl ? (
+          <img src={qrDataUrl} alt={`QR público de ${storeName}`} className="h-full w-full object-contain" />
+        ) : (
+          <div className="text-center text-xs font-semibold text-gray-500">{qrError || 'Generando QR…'}</div>
+        )}
+      </div>
+
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.24em] text-orange-600">QR de tienda</p>
+        <h2 className="mt-2 text-2xl font-black text-gray-950">Listo para imprimir o compartir</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">Este QR apunta a la URL pública de la tienda. Úsalo en mesa, vitrina, redes o empaques.</p>
+        <a href={publicUrl} target="_blank" rel="noreferrer" className="mt-3 block break-all text-sm font-semibold text-orange-700 hover:text-orange-900">
+          {publicUrl}
+        </a>
+        {qrDataUrl && (
+          <a
+            href={qrDataUrl}
+            download={`qr-${safeStoreName}.png`}
+            className="mt-4 inline-flex rounded-xl bg-gray-950 px-4 py-2 text-sm font-bold text-white transition hover:bg-gray-800"
+          >
+            Descargar QR PNG
+          </a>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function DesignPreview({ store }: { store: PublicStore }) {
+  return (
+    <section
+      aria-labelledby="design-preview-title"
+      className="overflow-hidden rounded-[1.75rem] border border-gray-200 bg-white shadow-sm"
+    >
+      <div className="border-b border-black/10 bg-white px-4 py-3">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Preview</p>
+        <h2 id="design-preview-title" className="mt-1 text-lg font-black text-gray-950">Así se va a ver la tienda pública</h2>
+        <p className="mt-1 text-sm text-gray-500">Usa la misma plantilla y los mismos colores que la página real.</p>
+      </div>
+
+      <div className="max-h-[44rem] overflow-auto bg-gray-100">
+        <div className="min-w-[72rem]">
+          <PublicStoreTemplateView store={store} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function makePreviewStore(form: StoreFormState, categories: CategoryDraft[], products: ProductDraft[], imagePreviewUrls: Record<string, string>): PublicStore {
+  const template = resolveTemplate(form.templateId);
+  const storeName = form.name.trim() || 'Nombre de la tienda';
+  const slug = normalizeSlug(form.slug || form.name) || 'preview';
+  const previewCategories = categories
+    .map((category, categoryIndex) => ({
+      id: category.id,
+      name: category.name.trim(),
+      active: category.active,
+      order: toOptionalNumber(category.order || String(categoryIndex)),
+      items: products
+        .filter((product) => product.categoryId === category.id && product.name.trim())
+        .map((product, productIndex) => ({
+          id: product.id,
+          categoryId: category.id,
+          name: product.name.trim(),
+          description: product.description.trim(),
+          price: toOptionalNumber(product.price),
+          imageUrl: imagePreviewUrls[product.id] || product.imageUrl,
+          active: product.active,
+          order: toOptionalNumber(product.order || String(productIndex)),
+          ...(form.stockControl ? { trackStock: product.trackStock, stock: product.trackStock ? toOptionalNumber(product.stock) : 0 } : {}),
+          ...(form.inStoreOrdering ? { availableInStore: product.availableInStore } : {}),
+          ...(form.deliveryOrdering ? { availableForDelivery: product.availableForDelivery } : {}),
+        })),
+    }))
+    .filter((category) => category.name && category.items.length > 0);
+
+  return {
+    id: form.id || 'preview-store',
+    name: storeName,
+    slug,
+    type: form.type,
+    active: form.active,
+    isActive: form.active,
+    currency: form.currency,
+    templateId: form.templateId,
+    themeId: form.themeId,
+    template: { id: template.id, name: template.name },
+    capabilities: {
+      inStoreOrdering: form.inStoreOrdering,
+      deliveryOrdering: form.deliveryOrdering,
+      stockControl: form.stockControl,
+    },
+    contact: {
+      whatsapp: form.whatsapp.trim() || '+573001234567',
+      instagram: form.instagram.trim() || '@mitienda',
+      address: form.address.trim() || 'Dirección de la tienda',
+      deliveryNotes: form.deliveryNotes.trim(),
+    },
+    schedule: form.schedule,
+    categories: previewCategories.length > 0 ? previewCategories : PREVIEW_CATEGORIES[form.type].map((category, categoryIndex) => ({
+      id: `preview-category-${categoryIndex}`,
+      name: category.name,
+      active: true,
+      order: categoryIndex,
+      items: category.items.map((item, itemIndex) => ({
+        id: `preview-item-${categoryIndex}-${itemIndex}`,
+        categoryId: `preview-category-${categoryIndex}`,
+        name: item.name,
+        description: item.description,
+        price: item.price,
+        active: true,
+        order: itemIndex,
+      })),
+    })),
+  };
+}
+
+function getOrderWhatsappHref(order: OrderDraft) {
+  const phone = (order.customerPhone || '').replace(/[^0-9]/g, '');
+
+  if (!phone) return null;
+
+  const statusLabel = ORDER_STATUSES.find((status) => status.value === order.status)?.label || 'Pendiente';
+  const summary = [
+    `Hola ${order.customerName || ''}`.trim(),
+    `Tu pedido está en estado: ${statusLabel}.`,
+    order.total ? `Total: ${order.total}` : null,
+  ].filter(Boolean).join('\n');
+
+  return `https://wa.me/${phone}?text=${encodeURIComponent(summary)}`;
 }
 
 function SectionTitle({ title, eyebrow }: { title: string; eyebrow?: string }) {

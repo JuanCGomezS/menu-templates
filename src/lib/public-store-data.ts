@@ -7,6 +7,7 @@ const STORE_TTL_MS = 60 * 60 * 1000;
 const CATEGORIES_TTL_MS = 60 * 60 * 1000;
 const ITEMS_TTL_MS = 30 * 60 * 1000;
 const TEMPLATES_TTL_MS = 2 * 60 * 60 * 1000;
+const ADMIN_STORE_TTL_MS = 60 * 60 * 1000;
 
 export const PUBLIC_STORE_LIMIT = 1;
 export const PUBLIC_CATEGORY_LIMIT = 50;
@@ -20,7 +21,13 @@ interface CacheEntry<T> {
 }
 
 function canUseLocalStorage() {
-  return typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+  if (typeof window === "undefined") return false;
+
+  try {
+    return typeof window.localStorage !== "undefined";
+  } catch {
+    return false;
+  }
 }
 
 export function clearPublicStoreCache(slug?: string, storeId?: string) {
@@ -31,6 +38,10 @@ export function clearPublicStoreCache(slug?: string, storeId?: string) {
     slug ? `${CACHE_PREFIX}:legacy-restaurant:${slug}` : null,
     storeId ? `${CACHE_PREFIX}:store:${storeId}:categories` : null,
     storeId ? `${CACHE_PREFIX}:store:${storeId}:items` : null,
+    storeId ? `${CACHE_PREFIX}:admin-store:${storeId}` : null,
+    slug ? `${CACHE_PREFIX}:admin-store-slug:${slug}` : null,
+    storeId ? `${CACHE_PREFIX}:store-slug:${storeId}` : null,
+    `${CACHE_PREFIX}:admin-stores:${ADMIN_STORE_LIST_LIMIT}`,
     storeId ? `${CACHE_PREFIX}:legacy-restaurant:${storeId}:categories` : null,
     storeId ? `${CACHE_PREFIX}:legacy-restaurant:${storeId}:items` : null,
   ];
@@ -38,6 +49,13 @@ export function clearPublicStoreCache(slug?: string, storeId?: string) {
   keys.forEach((key) => {
     if (key) window.localStorage.removeItem(key);
   });
+
+  for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
+    const key = window.localStorage.key(index);
+    if (key?.startsWith(`${CACHE_PREFIX}:admin-stores:`)) {
+      window.localStorage.removeItem(key);
+    }
+  }
 }
 
 async function getCachedOrFetch<T>(key: string, ttlMs: number, fetcher: () => Promise<T>): Promise<T> {
@@ -62,10 +80,14 @@ async function getCachedOrFetch<T>(key: string, ttlMs: number, fetcher: () => Pr
   const value = await fetcher();
 
   if (canUseLocalStorage()) {
-    window.localStorage.setItem(
-      cacheKey,
-      JSON.stringify({ expiresAt: Date.now() + ttlMs, value } satisfies CacheEntry<T>)
-    );
+    try {
+      window.localStorage.setItem(
+        cacheKey,
+        JSON.stringify({ expiresAt: Date.now() + ttlMs, value } satisfies CacheEntry<T>)
+      );
+    } catch {
+      // Reads must keep working even when the browser refuses cache writes.
+    }
   }
 
   return value;
@@ -181,41 +203,49 @@ async function getLegacyRestaurantItems(restaurantId: string, categories: Array<
 }
 
 export async function getStoreSlugById(storeId: string): Promise<string | null> {
-  const snapshot = await getDoc(doc(db, "stores", storeId));
+  return getCachedOrFetch(`store-slug:${storeId}`, ADMIN_STORE_TTL_MS, async () => {
+    const snapshot = await getDoc(doc(db, "stores", storeId));
 
-  if (!snapshot.exists()) {
-    return null;
-  }
+    if (!snapshot.exists()) {
+      return null;
+    }
 
-  const data = snapshot.data();
-  return typeof data.slug === "string" && data.slug.trim() ? data.slug : null;
+    const data = snapshot.data();
+    return typeof data.slug === "string" && data.slug.trim() ? data.slug : null;
+  });
 }
 
 export async function getStoreForAdminById(storeId: string) {
-  return fromDoc(await getDoc(doc(db, "stores", storeId)));
+  return getCachedOrFetch(`admin-store:${storeId}`, ADMIN_STORE_TTL_MS, async () => (
+    fromDoc(await getDoc(doc(db, "stores", storeId)))
+  ));
 }
 
 export async function getStoreForAdminBySlug(slug: string) {
-  const storesQuery = query(collection(db, "stores"), where("slug", "==", slug), limit(PUBLIC_STORE_LIMIT));
-  const snapshot = await getDocs(storesQuery);
+  return getCachedOrFetch(`admin-store-slug:${slug}`, ADMIN_STORE_TTL_MS, async () => {
+    const storesQuery = query(collection(db, "stores"), where("slug", "==", slug), limit(PUBLIC_STORE_LIMIT));
+    const snapshot = await getDocs(storesQuery);
 
-  if (snapshot.empty) {
-    return null;
-  }
+    if (snapshot.empty) {
+      return null;
+    }
 
-  const storeDoc = snapshot.docs[0];
+    const storeDoc = snapshot.docs[0];
 
-  return {
-    ...storeDoc.data(),
-    id: storeDoc.id,
-  };
+    return {
+      ...storeDoc.data(),
+      id: storeDoc.id,
+    };
+  });
 }
 
 export async function getLimitedStoresForAdmin(maxStores = ADMIN_STORE_LIST_LIMIT) {
-  const storesQuery = query(collection(db, "stores"), limit(maxStores));
-  const snapshot = await getDocs(storesQuery);
+  return getCachedOrFetch(`admin-stores:${maxStores}`, ADMIN_STORE_TTL_MS, async () => {
+    const storesQuery = query(collection(db, "stores"), limit(maxStores));
+    const snapshot = await getDocs(storesQuery);
 
-  return fromSnapshot(snapshot);
+    return fromSnapshot(snapshot);
+  });
 }
 
 export async function getPublicStoreBySlug(slug: string): Promise<PublicStore | null> {

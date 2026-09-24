@@ -2,7 +2,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import type { QueryDocumentSnapshot } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import type React from 'react';
-import { getUserProfile, ROLES } from '../../lib/auth';
+import { getCachedUserProfile, getUserProfile, ROLES } from '../../lib/auth';
 import { auth } from '../../lib/firebase';
 import { getStoreForAdminById, getStoreForAdminBySlug } from '../../lib/public-store-data';
 import { getHistoricalOrdersForStore, getOrdersForStoreDay, transitionOrderStatus, type OrderStatus, type StoreOrder } from '../../lib/orders';
@@ -39,9 +39,18 @@ export default function StoreAdminPanel({ slug }: { slug: string }) {
     setStatus(allowed ? 'allowed' : 'denied');
   }), [slug]);
 
-  if (status === 'loading') return <StoreAdminShell title="Cargando pedidos…" />;
-  if (status === 'denied') return <StoreAdminShell title="Acceso denegado"><p className="mt-3 text-gray-600">No tienes permiso para administrar esta tienda.</p></StoreAdminShell>;
-  if (status === 'not-found' || !store) return <StoreAdminShell title="Tienda no encontrada o inactiva" />;
+      const cachedProfile = getCachedUserProfile(user);
+
+      if (
+        cachedProfile?.role === ROLES.STOREADMIN
+        && cachedProfile.storeId
+        && cachedProfile.storeSlug === slug
+      ) {
+        window.location.assign(withBasePath(`/admin/store/?storeId=${cachedProfile.storeId}`));
+        return;
+      }
+
+      const profile = await getUserProfile(user);
 
   return <StoreAdminShell title="Operación de tienda"><AdminWorkspace store={store} /></StoreAdminShell>;
 }
