@@ -5,13 +5,11 @@ import type React from 'react';
 import { auth, db } from '../../lib/firebase';
 import { getUserProfile, ROLES } from '../../lib/auth';
 import { clearPublicStoreCache } from '../../lib/public-store-data';
-import type { PublicStore } from '../../lib/store-helpers';
-import { getAllTemplates, getAllThemes, resolveStoreTheme, resolveTemplate } from '../../lib/templates';
+import { getAllTemplates, getAllThemes, resolveStoreTheme, resolveTemplate, type TemplateConfig } from '../../lib/templates';
 import { withBasePath } from '../../lib/base-path';
 import AppHeader from './AppHeader';
 import AppFooter from './AppFooter';
 import Messaging, { type MessageTone } from './Messaging';
-import { PublicStoreTemplateView } from './RestaurantMenuView';
 
 type StoreType = 'restaurant' | 'food_business' | 'product_store';
 type PlanType = 'free_trial' | 'standard' | 'plus' | 'premium';
@@ -135,65 +133,6 @@ const WEEK_DAYS = [
 
 const INPUT_CLASS = 'w-full rounded-xl border border-gray-300 px-3 py-2 outline-none transition focus-visible:border-orange-500 focus-visible:ring-2 focus-visible:ring-orange-100';
 const COMPACT_INPUT_CLASS = 'w-full rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none transition focus-visible:border-orange-500 focus-visible:ring-2 focus-visible:ring-orange-100';
-
-type PreviewItem = {
-  name: string;
-  description: string;
-  price: number;
-};
-
-type PreviewCategory = {
-  name: string;
-  items: PreviewItem[];
-};
-
-const PREVIEW_CATEGORIES: Record<StoreType, PreviewCategory[]> = {
-  restaurant: [
-    {
-      name: 'Entradas y platos fuertes',
-      items: [
-        { name: 'Sopa de temporada', description: 'Preparación de la casa con ingredientes frescos.', price: 18000 },
-        { name: 'Plato especial', description: 'Proteína, acompañamiento y ensalada del día.', price: 34000 },
-      ],
-    },
-    {
-      name: 'Bebidas',
-      items: [
-        { name: 'Limonada natural', description: 'Fría, cítrica y preparada al momento.', price: 9000 },
-      ],
-    },
-  ],
-  food_business: [
-    {
-      name: 'Favoritos',
-      items: [
-        { name: 'Combo de la casa', description: 'Producto principal, acompañante y bebida.', price: 26000 },
-        { name: 'Postre artesanal', description: 'Porción individual lista para compartir.', price: 12000 },
-      ],
-    },
-    {
-      name: 'Promos',
-      items: [
-        { name: 'Dúo especial', description: 'Dos unidades seleccionadas por temporada.', price: 22000 },
-      ],
-    },
-  ],
-  product_store: [
-    {
-      name: 'Colección destacada',
-      items: [
-        { name: 'Producto esencial', description: 'Referencia principal con alta rotación.', price: 45000 },
-        { name: 'Set de regalo', description: 'Presentación lista para entregar.', price: 78000 },
-      ],
-    },
-    {
-      name: 'Novedades',
-      items: [
-        { name: 'Edición limitada', description: 'Disponible por temporada.', price: 59000 },
-      ],
-    },
-  ],
-};
 
 function createDefaultSchedule(): StoreFormState['schedule'] {
   return Object.fromEntries(
@@ -367,7 +306,6 @@ export default function StoreEditorPage() {
 
   const templates = useMemo(() => getAllTemplates(), []);
   const themes = useMemo(() => getAllThemes(), []);
-  const designPreviewStore = useMemo(() => makePreviewStore(form, categoryDrafts, productDrafts), [form, categoryDrafts, productDrafts]);
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (user) => {
@@ -759,15 +697,8 @@ export default function StoreEditorPage() {
           {activeTab === 'design' && (
             <div id="store-editor-design" role="tabpanel">
               <div className="mt-4 space-y-5">
-                <div className="grid items-end gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(16rem,0.7fr)]">
-                  <Field label="Plantilla"><select name="templateId" value={form.templateId} onChange={(event) => updateForm('templateId', event.target.value)} className={COMPACT_INPUT_CLASS} required>{templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></Field>
-                  <Field label="Tema"><select name="themeId" value={form.themeId} onChange={(event) => updateForm('themeId', event.target.value)} className={COMPACT_INPUT_CLASS}>{themes.map((theme) => <option key={theme.id} value={theme.id}>{theme.name}</option>)}</select></Field>
-                  <div className="rounded-2xl border border-orange-100 bg-orange-50 p-3 text-xs leading-5 text-orange-950">
-                    <p className="font-black">Vista previa en vivo</p>
-                    <p className="mt-1">Se actualiza con los cambios del formulario antes de guardar.</p>
-                  </div>
-                </div>
-                <DesignPreview store={designPreviewStore} />
+                <TemplateSelector templates={templates} selectedId={form.templateId} onChange={(templateId) => updateForm('templateId', templateId)} />
+                <Field label="Tema"><select name="themeId" value={form.themeId} onChange={(event) => updateForm('themeId', event.target.value)} className={COMPACT_INPUT_CLASS}>{themes.map((theme) => <option key={theme.id} value={theme.id}>{theme.name}</option>)}</select></Field>
               </div>
             </div>
           )}
@@ -815,7 +746,7 @@ export default function StoreEditorPage() {
 
                 {categoryDrafts.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-sm leading-6 text-gray-600">
-                    Todavía no hay categorías. Agregá una para empezar a cargar productos reales; mientras tanto el preview usa datos de ejemplo.
+                    Todavía no hay categorías. Agregá una para empezar a cargar productos reales.
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -916,93 +847,21 @@ export default function StoreEditorPage() {
   );
 }
 
-function DesignPreview({ store }: { store: PublicStore }) {
-  return (
-    <section
-      aria-labelledby="design-preview-title"
-      className="overflow-hidden rounded-[1.75rem] border border-gray-200 bg-white shadow-sm"
-    >
-      <div className="border-b border-black/10 bg-white px-4 py-3">
-        <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Preview</p>
-        <h2 id="design-preview-title" className="mt-1 text-lg font-black text-gray-950">Así se va a ver la tienda pública</h2>
-        <p className="mt-1 text-sm text-gray-500">Usa la misma plantilla y los mismos colores que la página real.</p>
-      </div>
-
-      <div className="max-h-[44rem] overflow-auto bg-gray-100">
-        <div className="min-w-[72rem]">
-          <PublicStoreTemplateView store={store} />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function makePreviewStore(form: StoreFormState, categories: CategoryDraft[], products: ProductDraft[]): PublicStore {
-  const template = resolveTemplate(form.templateId);
-  const storeName = form.name.trim() || 'Nombre de la tienda';
-  const slug = normalizeSlug(form.slug || form.name) || 'preview';
-  const previewCategories = categories
-    .map((category, categoryIndex) => ({
-      id: category.id,
-      name: category.name.trim(),
-      active: category.active,
-      order: toOptionalNumber(category.order || String(categoryIndex)),
-      items: products
-        .filter((product) => product.categoryId === category.id && product.name.trim())
-        .map((product, productIndex) => ({
-          id: product.id,
-          categoryId: category.id,
-          name: product.name.trim(),
-          description: product.description.trim(),
-          price: toOptionalNumber(product.price),
-          active: product.active,
-          order: toOptionalNumber(product.order || String(productIndex)),
-          ...(form.stockControl ? { trackStock: product.trackStock, stock: product.trackStock ? toOptionalNumber(product.stock) : 0 } : {}),
-          ...(form.inStoreOrdering ? { availableInStore: product.availableInStore } : {}),
-          ...(form.deliveryOrdering ? { availableForDelivery: product.availableForDelivery } : {}),
-        })),
-    }))
-    .filter((category) => category.name && category.items.length > 0);
-
-  return {
-    id: form.id || 'preview-store',
-    name: storeName,
-    slug,
-    type: form.type,
-    active: form.active,
-    isActive: form.active,
-    currency: form.currency,
-    templateId: form.templateId,
-    themeId: form.themeId,
-    template: { id: template.id, name: template.name },
-    capabilities: {
-      inStoreOrdering: form.inStoreOrdering,
-      deliveryOrdering: form.deliveryOrdering,
-      stockControl: form.stockControl,
-    },
-    contact: {
-      whatsapp: form.whatsapp.trim() || '+573001234567',
-      instagram: form.instagram.trim() || '@mitienda',
-      address: form.address.trim() || 'Dirección de la tienda',
-      deliveryNotes: form.deliveryNotes.trim(),
-    },
-    schedule: form.schedule,
-    categories: previewCategories.length > 0 ? previewCategories : PREVIEW_CATEGORIES[form.type].map((category, categoryIndex) => ({
-      id: `preview-category-${categoryIndex}`,
-      name: category.name,
-      active: true,
-      order: categoryIndex,
-      items: category.items.map((item, itemIndex) => ({
-        id: `preview-item-${categoryIndex}-${itemIndex}`,
-        categoryId: `preview-category-${categoryIndex}`,
-        name: item.name,
-        description: item.description,
-        price: item.price,
-        active: true,
-        order: itemIndex,
-      })),
-    })),
-  };
+function TemplateSelector({ templates, selectedId, onChange }: { templates: TemplateConfig[]; selectedId: string; onChange: (id: string) => void }) {
+  return <fieldset>
+    <legend className="text-sm font-semibold text-gray-700">Plantilla</legend>
+    <p className="mt-1 text-sm text-gray-500">Elegí la estructura visual. El tema cambia los colores sin cambiar el layout.</p>
+    <div className="mt-3 grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Plantilla de tienda">
+      {templates.map((template) => {
+        const selected = template.id === selectedId;
+        return <button key={template.id} type="button" role="radio" aria-checked={selected} onClick={() => onChange(template.id)} className={`rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 ${selected ? 'border-orange-600 bg-orange-50 ring-1 ring-orange-600' : 'border-gray-200 bg-white hover:border-orange-300'}`}>
+          <div className="flex items-start justify-between gap-3"><span className="text-lg font-black text-gray-950">{template.name}</span>{selected && <span className="rounded-full bg-orange-600 px-2 py-1 text-xs font-bold text-white">Seleccionada</span>}</div>
+          <p className="mt-2 text-sm leading-6 text-gray-600">{template.description}</p>
+          <p className="mt-3 text-xs font-bold uppercase tracking-wide text-orange-700">{template.component === 'minimal' ? 'Lectura directa · lista' : template.component === 'natural' ? 'Editorial · secciones' : template.component === 'warm' ? 'Promocional · destacados' : 'Premium · composición'}</p>
+        </button>;
+      })}
+    </div>
+  </fieldset>;
 }
 
 function SectionTitle({ title, eyebrow }: { title: string; eyebrow?: string }) {

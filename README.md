@@ -209,3 +209,7 @@ La pestaña **Estadísticas** incluye un calendario nativo para un día o un ran
 El carrito público puede minimizarse sin perder sus productos. Antes de agregar o confirmar, valida la modalidad configurada en la tienda, la disponibilidad del producto y el stock visible. La confirmación queda bloqueada mientras se envía y usa un identificador único por intento para evitar duplicados; ante un error conserva el carrito para reintentar.
 
 La atención administrativa usa `transitionOrderStatus`: al aceptar, una transacción comprueba disponibilidad y descuenta stock de los productos que lo controlan; al cancelar un pedido aceptado, preparando o listo, la misma transacción lo repone. No se descuenta en la creación pública ni se repone después de entregarlo.
+
+## Selector de plantillas
+
+El editor usa cards de plantilla en lugar de renderizar una tienda completa dentro del formulario. Cada card comunica su estructura y propósito, es seleccionable con teclado y lector de pantalla, y conserva los IDs canónicos al guardar. Los IDs heredados se resuelven de forma compatible mediante `resolveTemplate`.
