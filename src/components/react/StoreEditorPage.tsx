@@ -633,7 +633,7 @@ export default function StoreEditorPage() {
   };
 
   if (status === 'loading') {
-    return <EditorShell title="Configurar tienda" />;
+    return <EditorShell title="Preparando configuración"><div className="mt-6 animate-pulse rounded-2xl border border-gray-200 bg-white p-6 text-gray-600" role="status">Comprobando sesión, permisos y datos de la tienda…</div></EditorShell>;
   }
 
   if (status === 'denied') {

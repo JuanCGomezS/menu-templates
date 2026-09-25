@@ -221,3 +221,7 @@ Las cuatro plantillas consumen el mismo `StoreContentModel` normalizado; cambian
 ## Release y rutas estáticas
 
 Usá `npm run verify` antes de publicar: ejecuta typecheck, pruebas de reglas con Emulator, build y validación de archivos estáticos. El workflow de `main` despliega coordinadamente Firestore Rules, índices y Storage Rules antes de GitHub Pages; requiere el secreto `FIREBASE_SERVICE_ACCOUNT`. La verificación de carga directa/refresh y el registro de evidencia de producción están en [`docs/release-checklist.md`](docs/release-checklist.md).
+
+## Sesión y permisos
+
+El perfil de permisos se deduplica en memoria y se conserva durante cinco minutos por sesión para evitar lecturas repetidas de `users/{uid}` al navegar. Los paneles distinguen carga, sesión ausente, perfil incompleto, acceso denegado y error de red; Firestore Rules sigue validando toda operación. La guía de prueba está en [`docs/session-permissions-checklist.md`](docs/session-permissions-checklist.md).

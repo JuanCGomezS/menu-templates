@@ -192,7 +192,7 @@ export default function LoginForm() {
   if (loading) {
     return (
       <div className="rounded-3xl bg-white p-8 text-center shadow-xl ring-1 ring-gray-200">
-        <p className="text-gray-600">Validando sesión...</p>
+        <p className="text-gray-600">Preparando acceso…</p>
       </div>
     );
   }

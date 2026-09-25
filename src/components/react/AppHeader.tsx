@@ -1,7 +1,7 @@
 import { onAuthStateChanged, sendPasswordResetEmail, signOut } from 'firebase/auth';
 import { useEffect, useRef, useState } from 'react';
 import { auth } from '../../lib/firebase';
-import { getUserProfile, ROLE_LABELS, ROLES, type AppUserProfile } from '../../lib/auth';
+import { clearUserProfileCache, getUserProfile, ROLE_LABELS, ROLES, type AppUserProfile } from '../../lib/auth';
 import { withBasePath } from '../../lib/base-path';
 import Messaging, { type MessageTone } from './Messaging';
 
@@ -68,6 +68,7 @@ export default function AppHeader({ title = 'Menu Templates', fixed = false }: {
   };
 
   const handleLogout = async () => {
+    clearUserProfileCache(auth.currentUser?.uid);
     await signOut(auth);
     setOpen(false);
     window.location.assign(withBasePath('/login'));

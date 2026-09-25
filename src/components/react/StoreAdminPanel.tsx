@@ -1,49 +1,51 @@
-import { onAuthStateChanged } from 'firebase/auth';
 import type { QueryDocumentSnapshot } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 import type React from 'react';
-import { getUserProfile, ROLES } from '../../lib/auth';
-import { auth } from '../../lib/firebase';
+import { ROLES } from '../../lib/auth';
 import { getStoreForAdminById, getStoreForAdminBySlug } from '../../lib/public-store-data';
 import { getHistoricalOrdersForStore, getOrdersForStoreDay, transitionOrderStatus, type OrderStatus, type StoreOrder } from '../../lib/orders';
 import { formatPrice } from '../../lib/utils';
 import { withBasePath } from '../../lib/base-path';
 import AppFooter from './AppFooter';
 import AppHeader from './AppHeader';
+import { useAuthSession } from './useAuthSession';
 
 type StoreAccess = { id: string; name?: string; currency?: string; timeZone?: string };
 
 export default function StoreAdminPanel({ slug }: { slug: string }) {
-  const [status, setStatus] = useState<'loading' | 'allowed' | 'denied' | 'not-found'>('loading');
+  const { state: sessionState, profile } = useAuthSession();
+  const [status, setStatus] = useState<'loading' | 'allowed' | 'denied' | 'not-found' | 'error'>('loading');
   const [store, setStore] = useState<StoreAccess | null>(null);
 
-  useEffect(() => onAuthStateChanged(auth, async (user) => {
-    if (!user) {
-      window.location.assign(withBasePath('/login'));
-      return;
-    }
-    const profile = await getUserProfile(user);
-    if (profile?.role === ROLES.SUPERADMIN) {
-      const foundStore = await getStoreForAdminBySlug(slug);
-      setStore(foundStore || null);
-      setStatus(foundStore ? 'allowed' : 'not-found');
-      return;
-    }
-    if (profile?.role !== ROLES.STOREADMIN || !profile.storeId) {
-      setStatus('denied');
-      return;
-    }
-    const foundStore = await getStoreForAdminById(profile.storeId);
-    const allowed = foundStore && foundStore.slug === slug;
-    setStore(allowed ? foundStore : null);
-    setStatus(allowed ? 'allowed' : 'denied');
-  }), [slug]);
+  useEffect(() => {
+    if (sessionState === 'anonymous') window.location.assign(withBasePath('/login'));
+  }, [sessionState]);
 
-  if (status === 'loading') return <StoreAdminShell title="Cargando pedidos…" />;
+  useEffect(() => {
+    if (sessionState !== 'authenticated' || !profile) return;
+    let active = true;
+    const loadStore = profile.role === ROLES.SUPERADMIN
+      ? getStoreForAdminBySlug(slug)
+      : profile.role === ROLES.STOREADMIN && profile.storeId
+        ? getStoreForAdminById(profile.storeId)
+        : Promise.resolve(null);
+    loadStore.then((foundStore) => {
+      if (!active) return;
+      if (!foundStore) { setStatus(profile.role === ROLES.STOREADMIN || profile.role === ROLES.SUPERADMIN ? 'not-found' : 'denied'); return; }
+      const allowed = profile.role === ROLES.SUPERADMIN || (profile.role === ROLES.STOREADMIN && foundStore.id === profile.storeId && foundStore.slug === slug);
+      setStore(allowed ? foundStore : null); setStatus(allowed ? 'allowed' : 'denied');
+    }).catch((error) => { console.error('No se pudo cargar la tienda:', error); if (active) setStatus('error'); });
+    return () => { active = false; };
+  }, [profile, sessionState, slug]);
+
+  if (sessionState === 'loading' || status === 'loading') return <StoreAdminShell title="Preparando pedidos"><p className="mt-4 animate-pulse text-gray-600" role="status">Comprobando sesión y acceso a la tienda…</p></StoreAdminShell>;
+  if (sessionState === 'error') return <StoreAdminShell title="No pudimos validar tu sesión"><p className="mt-3 text-gray-600">Revisa tu conexión y recarga la página.</p></StoreAdminShell>;
+  if (sessionState === 'missing-profile') return <StoreAdminShell title="Perfil incompleto"><p className="mt-3 text-gray-600">Tu cuenta no tiene un perfil de permisos.</p></StoreAdminShell>;
+  if (sessionState === 'anonymous') return <StoreAdminShell title="Redirigiendo al acceso" />;
   if (status === 'denied') return <StoreAdminShell title="Acceso denegado"><p className="mt-3 text-gray-600">No tienes permiso para administrar esta tienda.</p></StoreAdminShell>;
-  if (status === 'not-found' || !store) return <StoreAdminShell title="Tienda no encontrada o inactiva" />;
-
-  return <StoreAdminShell title="Operación de tienda"><AdminWorkspace store={store} /></StoreAdminShell>;
+  if (status === 'not-found') return <StoreAdminShell title="Tienda no encontrada o inactiva" />;
+  if (status === 'error') return <StoreAdminShell title="No se pudo cargar la tienda"><p className="mt-3 text-gray-600">Revisa tu conexión y vuelve a intentar.</p></StoreAdminShell>;
+  return <StoreAdminShell title="Operación de tienda"><AdminWorkspace store={store!} /></StoreAdminShell>;
 }
 
 function AdminWorkspace({ store }: { store: StoreAccess }) {
