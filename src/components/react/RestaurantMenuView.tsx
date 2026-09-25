@@ -6,6 +6,7 @@ import { withBasePath } from '../../lib/base-path';
 import type { PublicCategory, PublicItem, PublicStore } from '../../lib/store-helpers';
 import { normalizeStoreContent, type StoreContentModel } from '../../lib/store-content';
 import { PublicOrderCartProvider, usePublicOrderCart } from './PublicOrderCart';
+import OrderTrackingView from './OrderTrackingView';
 
 type StoreData = PublicStore;
 type ScheduleEntry = [string, string];
@@ -77,6 +78,8 @@ export default function RestaurantMenuView({ slug }: Props) {
 
 export function PublicStoreTemplateView({ store }: { store: StoreData }) {
   const contentModel = normalizeStoreContent(store);
+  const trackingCode = typeof window === 'undefined' ? '' : new URLSearchParams(window.location.search).get('pedido') || '';
+  if (trackingCode) return <ThemeFrame theme={resolveStoreTheme(contentModel.templateId || '', contentModel.themeId)}><main className="flex min-h-screen items-center justify-center bg-[var(--store-bg)] px-4"><OrderTrackingView storeId={contentModel.id} trackingCode={trackingCode} /></main></ThemeFrame>;
   const template = getTemplateComponent(contentModel.templateId || '');
   const theme = resolveStoreTheme(contentModel.templateId || '', contentModel.themeId);
   const schedule = contentModel.schedule ? sortScheduleDays(contentModel.schedule) : [];

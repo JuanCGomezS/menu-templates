@@ -1,11 +1,11 @@
-import { collection, doc, getDocs, limit, orderBy, query, runTransaction, serverTimestamp, setDoc, startAfter, Timestamp, where, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, limit, orderBy, query, runTransaction, serverTimestamp, setDoc, startAfter, Timestamp, where, writeBatch, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
 
 export const ORDER_MODES = ['in_store', 'delivery'] as const;
 export type OrderMode = (typeof ORDER_MODES)[number];
 export const ACTIVE_ORDER_STATUSES = ['pending', 'accepted', 'preparing', 'ready'] as const;
 export type ActiveOrderStatus = (typeof ACTIVE_ORDER_STATUSES)[number];
-export const ORDER_STATUSES = [...ACTIVE_ORDER_STATUSES, 'delivered', 'cancelled'] as const;
+export const ORDER_STATUSES = [...ACTIVE_ORDER_STATUSES, 'out_for_delivery', 'delivered', 'cancelled'] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 export const ADMIN_ORDER_LIMIT = 25;
 
@@ -41,10 +41,14 @@ export function validatePublicOrder(input: PublicOrderInput, capabilities: Order
 }
 
 /** Writes only an already validated, normalized public order. */
-export async function createPublicOrder(storeId: string, order: PublicOrderInput, clientRequestId: string) {
-  if (!/^[a-zA-Z0-9_-]{8,100}$/.test(clientRequestId)) throw new Error('El identificador de pedido no es válido.');
-  // A stable id makes a retry idempotent and prevents duplicate submits from a double click.
-  return setDoc(doc(db, 'stores', storeId, 'orders', clientRequestId), { ...order, clientRequestId, status: 'pending', createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+export async function createPublicOrder(storeId: string, order: PublicOrderInput, trackingCode: string) {
+  if (!/^[a-zA-Z0-9_-]{16,100}$/.test(trackingCode)) throw new Error('El código de seguimiento no es válido.');
+  // One high-entropy id is both idempotency key and public tracking capability.
+  const batch = writeBatch(db);
+  batch.set(doc(db, 'stores', storeId, 'orders', trackingCode), { ...order, clientRequestId: trackingCode, trackingCode, status: 'pending', createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  batch.set(doc(db, 'stores', storeId, 'orderTracking', trackingCode), { type: order.type, status: 'pending', createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
+  await batch.commit();
+  return trackingCode;
 }
 
 export interface StoreOrder {
@@ -55,12 +59,14 @@ export interface StoreOrder {
   tableNumber?: number;
   deliveryAddress?: string;
   status?: OrderStatus;
+  trackingCode?: string;
   total?: number;
   items?: Array<{ itemId?: string; name?: string; quantity?: number; price?: number }>;
   createdAt?: Timestamp;
 }
 
 export interface OrdersPage { orders: StoreOrder[]; cursor: QueryDocumentSnapshot | null; }
+export interface PublicOrderTracking { type: OrderMode; status: OrderStatus; updatedAt?: Timestamp; }
 export interface DayRange { start: Date; end: Date; }
 export interface HistoricalOrdersPage extends OrdersPage { range: DayRange; }
 
@@ -142,7 +148,8 @@ const STATUS_TRANSITIONS: Partial<Record<OrderStatus, OrderStatus[]>> = {
   pending: ['accepted', 'cancelled'],
   accepted: ['preparing', 'cancelled'],
   preparing: ['ready', 'cancelled'],
-  ready: ['delivered', 'cancelled'],
+  ready: ['delivered', 'cancelled', 'out_for_delivery'],
+  out_for_delivery: ['delivered'],
 };
 
 /**
@@ -158,6 +165,8 @@ export async function transitionOrderStatus(storeId: string, orderId: string, ne
     if (!order.status || !STATUS_TRANSITIONS[order.status]?.includes(nextStatus)) throw new Error('La transición de estado no está permitida.');
     const orderItems = order.items || [];
     const itemSnapshots = await Promise.all(orderItems.map((item) => transaction.get(doc(db, 'stores', storeId, 'items', item.itemId || ''))));
+    const trackingRef = order.trackingCode ? doc(db, 'stores', storeId, 'orderTracking', order.trackingCode) : null;
+    const trackingSnapshot = trackingRef ? await transaction.get(trackingRef) : null;
 
     for (let index = 0; index < itemSnapshots.length; index += 1) {
       const item = itemSnapshots[index].data();
@@ -178,7 +187,14 @@ export async function transitionOrderStatus(storeId: string, orderId: string, ne
       });
     }
     transaction.update(orderRef, { status: nextStatus, updatedAt: serverTimestamp() });
+    if (trackingRef && trackingSnapshot?.exists()) transaction.update(trackingRef, { status: nextStatus, updatedAt: serverTimestamp() });
   });
+}
+
+export async function getPublicOrderTracking(storeId: string, trackingCode: string): Promise<PublicOrderTracking | null> {
+  if (!/^[a-zA-Z0-9_-]{16,100}$/.test(trackingCode)) return null;
+  const snapshot = await getDoc(doc(db, 'stores', storeId, 'orderTracking', trackingCode));
+  return snapshot.exists() ? snapshot.data() as PublicOrderTracking : null;
 }
 
 /** Legacy bounded active-orders query retained for existing integrations. */

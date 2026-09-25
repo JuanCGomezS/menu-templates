@@ -43,6 +43,17 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['name', 'order', 'active', 'createdAt', 'updatedAt']);
     }
 
+    function isValidOrderStatusTransition() {
+      return (resource.data.status == 'pending' && request.resource.data.status in ['accepted', 'cancelled'])
+        || (resource.data.status == 'accepted' && request.resource.data.status in ['preparing', 'cancelled'])
+        || (resource.data.status == 'preparing' && request.resource.data.status in ['ready', 'cancelled'])
+        || (resource.data.status == 'ready' && (
+          request.resource.data.status in ['delivered', 'cancelled']
+          || (resource.data.type == 'delivery' && request.resource.data.status == 'out_for_delivery')
+        ))
+        || (resource.data.status == 'out_for_delivery' && request.resource.data.status == 'delivered');
+    }
+
     function isStoreAdminItemWrite(storeId) {
       return isStoreAdminFor(storeId)
         && request.resource.data.keys().hasOnly([
@@ -54,7 +65,7 @@ service cloud.firestore {
 
     function hasValidPublicOrderBase() {
       return request.resource.data.keys().hasAll([
-          'customerName', 'type', 'status', 'items', 'total', 'clientRequestId', 'createdAt', 'updatedAt'
+          'customerName', 'type', 'status', 'items', 'total', 'clientRequestId', 'trackingCode', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.customerName is string
         && request.resource.data.customerName.size() >= 2
@@ -63,6 +74,11 @@ service cloud.firestore {
         && request.resource.data.clientRequestId is string
         && request.resource.data.clientRequestId.size() >= 8
         && request.resource.data.clientRequestId.size() <= 100
+        && request.resource.data.trackingCode is string
+        && request.resource.data.trackingCode.size() >= 16
+        && request.resource.data.trackingCode.size() <= 100
+        && request.resource.data.clientRequestId == request.resource.id
+        && request.resource.data.trackingCode == request.resource.id
         && request.resource.data.items is list
         && request.resource.data.items.size() > 0
         && request.resource.data.items.size() <= 40
@@ -78,7 +94,7 @@ service cloud.firestore {
     function hasValidTableOrder(storeId) {
       return get(/databases/$(database)/documents/stores/$(storeId)).data.capabilities.inStoreOrdering == true
         && request.resource.data.keys().hasOnly([
-          'customerName', 'type', 'status', 'items', 'total', 'tableNumber', 'notes', 'clientRequestId', 'createdAt', 'updatedAt'
+          'customerName', 'type', 'status', 'items', 'total', 'tableNumber', 'notes', 'clientRequestId', 'trackingCode', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.type == 'in_store'
         && request.resource.data.tableNumber is int
@@ -89,7 +105,7 @@ service cloud.firestore {
     function hasValidDeliveryOrder(storeId) {
       return get(/databases/$(database)/documents/stores/$(storeId)).data.capabilities.deliveryOrdering == true
         && request.resource.data.keys().hasOnly([
-          'customerName', 'customerPhone', 'type', 'status', 'items', 'total', 'deliveryAddress', 'notes', 'clientRequestId', 'createdAt', 'updatedAt'
+          'customerName', 'customerPhone', 'type', 'status', 'items', 'total', 'deliveryAddress', 'notes', 'clientRequestId', 'trackingCode', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.type == 'delivery'
         && request.resource.data.customerPhone is string
@@ -177,7 +193,21 @@ service cloud.firestore {
       match /orders/{orderId} {
         allow create: if isPublicOrderCreate(storeId);
         allow read: if isSuperAdmin() || isStoreAdminFor(storeId);
-        allow update: if isSuperAdmin() || (isStoreAdminFor(storeId) && storeAdminChangesOnly(['status', 'updatedAt']));
+        allow update: if isSuperAdmin() || (isStoreAdminFor(storeId) && storeAdminChangesOnly(['status', 'updatedAt']) && isValidOrderStatusTransition());
+        allow delete: if isSuperAdmin();
+      }
+
+      match /orderTracking/{trackingCode} {
+        allow get: if resource.data.keys().hasOnly(['type', 'status', 'createdAt', 'updatedAt']);
+        allow list: if false;
+        allow create: if request.resource.data.keys().hasOnly(['type', 'status', 'createdAt', 'updatedAt'])
+          && request.resource.data.type in ['in_store', 'delivery']
+          && request.resource.data.status == 'pending'
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time
+          && existsAfter(/databases/$(database)/documents/stores/$(storeId)/orders/$(trackingCode))
+          && getAfter(/databases/$(database)/documents/stores/$(storeId)/orders/$(trackingCode)).data.trackingCode == trackingCode;
+        allow update: if isSuperAdmin() || (isStoreAdminFor(storeId) && storeAdminChangesOnly(['status', 'updatedAt']) && isValidOrderStatusTransition());
         allow delete: if isSuperAdmin();
       }
 

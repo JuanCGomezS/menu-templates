@@ -9,6 +9,7 @@ import {
 import {
   collection,
   doc,
+  getDoc,
   getDocs,
   limit,
   query,
@@ -35,13 +36,14 @@ function withoutField(data, field) {
   return copy;
 }
 
-function publicOrder(overrides = {}) {
+function publicOrder(overrides = {}, trackingCode = 'publictrackingcode1234') {
   return {
     customerName: 'Ana Pérez',
     customerPhone: '+57 300 123 4567',
     type: 'in_store',
     tableNumber: 12,
-    clientRequestId: 'public-order-request',
+    clientRequestId: trackingCode,
+    trackingCode,
     status: 'pending',
     items: [{ itemId: 'item-1', name: 'Hamburguesa', quantity: 1, price: 18000 }],
     total: 18000,
@@ -75,12 +77,20 @@ before(async () => {
         status: 'pending',
         createdAt: Timestamp.fromDate(new Date()),
       }),
+      setDoc(doc(db, 'stores', 'store-a', 'orderTracking', 'securetrackingcode123'), {
+        type: 'delivery', status: 'preparing', createdAt: Timestamp.fromDate(new Date()), updatedAt: Timestamp.fromDate(new Date()),
+      }),
     ]);
   });
 });
 
 after(async () => {
   await testEnv?.cleanup();
+});
+
+test('el rastreo público permite get directo pero bloquea listados', async () => {
+  await assertSucceeds(getDoc(doc(publicDb(), 'stores', 'store-a', 'orderTracking', 'securetrackingcode123')));
+  await assertFails(getDocs(collection(publicDb(), 'stores', 'store-a', 'orderTracking')));
 });
 
 test('un registro público solo puede crear su perfil customer, con nombre opcional', async () => {
@@ -128,19 +138,19 @@ test('storeadmin solo puede actualizar el estado de un pedido', async () => {
 
 test('un pedido público válido solo se crea en una tienda activa', async () => {
   await assertSucceeds(
-    setDoc(doc(publicDb(), 'stores', 'store-a', 'orders', 'public-order'), publicOrder()),
+    setDoc(doc(publicDb(), 'stores', 'store-a', 'orders', 'publictrackingcode1234'), publicOrder()),
   );
 });
 
 test('un domicilio público exige teléfono y dirección, y no permite mesa', async () => {
   await assertSucceeds(
     setDoc(
-      doc(publicDb(), 'stores', 'store-a', 'orders', 'delivery-order'),
+      doc(publicDb(), 'stores', 'store-a', 'orders', 'deliverytrackingcode123'),
       withoutField(publicOrder({
         type: 'delivery',
         customerPhone: '+57 300 123 4567',
         deliveryAddress: 'Calle 123 #45-67',
-      }), 'tableNumber'),
+      }, 'deliverytrackingcode123'), 'tableNumber'),
     ),
   );
 

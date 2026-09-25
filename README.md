@@ -233,3 +233,9 @@ Desde el editor se puede cargar o reemplazar el logo (imagen menor de 5 MB) y co
 ## Acceso con Google
 
 En Firebase Console, activá **Authentication → Sign-in method → Google** y agregá `JuanCGomezS.github.io` a **Authentication → Settings → Authorized domains** para GitHub Pages. El botón Google sirve para entrar con una cuenta ya registrada; desde **Registrarme** abre Google, pide confirmar el nombre y crea solo un perfil `customer`. Si el documento `users/{uid}` ya existe, se conservan rol y vínculo de tienda; el cliente nunca puede asignarlos.
+
+## Estados y seguimiento de pedidos
+
+Mesa/recogida: **Solicitado → Confirmado → En preparación → Listo → Entregado**. Domicilio añade **En camino** entre Listo y Entregado. El panel solo muestra acciones válidas; aceptación descuenta stock y cancelar antes de entrega lo repone según el flujo existente.
+
+Al confirmar, el cliente recibe un código de alta entropía y un enlace de seguimiento que puede copiar o compartir. El negocio puede reenviarlo manualmente por WhatsApp. El documento público de seguimiento contiene solamente modalidad, estado y marcas de tiempo; Firestore permite lectura directa por código, pero bloquea listados y escrituras públicas.
