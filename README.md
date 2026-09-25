@@ -229,3 +229,7 @@ El perfil de permisos se deduplica en memoria y se conserva durante cinco minuto
 ## Identidad y ubicación
 
 Desde el editor se puede cargar o reemplazar el logo (imagen menor de 5 MB) y configurar latitud/longitud. Los logos se almacenan bajo `stores/{storeId}/branding/` en Firebase Storage; la tienda pública muestra el logo cuando existe y un enlace accesible a Google Maps cuando hay coordenadas. Las tiendas sin estos campos siguen funcionando sin cambios.
+
+## Acceso con Google
+
+En Firebase Console, activá **Authentication → Sign-in method → Google** y agregá `JuanCGomezS.github.io` a **Authentication → Settings → Authorized domains** para GitHub Pages. El botón Google sirve para entrar con una cuenta ya registrada; desde **Registrarme** abre Google, pide confirmar el nombre y crea solo un perfil `customer`. Si el documento `users/{uid}` ya existe, se conservan rol y vínculo de tienda; el cliente nunca puede asignarlos.

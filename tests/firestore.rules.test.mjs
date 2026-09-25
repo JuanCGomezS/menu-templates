@@ -83,6 +83,15 @@ after(async () => {
   await testEnv?.cleanup();
 });
 
+test('un registro público solo puede crear su perfil customer, con nombre opcional', async () => {
+  await assertSucceeds(setDoc(doc(adminDb('new-customer'), 'users', 'new-customer'), {
+    uid: 'new-customer', email: 'customer@example.com', name: 'Cliente Google', role: 'customer', createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(adminDb('forged-admin'), 'users', 'forged-admin'), {
+    uid: 'forged-admin', email: 'admin@example.com', role: 'superadmin', createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
+  }));
+});
+
 test('storeadmin puede cargar pedidos activos únicamente de su tienda', async () => {
   const ownOrders = query(
     collection(adminDb('admin-a'), 'stores', 'store-a', 'orders'),
