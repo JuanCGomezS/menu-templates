@@ -26,7 +26,8 @@ const firebaseConfig = {
   measurementId: import.meta.env.PUBLIC_FIREBASE_MEASUREMENT_ID?.trim(),
 };
 
-const app = initializeApp(firebaseConfig);
+export const app = initializeApp(firebaseConfig);
+export const vapidKey = import.meta.env.PUBLIC_FIREBASE_VAPID_KEY?.trim() || '';
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);

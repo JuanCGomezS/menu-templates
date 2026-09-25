@@ -239,3 +239,9 @@ En Firebase Console, activá **Authentication → Sign-in method → Google** y 
 Mesa/recogida: **Solicitado → Confirmado → En preparación → Listo → Entregado**. Domicilio añade **En camino** entre Listo y Entregado. El panel solo muestra acciones válidas; aceptación descuenta stock y cancelar antes de entrega lo repone según el flujo existente.
 
 Al confirmar, el cliente recibe un código de alta entropía y un enlace de seguimiento que puede copiar o compartir. El negocio puede reenviarlo manualmente por WhatsApp. El documento público de seguimiento contiene solamente modalidad, estado y marcas de tiempo; Firestore permite lectura directa por código, pero bloquea listados y escrituras públicas.
+
+## Alertas de pedidos y FCM
+
+La cola activa escucha en tiempo real solo cuando está visible: una consulta por tienda, día, estados activos y máximo 25 pedidos. La primera carga establece una base y no alerta pedidos históricos. Las notificaciones locales de escritorio son voluntarias.
+
+La push con FCM es opcional y usa `functions/notifyStoreAdminOfNewOrder`, por lo que exige Blaze, Firebase Cloud Messaging configurado y una cuenta de servicio de deploy. La Function hace como máximo dos lecturas por pedido (tienda y token del admin), no hace queries de colección ni polling. Configurá un presupuesto/alertas de Google Cloud antes de desplegar Functions; sin FCM configurado, la cola local continúa funcionando.

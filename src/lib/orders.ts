@@ -4,6 +4,7 @@ import {
   getDoc,
   getDocs,
   limit,
+  onSnapshot,
   orderBy,
   query,
   runTransaction,
@@ -394,6 +395,28 @@ export async function getHistoricalOrdersForStore(
     cursor: snapshot.docs.at(-1) || null,
     range,
   };
+}
+
+/** Subscribes only to the visible admin queue; callers must unsubscribe when hidden. */
+export function subscribeToActiveOrdersForStoreDay(
+  storeId: string,
+  timeZone: string,
+  onOrders: (orders: StoreOrder[], initial: boolean) => void,
+  onError: (error: Error) => void,
+) {
+  const range = getStoreDayRange(timeZone);
+  let initial = true;
+  return onSnapshot(query(
+    collection(db, "stores", storeId, "orders"),
+    where("status", "in", ACTIVE_ORDER_STATUSES),
+    where("createdAt", ">=", Timestamp.fromDate(range.start)),
+    where("createdAt", "<", Timestamp.fromDate(range.end)),
+    orderBy("createdAt", "desc"),
+    limit(ADMIN_ORDER_LIMIT),
+  ), (snapshot) => {
+    onOrders(snapshot.docs.map((orderDoc) => ({ id: orderDoc.id, ...orderDoc.data() }) as StoreOrder), initial);
+    initial = false;
+  }, onError);
 }
 
 /** Fetches one bounded, paginable queue page for the store's current local day. */

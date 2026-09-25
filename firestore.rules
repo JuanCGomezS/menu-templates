@@ -208,6 +208,17 @@ service cloud.firestore {
         allow delete: if isSuperAdmin();
       }
 
+      match /notificationDevices/{uid} {
+        allow read: if isSuperAdmin() || isStoreAdminFor(storeId);
+        allow create, update: if isStoreAdminFor(storeId)
+          && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['token', 'updatedAt'])
+          && request.resource.data.token is string
+          && request.resource.data.token.size() > 20
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if (isStoreAdminFor(storeId) && request.auth.uid == uid) || isSuperAdmin();
+      }
+
       match /orderTracking/{trackingCode} {
         allow get: if resource.data.keys().hasOnly(['type', 'status', 'createdAt', 'updatedAt']);
         allow list: if false;
