@@ -89,7 +89,7 @@ service cloud.firestore {
     function hasValidDeliveryOrder(storeId) {
       return get(/databases/$(database)/documents/stores/$(storeId)).data.capabilities.deliveryOrdering == true
         && request.resource.data.keys().hasOnly([
-          'customerName', 'customerPhone', 'type', 'status', 'items', 'total', 'deliveryAddress', 'notes', 'clientRequestId', 'createdAt', 'updatedAt'
+          'customerName', 'customerPhone', 'type', 'status', 'items', 'total', 'deliveryAddress', 'deliveryLocation', 'notes', 'clientRequestId', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.type == 'delivery'
         && request.resource.data.customerPhone is string
@@ -97,7 +97,15 @@ service cloud.firestore {
         && request.resource.data.customerPhone.size() <= 30
         && request.resource.data.deliveryAddress is string
         && request.resource.data.deliveryAddress.size() >= 5
-        && request.resource.data.deliveryAddress.size() <= 200;
+        && request.resource.data.deliveryAddress.size() <= 200
+        && request.resource.data.deliveryLocation is map
+        && request.resource.data.deliveryLocation.keys().hasOnly(['latitude', 'longitude'])
+        && request.resource.data.deliveryLocation.latitude is number
+        && request.resource.data.deliveryLocation.latitude >= -90
+        && request.resource.data.deliveryLocation.latitude <= 90
+        && request.resource.data.deliveryLocation.longitude is number
+        && request.resource.data.deliveryLocation.longitude >= -180
+        && request.resource.data.deliveryLocation.longitude <= 180;
     }
 
     function isPublicOrderCreate(storeId) {
