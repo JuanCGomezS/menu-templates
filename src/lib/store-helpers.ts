@@ -38,6 +38,8 @@ export interface PublicStore {
   templateId: string;
   themeId?: string;
   timeZone?: string;
+  logoUrl?: string;
+  location?: { latitude?: number; longitude?: number };
   template?: { id: string; name: string } | null;
   capabilities?: {
     inStoreOrdering?: boolean;

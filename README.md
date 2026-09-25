@@ -225,3 +225,7 @@ Usá `npm run verify` antes de publicar: ejecuta typecheck, pruebas de reglas co
 ## Sesión y permisos
 
 El perfil de permisos se deduplica en memoria y se conserva durante cinco minutos por sesión para evitar lecturas repetidas de `users/{uid}` al navegar. Los paneles distinguen carga, sesión ausente, perfil incompleto, acceso denegado y error de red; Firestore Rules sigue validando toda operación. La guía de prueba está en [`docs/session-permissions-checklist.md`](docs/session-permissions-checklist.md).
+
+## Identidad y ubicación
+
+Desde el editor se puede cargar o reemplazar el logo (imagen menor de 5 MB) y configurar latitud/longitud. Los logos se almacenan bajo `stores/{storeId}/branding/` en Firebase Storage; la tienda pública muestra el logo cuando existe y un enlace accesible a Google Maps cuando hay coordenadas. Las tiendas sin estos campos siguen funcionando sin cambios.

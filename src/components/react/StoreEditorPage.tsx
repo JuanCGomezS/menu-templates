@@ -2,7 +2,8 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { collection, doc, getDoc, getDocs, limit, query, serverTimestamp, writeBatch, where } from 'firebase/firestore';
 import { useEffect, useMemo, useState } from 'react';
 import type React from 'react';
-import { auth, db } from '../../lib/firebase';
+import { auth, db, storage } from '../../lib/firebase';
+import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { getUserProfile, ROLES } from '../../lib/auth';
 import { clearPublicStoreCache } from '../../lib/public-store-data';
 import { getAllTemplates, getAllThemes, resolveStoreTheme, resolveTemplate, type TemplateConfig } from '../../lib/templates';
@@ -29,6 +30,8 @@ interface StoreData {
   currency?: Currency;
   plan?: PlanType;
   timeZone?: string;
+  logoUrl?: string;
+  location?: { latitude?: number; longitude?: number };
   limits?: {
     maxProducts?: number;
     maxCategories?: number;
@@ -55,6 +58,9 @@ interface StoreFormState {
   currency: Currency;
   plan: PlanType;
   timeZone: string;
+  logoUrl: string;
+  latitude: string;
+  longitude: string;
   maxProducts: string;
   maxCategories: string;
   maxImages: string;
@@ -152,6 +158,9 @@ function emptyForm(): StoreFormState {
     currency: 'COP',
     plan: 'free_trial',
     timeZone: 'America/Bogota',
+    logoUrl: '',
+    latitude: '',
+    longitude: '',
     maxProducts: '100',
     maxCategories: '20',
     maxImages: '30',
@@ -195,6 +204,9 @@ function formFromStore(store: StoreData): StoreFormState {
     currency: store.currency || defaults.currency,
     plan: store.plan || defaults.plan,
     timeZone: store.timeZone || defaults.timeZone,
+    logoUrl: store.logoUrl || '',
+    latitude: store.location?.latitude === undefined ? '' : String(store.location.latitude),
+    longitude: store.location?.longitude === undefined ? '' : String(store.location.longitude),
     maxProducts: String(store.limits?.maxProducts ?? defaults.maxProducts),
     maxCategories: String(store.limits?.maxCategories ?? defaults.maxCategories),
     maxImages: String(store.limits?.maxImages ?? defaults.maxImages),
@@ -227,6 +239,12 @@ function toPositiveNumber(value: string, fallback: number) {
 function toOptionalNumber(value: string) {
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function hasValidCoordinates(latitude: string, longitude: string) {
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 }
 
 function createDraftId(prefix: string) {
@@ -270,6 +288,8 @@ function makeStorePayload(form: StoreFormState) {
     currency: form.currency,
     plan: form.plan,
     timeZone: form.timeZone,
+    ...(form.logoUrl ? { logoUrl: form.logoUrl } : { logoUrl: null }),
+    ...(form.latitude.trim() && form.longitude.trim() ? { location: { latitude: Number(form.latitude), longitude: Number(form.longitude) } } : { location: null }),
     limits: {
       maxProducts: toPositiveNumber(form.maxProducts, 100),
       maxCategories: toPositiveNumber(form.maxCategories, 20),
@@ -303,6 +323,9 @@ export default function StoreEditorPage() {
   const [isDirty, setIsDirty] = useState(false);
   const [categoryDrafts, setCategoryDrafts] = useState<CategoryDraft[]>([]);
   const [productDrafts, setProductDrafts] = useState<ProductDraft[]>([]);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoToDelete, setLogoToDelete] = useState<string | null>(null);
 
   const templates = useMemo(() => getAllTemplates(), []);
   const themes = useMemo(() => getAllThemes(), []);
@@ -491,6 +514,15 @@ export default function StoreEditorPage() {
       setError('Nombre, slug, tipo y plantilla son obligatorios.');
       return;
     }
+    const hasAnyCoordinate = form.latitude.trim() || form.longitude.trim();
+    if (hasAnyCoordinate && !hasValidCoordinates(form.latitude, form.longitude)) {
+      setError('Ingresa latitud y longitud válidas para la ubicación.');
+      return;
+    }
+    if (logoFile && (!logoFile.type.startsWith('image/') || logoFile.size >= 5 * 1024 * 1024)) {
+      setError('El logo debe ser una imagen menor de 5 MB.');
+      return;
+    }
 
     const categoriesToSave = categoryDrafts
       .map((category, index) => ({
@@ -524,10 +556,17 @@ export default function StoreEditorPage() {
     setSaving(true);
 
     try {
-      const payload = makeStorePayload({ ...form, slug });
       const storeAdmin = await getStoreAdminUserId(form.storeAdminEmail);
       const storeRef = mode === 'edit' && form.id ? doc(db, 'stores', form.id) : doc(collection(db, 'stores'));
       const storeId = storeRef.id;
+      let logoUrl = form.logoUrl;
+      if (logoFile) {
+        setUploadingLogo(true);
+        const logoRef = ref(storage, `stores/${storeId}/branding/logo-${Date.now()}`);
+        await uploadBytes(logoRef, logoFile, { contentType: logoFile.type });
+        logoUrl = await getDownloadURL(logoRef);
+      }
+      const payload = makeStorePayload({ ...form, slug, logoUrl });
       const previousOwnerRef = storeAdmin && mode === 'edit' && form.ownerUid && form.ownerUid !== storeAdmin.userId
         ? doc(db, 'users', form.ownerUid)
         : null;
@@ -610,6 +649,8 @@ export default function StoreEditorPage() {
       }
 
       await batch.commit();
+      const staleLogoUrl = logoToDelete || (form.logoUrl !== logoUrl ? form.logoUrl : null);
+      if (staleLogoUrl) deleteObject(ref(storage, staleLogoUrl)).catch((deleteError) => console.warn('No se pudo eliminar el logo anterior:', deleteError));
 
       clearPublicStoreCache(slug, storeId);
       if (mode === 'edit' && form.slug && form.slug !== slug) {
@@ -617,7 +658,9 @@ export default function StoreEditorPage() {
       }
 
       setMode('edit');
-      setForm({ ...form, id: storeId, slug, storeAdminEmail: '', ownerUid: storeAdmin?.userId || form.ownerUid });
+      setForm({ ...form, id: storeId, slug, logoUrl, storeAdminEmail: '', ownerUid: storeAdmin?.userId || form.ownerUid });
+      setLogoFile(null);
+      setLogoToDelete(null);
       setCategoryDrafts(categoriesToSave.map((category) => ({ ...category, order: String(category.order) })));
       setProductDrafts(productsToSave.map((product) => ({ ...product, price: String(product.price), order: String(product.order), stock: String(product.stock) })));
       setIsDirty(false);
@@ -629,6 +672,7 @@ export default function StoreEditorPage() {
       setError(err instanceof Error ? err.message : 'No pudimos guardar la tienda. Revisa permisos e intenta de nuevo.');
     } finally {
       setSaving(false);
+      setUploadingLogo(false);
     }
   };
 
@@ -698,6 +742,7 @@ export default function StoreEditorPage() {
             <div id="store-editor-design" role="tabpanel">
               <div className="mt-4 space-y-5">
                 <TemplateSelector templates={templates} selectedId={form.templateId} onChange={(templateId) => updateForm('templateId', templateId)} />
+                <section className="rounded-2xl border border-gray-200 p-4" aria-labelledby="store-logo-title"><h2 id="store-logo-title" className="font-black text-gray-950">Logo del negocio</h2><p className="mt-1 text-sm text-gray-500">PNG, JPG, WebP o SVG, máximo 5 MB.</p><div className="mt-3 flex flex-wrap items-center gap-3">{form.logoUrl && <img src={form.logoUrl} alt="Logo actual" className="h-16 w-16 rounded-xl border border-gray-200 object-contain" />}<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={(event) => setLogoFile(event.target.files?.[0] || null)} className="text-sm" aria-describedby="store-logo-help" />{form.logoUrl && <button type="button" onClick={() => { setLogoToDelete(form.logoUrl); updateForm('logoUrl', ''); }} className="rounded-lg border border-red-200 px-3 py-2 text-sm font-bold text-red-700">Quitar logo</button>}</div><p id="store-logo-help" className="mt-2 text-xs text-gray-500">{logoFile ? `Listo para subir: ${logoFile.name}` : uploadingLogo ? 'Subiendo logo…' : 'El logo se guarda al guardar la tienda.'}</p></section>
                 <Field label="Tema"><select name="themeId" value={form.themeId} onChange={(event) => updateForm('themeId', event.target.value)} className={COMPACT_INPUT_CLASS}>{themes.map((theme) => <option key={theme.id} value={theme.id}>{theme.name}</option>)}</select></Field>
               </div>
             </div>
@@ -710,8 +755,12 @@ export default function StoreEditorPage() {
                 <Field label="Instagram"><input name="instagram" autoComplete="off" spellCheck={false} value={form.instagram} onChange={(event) => updateForm('instagram', event.target.value)} className={INPUT_CLASS} placeholder="Ej. @mitienda…" /></Field>
                 <Field label="Dirección"><input name="address" autoComplete="street-address" value={form.address} onChange={(event) => updateForm('address', event.target.value)} className={INPUT_CLASS} /></Field>
                 <Field label="Notas de domicilio"><input name="deliveryNotes" autoComplete="off" value={form.deliveryNotes} onChange={(event) => updateForm('deliveryNotes', event.target.value)} className={INPUT_CLASS} /></Field>
+                <Field label="Latitud"><input name="latitude" inputMode="decimal" value={form.latitude} onChange={(event) => updateForm('latitude', event.target.value)} className={INPUT_CLASS} placeholder="Ej. 4.6533" /></Field>
+                <Field label="Longitud"><input name="longitude" inputMode="decimal" value={form.longitude} onChange={(event) => updateForm('longitude', event.target.value)} className={INPUT_CLASS} placeholder="Ej. -74.0837" /></Field>
                 <Field label="Zona horaria de operación"><select name="timeZone" value={form.timeZone} onChange={(event) => updateForm('timeZone', event.target.value)} className={INPUT_CLASS}><option value="America/Bogota">Colombia (Bogotá)</option><option value="America/Mexico_City">México central</option><option value="America/Lima">Perú</option><option value="America/Santiago">Chile</option><option value="America/Argentina/Buenos_Aires">Argentina</option></select></Field>
               </div>
+
+              {hasValidCoordinates(form.latitude, form.longitude) && <section className="mt-6 overflow-hidden rounded-2xl border border-gray-200"><iframe title="Vista previa de ubicación" className="h-64 w-full" loading="lazy" referrerPolicy="no-referrer-when-downgrade" src={`https://www.google.com/maps?q=${encodeURIComponent(`${form.latitude},${form.longitude}`)}&output=embed`} /></section>}
 
               <SectionTitle title="Horario" />
               <div className="mt-4 grid gap-3 md:grid-cols-2">

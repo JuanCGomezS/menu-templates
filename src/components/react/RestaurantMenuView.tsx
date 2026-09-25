@@ -240,6 +240,7 @@ function StoreHero({ store, isOpen, align, badge, variant = 'minimal' }: {
           <div>
             <div className="mb-5 flex flex-wrap gap-2"><span className="rounded-full bg-[var(--store-accent)] px-3 py-1 text-xs font-black uppercase tracking-[0.2em] text-[var(--store-on-accent)]">Plantilla Natural</span></div>
             {badge && <p className="mb-3 text-sm font-black uppercase tracking-[0.28em] text-[var(--store-accent)]">{badge}</p>}
+            {store.logoUrl && <img src={store.logoUrl} alt={`Logo de ${store.name}`} className="mb-4 h-20 w-20 rounded-2xl border border-[var(--store-border)] bg-[var(--store-surface)] object-contain p-1" />}
             <h1 className="break-words text-5xl font-black leading-none tracking-tight text-emerald-950 [text-wrap:balance] md:text-7xl">{store.name}</h1>
             {store.contact?.address && <p className="mt-4 text-lg leading-7 text-emerald-900/70">📍 {store.contact.address}</p>}
             {isOpen !== null && (
@@ -263,6 +264,7 @@ function StoreHero({ store, isOpen, align, badge, variant = 'minimal' }: {
       <div className={`relative z-10 mx-auto grid max-w-6xl items-center gap-10 ${variant === 'minimal' ? 'lg:grid-cols-[1.05fr_0.95fr]' : 'lg:grid-cols-[0.95fr_1.05fr]'} ${align === 'center' ? 'text-center lg:text-left' : 'text-left'}`}>
         <div>
           {badge && <p className={`mb-4 text-sm font-black uppercase tracking-[0.28em] ${isWarm || isElegant ? 'text-orange-300' : 'text-[var(--store-accent)]'}`}>{badge}</p>}
+          {store.logoUrl && <img src={store.logoUrl} alt={`Logo de ${store.name}`} className="mb-4 h-20 w-20 rounded-2xl border border-[var(--store-border)] bg-[var(--store-surface)] object-contain p-1" />}
           <h1 className={`break-words font-black tracking-tight [text-wrap:balance] ${isWarm ? 'text-6xl uppercase leading-none text-white md:text-8xl' : isElegant ? 'text-5xl leading-tight text-amber-50 md:text-7xl' : 'text-5xl text-stone-950 md:text-7xl'}`}>{store.name}</h1>
           {store.contact?.address && <p className={`mt-4 text-lg ${isWarm || isElegant ? 'text-white/70' : 'text-gray-600'}`}>📍 {store.contact.address}</p>}
           {isOpen !== null && (
@@ -389,7 +391,7 @@ function FeaturedStrip({ store, items }: { store: StoreData; items: PublicItem[]
 }
 
 function ContactActions({ store, variant = 'minimal' }: { store: StoreData; variant?: 'minimal' | 'natural' | 'warm' | 'elegant' }) {
-  if (!store.contact?.whatsapp && !store.contact?.instagram) return null;
+  if (!store.contact?.whatsapp && !store.contact?.instagram && (typeof store.location?.latitude !== 'number' || typeof store.location?.longitude !== 'number')) return null;
   const cardClass = {
     minimal: 'border-stone-300 bg-[#fffaf0] text-stone-950',
     natural: 'border-white/80 bg-white/75 text-emerald-950 shadow-[0_14px_45px_rgba(6,78,59,0.08)] ring-1 ring-emerald-100/70 backdrop-blur',
@@ -409,6 +411,11 @@ function ContactActions({ store, variant = 'minimal' }: { store: StoreData; vari
         {store.contact.instagram && (
           <a className="rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 text-center font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-700 focus-visible:ring-offset-2" href={`https://instagram.com/${store.contact.instagram.replace('@', '')}`} target="_blank" rel="noopener noreferrer">
             Instagram
+          </a>
+        )}
+        {typeof store.location?.latitude === 'number' && typeof store.location?.longitude === 'number' && (
+          <a className="rounded-xl border border-current px-4 py-3 text-center font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]" href={`https://www.google.com/maps/search/?api=1&query=${store.location.latitude},${store.location.longitude}`} target="_blank" rel="noopener noreferrer">
+            Ver ubicación en el mapa
           </a>
         )}
       </div>
