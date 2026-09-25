@@ -22,7 +22,7 @@ Vender este sistema a múltiples tiendas para mejorar su atención, presentació
 ### Tipos de negocio objetivo
 
 | Tipo | Enfoque público | Ejemplos |
-|---|---|---|
+| --- | --- | --- |
 | Restaurante | Menú gastronómico | Pizzería, café, hamburguesería, bar |
 | Emprendimiento de comida | Menú + pedidos por contacto | Postres, comidas rápidas, almuerzos |
 | Emprendimiento de ventas | Catálogo de productos | Ropa, accesorios, detalles, regalos |
@@ -30,7 +30,7 @@ Vender este sistema a múltiples tiendas para mejorar su atención, presentació
 ### Dos líneas funcionales del producto
 
 | Línea | Función | Prioridad |
-|---|---|---|
+| --- | --- | --- |
 | Presentación pública | Menú o catálogo público por tienda | MVP |
 | Operación interna | Pedidos, domicilios y stock | Post-MVP temprano |
 
@@ -43,7 +43,7 @@ Este proyecto debe vivir inicialmente dentro de planes gratuitos. Esta restricci
 ### Stack de infraestructura
 
 | Capa | Tecnología | Razón |
-|---|---|---|
+| --- | --- | --- |
 | Hosting | GitHub Pages | Despliegue estático gratuito |
 | Framework | Astro | Excelente para sitios estáticos y performance |
 | UI interactiva | React en islands/client components | Paneles, Auth, formularios y estados complejos |
@@ -55,7 +55,7 @@ Este proyecto debe vivir inicialmente dentro de planes gratuitos. Esta restricci
 ### Límites relevantes de Firebase Spark
 
 | Recurso | Límite gratuito |
-|---|---|
+| --- | --- |
 | Lecturas Firestore | 50.000 / día |
 | Escrituras Firestore | 20.000 / día |
 | Eliminaciones Firestore | 20.000 / día |
@@ -75,7 +75,7 @@ Este proyecto debe vivir inicialmente dentro de planes gratuitos. Esta restricci
 TTL sugerido:
 
 | Dato | TTL | Motivo |
-|---|---:|---|
+| --- | ---: | --- |
 | Configuración de tienda | 1 hora | Cambia poco |
 | Categorías | 1 hora | Cambian poco |
 | Productos/items públicos | 30 min | Pueden cambiar por stock o disponibilidad |
@@ -93,7 +93,7 @@ Entidad principal del sistema. Una tienda puede ser restaurante, emprendimiento 
 ### Menú vs catálogo
 
 | Concepto | Cuándo se usa | Qué muestra |
-|---|---|---|
+| --- | --- | --- |
 | Menú | Comida preparada o restaurante | Categorías, platos, precios, descripción, disponibilidad |
 | Catálogo | Productos físicos o emprendimientos de venta | Productos, fotos, variantes, stock, precio |
 
@@ -109,7 +109,7 @@ Esta distinción es IMPORTANTE:
 Ejemplos de templates reales:
 
 | Plantilla / layout | Enfoque | Diferencia real |
-|---|---|---|
+| --- | --- | --- |
 | `layout-minimal` | Lectura directa | Menú limpio, rápido y fácil de escanear |
 | `layout-natural` | Marca fresca/artesanal | Estética orgánica para cafés, comida saludable o productos naturales |
 | `layout-warm` | Promocional/cercano | Experiencia colorida para comida rápida, postres o combos |
@@ -118,7 +118,7 @@ Ejemplos de templates reales:
 Ejemplos de themes reales:
 
 | Theme | Enfoque | Diferencia real |
-|---|---|---|
+| --- | --- | --- |
 | `theme-default` | Base permanente | Sin ambientación estacional |
 | `theme-christmas` | Navidad | Ambientación temporal para regalos, combos o temporada |
 | `theme-mothers-day` | Día de la Madre | Ambientación emocional para detalles, postres y promociones |
@@ -136,7 +136,7 @@ La autenticación se resuelve con **Firebase Auth**. La autorización se resuelv
 ### Roles base
 
 | Rol | Descripción | Acceso |
-|---|---|---|
+| --- | --- | --- |
 | `superadmin` | Dueño de la plataforma | Control global de todas las tiendas, planes, estados y usuarios |
 | `storeadmin` | Dueño/admin de una tienda | Administra solo su tienda: menú, catálogo, pedidos, stock y configuración |
 | `customer` | Cliente final | Puede ver tienda pública y realizar pedidos |
@@ -204,6 +204,7 @@ stores/{storeId}
   ├── schedule: {
   │     [day: string]: { open: string, close: string, closed: boolean }
   │   }
+  ├── timeZone: string // zona horaria IANA de la tienda, ej. America/Bogota
   └── createdAt / updatedAt
 
 stores/{storeId}/categories/{categoryId}
@@ -226,9 +227,9 @@ stores/{storeId}/items/{itemId}
 stores/{storeId}/orders/{orderId}
   ├── customerName: string
   ├── type: 'in_store' | 'delivery'
-  ├── tableNumber: number // requerido solo para in_store
-  ├── customerPhone: string // requerido solo para delivery
-  ├── deliveryAddress: string // requerido solo para delivery
+  ├── tableNumber?: string // obligatorio cuando type = 'in_store'
+  ├── customerPhone?: string // obligatorio cuando type = 'delivery'
+  ├── deliveryAddress?: string // obligatorio cuando type = 'delivery'
   ├── status: 'pending' | 'accepted' | 'preparing' | 'ready' | 'delivered' | 'cancelled'
   ├── items: Array<{ itemId: string, name: string, quantity: number, price: number }>
   ├── total: number
@@ -482,12 +483,12 @@ src/
 
 **Objetivo:** controlar disponibilidad de productos cuando aplique.
 
-- [ ] Campo `trackStock` por item.
-- [ ] Campo `stock` por item o variante.
-- [ ] Descontar stock al aceptar pedido, no necesariamente al crearlo.
-- [ ] Evitar aceptar pedidos con stock insuficiente.
-- [ ] Mostrar “agotado” en catálogo público.
-- [ ] Permitir ajuste manual de stock desde admin.
+- [x] Campo `trackStock` por item.
+- [x] Campo `stock` por item o variante.
+- [x] Descontar stock al aceptar pedido, no necesariamente al crearlo.
+- [ ] Evitar aceptar pedidos con stock insuficiente mediante transacción Firestore; pendiente de endurecer en la Etapa 9.
+- [x] Mostrar “agotado” en catálogo público.
+- [x] Permitir ajuste manual de stock desde admin.
 
 **Entregable:** tiendas tipo catálogo pueden controlar disponibilidad sin sistema complejo de inventario.
 
@@ -503,6 +504,8 @@ src/
 - [x] Crear `layout-elegant`.
 - [ ] Definir API común de props para templates: `store`, `categories`, `items`, `theme`.
 - [x] Definir themes como tokens de color/estilo separados del template.
+
+**Estado:** existe una primera versión funcional. La diferenciación estructural, el selector de plantillas y la consistencia responsive se refactorizan en la Etapa 9.
 
 **Entregable:** el producto puede vender variedad real, no solo cambios de color.
 
@@ -521,21 +524,69 @@ src/
 
 ---
 
+### Etapa 9 — Refactorización operativa y de experiencia
+
+**Objetivo:** convertir la primera versión funcional en una operación confiable y una propuesta visual vendible, sin salir de GitHub Pages ni Firebase Spark.
+
+#### 9.1 Aislar y validar el punto de partida
+
+- [ ] Inspeccionar y aislar los cambios locales/staged antes de refactorizar componentes compartidos.
+- [ ] Crear una ruta de verificación reproducible para el acceso y la carga de pedidos; hoy no existe prueba de navegador ni Firebase Emulator.
+- [ ] Añadir pruebas de reglas con Emulator para roles, aislamiento por tienda y creación pública de pedidos.
+- [ ] Mantener los queries por tienda, estado y rango temporal; prohibido introducir listeners públicos o lecturas de colección completa.
+
+#### 9.2 Pedidos como operación diaria
+
+- [ ] Hacer **Pedidos** el destino inicial del `storeadmin`, separado de la edición de la tienda.
+- [ ] Mostrar solo la cola operativa del día de la tienda: pedidos, estado, total, origen y acciones de atención.
+- [ ] Calcular el día con `timeZone` IANA de la tienda y consultar Firestore por `[inicioDelDía, inicioDelDíaSiguiente)`, con límite y paginación explícitos.
+- [ ] Añadir **Estadísticas** como sección independiente para histórico: calendario interactivo, rango acotado, resumen de pedidos/ventas/productos y estados vacíos/carga/error.
+- [ ] Crear los índices Firestore requeridos y documentar su despliegue antes de activar las nuevas queries.
+
+#### 9.3 Contrato de pedido y stock
+
+- [ ] Para `in_store`, solicitar nombre y número de mesa; no solicitar teléfono ni dirección.
+- [ ] Para `delivery`, solicitar nombre, teléfono y dirección; no solicitar número de mesa.
+- [ ] Migrar de forma compatible los pedidos históricos que no tengan `tableNumber` o que usen campos heredados.
+- [ ] Validar el contrato en cliente y en Firestore Rules: campos permitidos, tipo de pedido, capacidades de tienda, disponibilidad de items y aislamiento multi-tenant.
+- [ ] Definir la transición que descuenta stock y la que lo repone al cancelar; ejecutar ambos cambios en transacciones Firestore con UX de reintento y protección contra doble envío.
+- [ ] Aplicar `availableInStore` y `availableForDelivery` al carrito y a la creación de pedidos.
+- [ ] Permitir minimizar el carrito/modal sin perder items ni estado de la compra.
+
+#### 9.4 Selector y sistema de plantillas
+
+- [ ] Eliminar el preview embebido de la tienda pública en el editor.
+- [ ] Reemplazar los selects por cards de plantilla accesibles, con jerarquía clara, estado seleccionado, descripción y representación abstracta del layout; no simular una tienda completa.
+- [ ] Mantener los IDs de plantilla persistidos y normalizar la resolución de valores heredados antes de cambiar el registro.
+- [ ] Extraer un modelo de vista común para asegurar que cada layout presente la misma información, estados y capacidades.
+- [ ] Convertir `minimal`, `natural`, `warm` y `elegant` en módulos de layout estructuralmente distintos; cada uno debe diferir en jerarquía, navegación, densidad y composición, no solo en estilos.
+- [ ] Limitar los themes a tokens de paleta/contraste compatibles con todos los layouts; validar combinaciones claras y oscuras.
+- [ ] Diseñar y revisar en móvil y desktop los estados de carga, vacío, error, catálogo, menú y carrito en cada combinación soportada.
+
+#### 9.5 Endurecimiento de entrega
+
+- [ ] Limitar las escrituras de `storeadmin` a campos y subdocumentos autorizados.
+- [ ] Documentar y automatizar, o ejecutar explícitamente con checklist, el despliegue coordinado de Firestore Rules y Storage Rules.
+- [ ] Añadir scripts de calidad: typecheck independiente, pruebas seleccionadas y validación de build.
+- [ ] Verificar rutas públicas y administrativas mediante carga directa y refresh bajo el fallback estático de GitHub Pages.
+- [ ] Verificar el deploy final con credenciales/configuración de producción y registrar el resultado.
+
+**Entregable:** un storeadmin abre primero sus pedidos del día, puede consultar el histórico con costo de lectura controlado, y vende una experiencia de plantilla realmente diferenciada sin perder compatibilidad ni seguridad.
+
+---
+
 ## 10) Orden de implementación recomendado
 
 ```text
-Etapa 0 → Setup técnico
-Etapa 1 → Landing comercial
-Etapa 2 → Superadmin
-Etapa 3 → Vista pública de tienda
-Etapa 4 → Panel admin de tienda
-Etapa 5 → Pedidos básicos
-Etapa 6 → Stock básico
-Etapa 7 → Plantillas y temas
-Etapa 8 → Pulido
+Etapas 0–8 → Base funcional existente
+Etapa 9.1 → Aislar cambios y construir feedback loop
+Etapa 9.2 → Pedidos del día + estadísticas históricas
+Etapa 9.3 → Contrato de pedido, disponibilidad y stock seguro
+Etapa 9.4 → Selector y layouts/themes profesionales
+Etapa 9.5 → Seguridad, reglas, calidad y deploy verificado
 ```
 
-La razón de este orden es simple: primero se construye lo que permite vender y crear tiendas; después se agregan operación y diferenciación visual.
+La etapa 9 prioriza primero la operación que soporta el negocio y su contrato de datos; el rediseño visual se construye sobre esos flujos ya validados.
 
 ---
 

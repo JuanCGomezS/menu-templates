@@ -105,7 +105,7 @@ service cloud.firestore {
     function hasValidDeliveryOrder(storeId) {
       return get(/databases/$(database)/documents/stores/$(storeId)).data.capabilities.deliveryOrdering == true
         && request.resource.data.keys().hasOnly([
-          'customerName', 'customerPhone', 'type', 'status', 'items', 'total', 'deliveryAddress', 'notes', 'clientRequestId', 'trackingCode', 'createdAt', 'updatedAt'
+          'customerName', 'customerPhone', 'type', 'status', 'items', 'total', 'deliveryAddress', 'deliveryLocation', 'notes', 'clientRequestId', 'trackingCode', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.type == 'delivery'
         && request.resource.data.customerPhone is string
@@ -113,13 +113,24 @@ service cloud.firestore {
         && request.resource.data.customerPhone.size() <= 30
         && request.resource.data.deliveryAddress is string
         && request.resource.data.deliveryAddress.size() >= 5
-        && request.resource.data.deliveryAddress.size() <= 200;
+        && request.resource.data.deliveryAddress.size() <= 200
+        && request.resource.data.deliveryLocation is map
+        && request.resource.data.deliveryLocation.keys().hasOnly(['latitude', 'longitude'])
+        && request.resource.data.deliveryLocation.latitude is number
+        && request.resource.data.deliveryLocation.latitude >= -90
+        && request.resource.data.deliveryLocation.latitude <= 90
+        && request.resource.data.deliveryLocation.longitude is number
+        && request.resource.data.deliveryLocation.longitude >= -180
+        && request.resource.data.deliveryLocation.longitude <= 180;
     }
 
     function isPublicOrderCreate(storeId) {
       return storeIsActive(storeId)
         && hasValidPublicOrderBase()
-        && (hasValidTableOrder(storeId) || hasValidDeliveryOrder(storeId));
+        && (hasValidTableOrder(storeId) || hasValidDeliveryOrder(storeId))
+        && !exists(/databases/$(database)/documents/stores/$(storeId)/orderTracking/$(request.resource.data.trackingCode))
+        && getAfter(/databases/$(database)/documents/stores/$(storeId)/orderTracking/$(request.resource.data.trackingCode)).data.type == request.resource.data.type
+        && getAfter(/databases/$(database)/documents/stores/$(storeId)/orderTracking/$(request.resource.data.trackingCode)).data.status == 'pending';
     }
 
     function isCustomerSelfCreate(uid) {
@@ -205,8 +216,10 @@ service cloud.firestore {
           && request.resource.data.status == 'pending'
           && request.resource.data.createdAt == request.time
           && request.resource.data.updatedAt == request.time
-          && existsAfter(/databases/$(database)/documents/stores/$(storeId)/orders/$(trackingCode))
-          && getAfter(/databases/$(database)/documents/stores/$(storeId)/orders/$(trackingCode)).data.trackingCode == trackingCode;
+          && !exists(/databases/$(database)/documents/stores/$(storeId)/orders/$(trackingCode))
+          && getAfter(/databases/$(database)/documents/stores/$(storeId)/orders/$(trackingCode)).data.trackingCode == trackingCode
+          && getAfter(/databases/$(database)/documents/stores/$(storeId)/orders/$(trackingCode)).data.type == request.resource.data.type
+          && getAfter(/databases/$(database)/documents/stores/$(storeId)/orders/$(trackingCode)).data.status == 'pending';
         allow update: if isSuperAdmin() || (isStoreAdminFor(storeId) && storeAdminChangesOnly(['status', 'updatedAt']) && isValidOrderStatusTransition());
         allow delete: if isSuperAdmin();
       }

@@ -6,27 +6,46 @@ service firebase.storage {
     function userDoc() {
       return firestore.get(/databases/(default)/documents/users/$(request.auth.uid));
     }
-    function isSuperAdmin() {
-      return signedIn() && userDoc().data.role == 'superadmin';
+
+    function hasProfile() {
+      return signedIn() && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid));
     }
+
+    function isSuperAdmin() {
+      return hasProfile() && userDoc().data.role == 'superadmin';
+    }
+
     function isStoreAdminFor(storeId) {
-      return signedIn()
+      return hasProfile()
         && userDoc().data.role == 'storeadmin'
         && userDoc().data.storeId == storeId;
     }
+
     function activeStore(storeId) {
       return firestore.exists(/databases/(default)/documents/stores/$(storeId))
         && firestore.get(/databases/(default)/documents/stores/$(storeId)).data.active == true;
     }
 
-    // Public assets are readable only for active stores; each admin can write
-    // only to their own store namespace. Limit files to 5 MiB images.
-    match /stores/{storeId}/{allPaths=**} {
-      allow read: if activeStore(storeId) || isStoreAdminFor(storeId) || isSuperAdmin();
-      allow create, update: if (isStoreAdminFor(storeId) || isSuperAdmin())
-        && request.resource.size < 5 * 1024 * 1024
-        && request.resource.contentType.matches('image/.*');
-      allow delete: if isStoreAdminFor(storeId) || isSuperAdmin();
+    function canManage(storeId) {
+      return isSuperAdmin() || isStoreAdminFor(storeId);
+    }
+
+    function isAllowedImage(maxBytes) {
+      return request.resource != null
+        && request.resource.size <= maxBytes
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+
+    match /stores/{storeId}/branding/{fileName} {
+      allow read: if activeStore(storeId) || canManage(storeId);
+      allow create, update: if canManage(storeId) && isAllowedImage(5 * 1024 * 1024);
+      allow delete: if canManage(storeId);
+    }
+
+    match /stores/{storeId}/items/{itemId}/{fileName} {
+      allow read: if activeStore(storeId) || canManage(storeId);
+      allow create, update: if canManage(storeId) && isAllowedImage(2 * 1024 * 1024);
+      allow delete: if canManage(storeId);
     }
 
     match /{allPaths=**} { allow read, write: if false; }
