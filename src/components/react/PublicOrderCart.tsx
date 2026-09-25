@@ -179,7 +179,11 @@ export function PublicOrderCartProvider({
       setSubmitting(true);
       setNotice("Enviando pedido…");
       const requestId = crypto.randomUUID().replace(/-/g, "");
-      const code = await createPublicOrder(store.id, validation.value, requestId);
+      const code = await createPublicOrder(
+        store.id,
+        validation.value,
+        requestId,
+      );
       setTrackingCode(code);
       setLines([]);
       setStep("products");
@@ -206,7 +210,10 @@ export function PublicOrderCartProvider({
       : "";
   const shareTracking = async () => {
     if (navigator.share) {
-      await navigator.share({ title: "Seguimiento de pedido", url: trackingUrl });
+      await navigator.share({
+        title: "Seguimiento de pedido",
+        url: trackingUrl,
+      });
     } else {
       await navigator.clipboard.writeText(trackingUrl);
     }
@@ -433,13 +440,18 @@ export function PublicOrderCartProvider({
             {trackingCode && (
               <div className="mt-3 rounded-xl bg-green-50 p-3 text-xs text-green-900">
                 <p className="font-bold">Código: {trackingCode}</p>
-                <a className="mt-1 block break-all underline" href={trackingUrl}>
+                <a
+                  className="mt-1 block break-all underline"
+                  href={trackingUrl}
+                >
                   Ver seguimiento
                 </a>
                 <div className="mt-2 flex gap-2">
                   <button
                     type="button"
-                    onClick={() => void navigator.clipboard.writeText(trackingUrl)}
+                    onClick={() =>
+                      void navigator.clipboard.writeText(trackingUrl)
+                    }
                     className="font-bold underline"
                   >
                     Copiar enlace

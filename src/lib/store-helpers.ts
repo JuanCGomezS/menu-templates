@@ -61,7 +61,7 @@ export function getStoreWithData(
   store: any,
   categories: any[],
   items: any[],
-  templates: any[]
+  templates: any[],
 ): PublicStore {
   const storeCategories = categories
     .filter((category) => category.active !== false)
@@ -69,7 +69,7 @@ export function getStoreWithData(
     .map((category) => {
       const categoryItems = items
         .filter(
-          (item) => item.categoryId === category.id && item.active !== false
+          (item) => item.categoryId === category.id && item.active !== false,
         )
         .sort((a, b) => (a.order || 0) - (b.order || 0));
 
@@ -79,7 +79,9 @@ export function getStoreWithData(
       };
     });
 
-  const template = templates.find((template) => template.id === store.templateId);
+  const template = templates.find(
+    (template) => template.id === store.templateId,
+  );
   const active = store.active ?? store.isActive ?? false;
 
   return {

@@ -424,7 +424,8 @@ export async function getOrdersForStoreDay(
 const STATUS_TRANSITIONS: Partial<Record<OrderStatus, OrderStatus[]>> = {
   pending: ["accepted", "cancelled"],
   accepted: ["preparing", "cancelled"],
-  preparing: ["ready", "cancelled", "out_for_delivery"],
+  preparing: ["ready", "cancelled"],
+  ready: ["delivered", "cancelled", "out_for_delivery"],
   out_for_delivery: ["delivered"],
 };
 
@@ -457,7 +458,9 @@ export async function transitionOrderStatus(
     const trackingRef = order.trackingCode
       ? doc(db, "stores", storeId, "orderTracking", order.trackingCode)
       : null;
-    const trackingSnapshot = trackingRef ? await transaction.get(trackingRef) : null;
+    const trackingSnapshot = trackingRef
+      ? await transaction.get(trackingRef)
+      : null;
     if (trackingRef && !trackingSnapshot?.exists())
       throw new Error("El seguimiento del pedido ya no existe.");
 

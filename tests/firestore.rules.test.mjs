@@ -105,9 +105,15 @@ before(async () => {
         status: "pending",
         createdAt: Timestamp.fromDate(new Date()),
       }),
-      setDoc(doc(db, 'stores', 'store-a', 'orderTracking', 'securetrackingcode123'), {
-        type: 'delivery', status: 'preparing', createdAt: Timestamp.fromDate(new Date()), updatedAt: Timestamp.fromDate(new Date()),
-      }),
+      setDoc(
+        doc(db, "stores", "store-a", "orderTracking", "securetrackingcode123"),
+        {
+          type: "delivery",
+          status: "preparing",
+          createdAt: Timestamp.fromDate(new Date()),
+          updatedAt: Timestamp.fromDate(new Date()),
+        },
+      ),
     ]);
   });
 });
@@ -118,19 +124,44 @@ after(async () => {
 
 test("el rastreo público permite get directo pero bloquea listados", async () => {
   await assertSucceeds(
-    getDoc(doc(publicDb(), "stores", "store-a", "orderTracking", "securetrackingcode123")),
+    getDoc(
+      doc(
+        publicDb(),
+        "stores",
+        "store-a",
+        "orderTracking",
+        "securetrackingcode123",
+      ),
+    ),
   );
-  await assertFails(getDocs(collection(publicDb(), "stores", "store-a", "orderTracking")));
-  await assertFails(getDoc(doc(publicDb(), "stores", "store-a", "orders", "active-a")));
+  await assertFails(
+    getDocs(collection(publicDb(), "stores", "store-a", "orderTracking")),
+  );
+  await assertFails(
+    getDoc(doc(publicDb(), "stores", "store-a", "orders", "active-a")),
+  );
 });
 
 test("un registro público solo puede crear su perfil customer, con nombre opcional", async () => {
-  await assertSucceeds(setDoc(doc(adminDb("new-customer"), "users", "new-customer"), {
-    uid: "new-customer", email: "customer@example.com", name: "Cliente Google", role: "customer", createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-  }));
-  await assertFails(setDoc(doc(adminDb("forged-admin"), "users", "forged-admin"), {
-    uid: "forged-admin", email: "admin@example.com", role: "superadmin", createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-  }));
+  await assertSucceeds(
+    setDoc(doc(adminDb("new-customer"), "users", "new-customer"), {
+      uid: "new-customer",
+      email: "customer@example.com",
+      name: "Cliente Google",
+      role: "customer",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertFails(
+    setDoc(doc(adminDb("forged-admin"), "users", "forged-admin"), {
+      uid: "forged-admin",
+      email: "admin@example.com",
+      role: "superadmin",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }),
+  );
 });
 
 test("storeadmin puede cargar pedidos activos únicamente de su tienda", async () => {
@@ -185,22 +216,41 @@ test("storeadmin solo puede actualizar el estado de un pedido", async () => {
 
 test("un pedido público válido crea un pedido y un rastreo juntos", async () => {
   await assertSucceeds(publicOrderBatch("store-a", "publictrackingcode1234"));
-  const tracking = await assertSucceeds(getDoc(
-    doc(publicDb(), "stores", "store-a", "orderTracking", "publictrackingcode1234"),
-  ));
-  assert.deepEqual(Object.keys(tracking.data()).sort(), ["createdAt", "status", "type", "updatedAt"]);
+  const tracking = await assertSucceeds(
+    getDoc(
+      doc(
+        publicDb(),
+        "stores",
+        "store-a",
+        "orderTracking",
+        "publictrackingcode1234",
+      ),
+    ),
+  );
+  assert.deepEqual(Object.keys(tracking.data()).sort(), [
+    "createdAt",
+    "status",
+    "type",
+    "updatedAt",
+  ]);
 });
 
 test("un pedido y su rastreo no se pueden crear por separado", async () => {
   const code = "separateordercode1234";
-  await assertFails(setDoc(
-    doc(publicDb(), "stores", "store-a", "orders", code),
-    publicOrder({}, code),
-  ));
-  await assertFails(setDoc(
-    doc(publicDb(), "stores", "store-a", "orderTracking", code),
-    { type: "in_store", status: "pending", createdAt: serverTimestamp(), updatedAt: serverTimestamp() },
-  ));
+  await assertFails(
+    setDoc(
+      doc(publicDb(), "stores", "store-a", "orders", code),
+      publicOrder({}, code),
+    ),
+  );
+  await assertFails(
+    setDoc(doc(publicDb(), "stores", "store-a", "orderTracking", code), {
+      type: "in_store",
+      status: "pending",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }),
+  );
 });
 
 test("out_for_delivery solo se permite para domicilios", async () => {
@@ -208,59 +258,79 @@ test("out_for_delivery solo se permite para domicilios", async () => {
     const db = context.firestore();
     await Promise.all([
       setDoc(doc(db, "stores", "store-a", "orders", "ready-table"), {
-        type: "in_store", status: "ready", updatedAt: Timestamp.now(),
+        type: "in_store",
+        status: "ready",
+        updatedAt: Timestamp.now(),
       }),
       setDoc(doc(db, "stores", "store-a", "orders", "ready-delivery"), {
-        type: "delivery", status: "ready", updatedAt: Timestamp.now(),
+        type: "delivery",
+        status: "ready",
+        updatedAt: Timestamp.now(),
       }),
     ]);
   });
-  await assertFails(setDoc(
-    doc(adminDb("admin-a"), "stores", "store-a", "orders", "ready-table"),
-    { status: "out_for_delivery", updatedAt: serverTimestamp() },
-    { merge: true },
-  ));
-  await assertSucceeds(setDoc(
-    doc(adminDb("admin-a"), "stores", "store-a", "orders", "ready-delivery"),
-    { status: "out_for_delivery", updatedAt: serverTimestamp() },
-    { merge: true },
-  ));
+  await assertFails(
+    setDoc(
+      doc(adminDb("admin-a"), "stores", "store-a", "orders", "ready-table"),
+      { status: "out_for_delivery", updatedAt: serverTimestamp() },
+      { merge: true },
+    ),
+  );
+  await assertSucceeds(
+    setDoc(
+      doc(adminDb("admin-a"), "stores", "store-a", "orders", "ready-delivery"),
+      { status: "out_for_delivery", updatedAt: serverTimestamp() },
+      { merge: true },
+    ),
+  );
 });
 
 test("un domicilio público exige teléfono, dirección y punto de mapa, y no permite mesa", async () => {
-  await assertSucceeds(publicOrderBatch("store-a", "deliverytrackingcode123", {
-    type: "delivery",
-    customerPhone: "+57 300 123 4567",
-    deliveryAddress: "Calle 123 #45-67",
-    deliveryLocation: { latitude: 4.711, longitude: -74.0721 },
-    tableNumber: undefined,
-  }));
+  await assertSucceeds(
+    publicOrderBatch("store-a", "deliverytrackingcode123", {
+      type: "delivery",
+      customerPhone: "+57 300 123 4567",
+      deliveryAddress: "Calle 123 #45-67",
+      deliveryLocation: { latitude: 4.711, longitude: -74.0721 },
+      tableNumber: undefined,
+    }),
+  );
 
-  await assertFails(publicOrderBatch("store-a", "invaliddeliverycode123", {
-    type: "delivery",
-    customerPhone: "+57 300 123 4567",
-    deliveryAddress: "Calle 123 #45-67",
-    tableNumber: undefined,
-  }));
-  await assertFails(publicOrderBatch("store-a", "invalidcoordinates123", {
-    type: "delivery",
-    customerPhone: "+57 300 123 4567",
-    deliveryAddress: "Calle 123 #45-67",
-    deliveryLocation: { latitude: 91, longitude: -74.0721 },
-    tableNumber: undefined,
-  }));
+  await assertFails(
+    publicOrderBatch("store-a", "invaliddeliverycode123", {
+      type: "delivery",
+      customerPhone: "+57 300 123 4567",
+      deliveryAddress: "Calle 123 #45-67",
+      tableNumber: undefined,
+    }),
+  );
+  await assertFails(
+    publicOrderBatch("store-a", "invalidcoordinates123", {
+      type: "delivery",
+      customerPhone: "+57 300 123 4567",
+      deliveryAddress: "Calle 123 #45-67",
+      deliveryLocation: { latitude: 91, longitude: -74.0721 },
+      tableNumber: undefined,
+    }),
+  );
 });
 
 test("un pedido en mesa exige mesa y no permite datos de domicilio", async () => {
-  await assertFails(publicOrderBatch("store-a", "missingtablecode1234", {
-    tableNumber: undefined,
-  }));
-  await assertFails(publicOrderBatch("store-a", "tablewithphonecode123", {
-    customerPhone: "+57 300 123 4567",
-  }));
-  await assertFails(publicOrderBatch("store-a", "tablewithlocation123", {
-    deliveryLocation: { latitude: 4.711, longitude: -74.0721 },
-  }));
+  await assertFails(
+    publicOrderBatch("store-a", "missingtablecode1234", {
+      tableNumber: undefined,
+    }),
+  );
+  await assertFails(
+    publicOrderBatch("store-a", "tablewithphonecode123", {
+      customerPhone: "+57 300 123 4567",
+    }),
+  );
+  await assertFails(
+    publicOrderBatch("store-a", "tablewithlocation123", {
+      deliveryLocation: { latitude: 4.711, longitude: -74.0721 },
+    }),
+  );
 });
 
 test("la creación pública respeta las capacidades de la tienda", async () => {
@@ -271,19 +341,23 @@ test("la creación pública respeta las capacidades de la tienda", async () => {
     });
   });
 
-  await assertFails(publicOrderBatch("no-delivery-store", "blockeddeliverycode123", {
-    type: "delivery",
-    customerPhone: "+57 300 123 4567",
-    deliveryAddress: "Calle 123 #45-67",
-    deliveryLocation: { latitude: 4.711, longitude: -74.0721 },
-    tableNumber: undefined,
-  }));
+  await assertFails(
+    publicOrderBatch("no-delivery-store", "blockeddeliverycode123", {
+      type: "delivery",
+      customerPhone: "+57 300 123 4567",
+      deliveryAddress: "Calle 123 #45-67",
+      deliveryLocation: { latitude: 4.711, longitude: -74.0721 },
+      tableNumber: undefined,
+    }),
+  );
 });
 
 test("la creación pública rechaza estados que no sean pending", async () => {
-  await assertFails(publicOrderBatch("store-a", "forgedstatuscode1234", {
-    status: "accepted",
-  }));
+  await assertFails(
+    publicOrderBatch("store-a", "forgedstatuscode1234", {
+      status: "accepted",
+    }),
+  );
 });
 
 test("la creación pública se bloquea para tiendas inactivas", async () => {

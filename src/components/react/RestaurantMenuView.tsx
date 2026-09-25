@@ -106,7 +106,10 @@ export function PublicStoreTemplateView({ store }: { store: StoreData }) {
     return (
       <ThemeFrame theme={theme}>
         <main className="flex min-h-screen items-center justify-center bg-[var(--store-bg)] px-4">
-          <OrderTrackingView storeId={contentModel.id} trackingCode={trackingCode} />
+          <OrderTrackingView
+            storeId={contentModel.id}
+            trackingCode={trackingCode}
+          />
         </main>
       </ThemeFrame>
     );
@@ -265,7 +268,6 @@ function MinimalLayout(props: StoreViewProps) {
               <EmptyMenu />
             )}
           </div>
-
         </section>
         <MinimalInfoFooter store={store} schedule={schedule} />
       </div>
@@ -712,7 +714,6 @@ function WarmHero({
               </article>
             ))}
           </div>
-
         </div>
       </div>
     </header>
@@ -1099,11 +1100,34 @@ function MenuPoster({
 
 function CategoryNav({ store }: { store: StoreContentModel }) {
   if (!store.navigation.length) return null;
-  return <nav aria-label="Categorías" className="mb-7 flex gap-2 overflow-x-auto border-y border-[var(--store-border)] py-3"><span className="shrink-0 text-xs font-bold uppercase tracking-[.16em] text-[var(--store-muted)]">Explorar</span>{store.navigation.map((category) => <a key={category.id} href={`#category-${category.id}`} className="shrink-0 rounded-full border border-[var(--store-border)] px-3 py-1 text-xs font-bold transition hover:border-[var(--store-accent)] hover:text-[var(--store-accent)]">{category.label}</a>)}</nav>;
+  return (
+    <nav
+      aria-label="Categorías"
+      className="mb-7 flex gap-2 overflow-x-auto border-y border-[var(--store-border)] py-3"
+    >
+      <span className="shrink-0 text-xs font-bold uppercase tracking-[.16em] text-[var(--store-muted)]">
+        Explorar
+      </span>
+      {store.navigation.map((category) => (
+        <a
+          key={category.id}
+          href={`#category-${category.id}`}
+          className="shrink-0 rounded-full border border-[var(--store-border)] px-3 py-1 text-xs font-bold transition hover:border-[var(--store-accent)] hover:text-[var(--store-accent)]"
+        >
+          {category.label}
+        </a>
+      ))}
+    </nav>
+  );
 }
 
-function CategoryList({ store, variant }: { store: StoreData; variant: 'minimal' | 'natural' | 'warm' | 'elegant' }) {
-
+function CategoryList({
+  store,
+  variant,
+}: {
+  store: StoreData;
+  variant: "minimal" | "natural" | "warm" | "elegant";
+}) {
   if (!store.categories.length) {
     return <EmptyMenu />;
   }
@@ -1458,8 +1482,20 @@ function _OrderCart({
   );
 }
 
-function ContactActions({ store, variant = 'minimal' }: { store: StoreData; variant?: 'minimal' | 'natural' | 'warm' | 'elegant' }) {
-  if (!store.contact?.whatsapp && !store.contact?.instagram && (typeof store.location?.latitude !== 'number' || typeof store.location?.longitude !== 'number')) return null;
+function ContactActions({
+  store,
+  variant = "minimal",
+}: {
+  store: StoreData;
+  variant?: "minimal" | "natural" | "warm" | "elegant";
+}) {
+  if (
+    !store.contact?.whatsapp &&
+    !store.contact?.instagram &&
+    (typeof store.location?.latitude !== "number" ||
+      typeof store.location?.longitude !== "number")
+  )
+    return null;
 
   const cardClass = {
     minimal:
@@ -1494,11 +1530,17 @@ function ContactActions({ store, variant = 'minimal' }: { store: StoreData; vari
             Instagram
           </a>
         )}
-        {typeof store.location?.latitude === 'number' && typeof store.location?.longitude === 'number' && (
-          <a className="rounded-xl border border-current px-4 py-3 text-center font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]" href={`https://www.google.com/maps/search/?api=1&query=${store.location.latitude},${store.location.longitude}`} target="_blank" rel="noopener noreferrer">
-            Ver ubicación en el mapa
-          </a>
-        )}
+        {typeof store.location?.latitude === "number" &&
+          typeof store.location?.longitude === "number" && (
+            <a
+              className="rounded-xl border border-current px-4 py-3 text-center font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]"
+              href={`https://www.google.com/maps/search/?api=1&query=${store.location.latitude},${store.location.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Ver ubicación en el mapa
+            </a>
+          )}
       </div>
     </section>
   );

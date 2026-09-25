@@ -10,7 +10,12 @@ import {
   writeBatch,
   where,
 } from "firebase/firestore";
-import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import {
+  deleteObject,
+  getDownloadURL,
+  ref,
+  uploadBytes,
+} from "firebase/storage";
 import { useEffect, useMemo, useState } from "react";
 import type React from "react";
 import { auth, db, storage } from "../../lib/firebase";
@@ -257,9 +262,15 @@ function formFromStore(store: StoreData): StoreFormState {
     currency: store.currency || defaults.currency,
     plan: store.plan || defaults.plan,
     timeZone: store.timeZone || defaults.timeZone,
-    logoUrl: store.logoUrl || '',
-    latitude: store.location?.latitude === undefined ? '' : String(store.location.latitude),
-    longitude: store.location?.longitude === undefined ? '' : String(store.location.longitude),
+    logoUrl: store.logoUrl || "",
+    latitude:
+      store.location?.latitude === undefined
+        ? ""
+        : String(store.location.latitude),
+    longitude:
+      store.location?.longitude === undefined
+        ? ""
+        : String(store.location.longitude),
     maxProducts: String(store.limits?.maxProducts ?? defaults.maxProducts),
     maxCategories: String(
       store.limits?.maxCategories ?? defaults.maxCategories,
@@ -300,7 +311,14 @@ function toOptionalNumber(value: string) {
 function hasValidCoordinates(latitude: string, longitude: string) {
   const lat = Number(latitude);
   const lng = Number(longitude);
-  return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lng >= -180 &&
+    lng <= 180
+  );
 }
 
 function createDraftId(prefix: string) {
@@ -353,7 +371,14 @@ function makeStorePayload(form: StoreFormState) {
     plan: form.plan,
     timeZone: form.timeZone,
     ...(form.logoUrl ? { logoUrl: form.logoUrl } : { logoUrl: null }),
-    ...(form.latitude.trim() && form.longitude.trim() ? { location: { latitude: Number(form.latitude), longitude: Number(form.longitude) } } : { location: null }),
+    ...(form.latitude.trim() && form.longitude.trim()
+      ? {
+          location: {
+            latitude: Number(form.latitude),
+            longitude: Number(form.longitude),
+          },
+        }
+      : { location: null }),
     limits: {
       maxProducts: toPositiveNumber(form.maxProducts, 100),
       maxCategories: toPositiveNumber(form.maxCategories, 20),
@@ -751,12 +776,19 @@ export default function StoreEditorPage() {
       return;
     }
     const hasAnyCoordinate = form.latitude.trim() || form.longitude.trim();
-    if (hasAnyCoordinate && !hasValidCoordinates(form.latitude, form.longitude)) {
-      setError('Ingresa latitud y longitud válidas para la ubicación.');
+    if (
+      hasAnyCoordinate &&
+      !hasValidCoordinates(form.latitude, form.longitude)
+    ) {
+      setError("Ingresa latitud y longitud válidas para la ubicación.");
       return;
     }
-    if (logoFile && (!['image/jpeg', 'image/png', 'image/webp'].includes(logoFile.type) || logoFile.size > 5 * 1024 * 1024)) {
-      setError('El logo debe ser JPG, PNG o WebP de máximo 5 MB.');
+    if (
+      logoFile &&
+      (!["image/jpeg", "image/png", "image/webp"].includes(logoFile.type) ||
+        logoFile.size > 5 * 1024 * 1024)
+    ) {
+      setError("El logo debe ser JPG, PNG o WebP de máximo 5 MB.");
       return;
     }
 
@@ -803,7 +835,10 @@ export default function StoreEditorPage() {
       let logoUrl = form.logoUrl;
       if (logoFile) {
         setUploadingLogo(true);
-        const logoRef = ref(storage, `stores/${storeId}/branding/logo-${Date.now()}`);
+        const logoRef = ref(
+          storage,
+          `stores/${storeId}/branding/logo-${Date.now()}`,
+        );
         await uploadBytes(logoRef, logoFile, { contentType: logoFile.type });
         logoUrl = await getDownloadURL(logoRef);
       }
@@ -937,8 +972,12 @@ export default function StoreEditorPage() {
       }
 
       await batch.commit();
-      const staleLogoUrl = logoToDelete || (form.logoUrl === logoUrl ? null : form.logoUrl);
-      if (staleLogoUrl) deleteObject(ref(storage, staleLogoUrl)).catch((deleteError) => console.warn('No se pudo eliminar el logo anterior:', deleteError));
+      const staleLogoUrl =
+        logoToDelete || (form.logoUrl === logoUrl ? null : form.logoUrl);
+      if (staleLogoUrl)
+        deleteObject(ref(storage, staleLogoUrl)).catch((deleteError) =>
+          console.warn("No se pudo eliminar el logo anterior:", deleteError),
+        );
 
       clearPublicStoreCache(slug, storeId);
       if (mode === "edit" && form.slug && form.slug !== slug) {
@@ -996,7 +1035,16 @@ export default function StoreEditorPage() {
   };
 
   if (status === "loading") {
-    return <EditorShell title="Preparando configuración"><div className="mt-6 animate-pulse rounded-2xl border border-gray-200 bg-white p-6 text-gray-600" role="status">Comprobando sesión, permisos y datos de la tienda…</div></EditorShell>;
+    return (
+      <EditorShell title="Preparando configuración">
+        <div
+          className="mt-6 animate-pulse rounded-2xl border border-gray-200 bg-white p-6 text-gray-600"
+          role="status"
+        >
+          Comprobando sesión, permisos y datos de la tienda…
+        </div>
+      </EditorShell>
+    );
   }
 
   if (status === "denied") {
@@ -1150,15 +1198,60 @@ export default function StoreEditorPage() {
                     ))}
                   </select>
                 </Field>
-                <section className="rounded-2xl border border-gray-200 p-4" aria-labelledby="store-logo-title">
-                  <h2 id="store-logo-title" className="font-black text-gray-950">Logo del negocio</h2>
-                  <p className="mt-1 text-sm text-gray-500">PNG, JPG o WebP, máximo 5 MB.</p>
+                <section
+                  className="rounded-2xl border border-gray-200 p-4"
+                  aria-labelledby="store-logo-title"
+                >
+                  <h2
+                    id="store-logo-title"
+                    className="font-black text-gray-950"
+                  >
+                    Logo del negocio
+                  </h2>
+                  <p className="mt-1 text-sm text-gray-500">
+                    PNG, JPG o WebP, máximo 5 MB.
+                  </p>
                   <div className="mt-3 flex flex-wrap items-center gap-3">
-                    {form.logoUrl && <img src={form.logoUrl} alt="Logo actual" className="h-16 w-16 rounded-xl border border-gray-200 object-contain" />}
-                    <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { setLogoFile(event.target.files?.[0] || null); setIsDirty(true); }} className="text-sm" aria-describedby="store-logo-help" />
-                    {form.logoUrl && <button type="button" onClick={() => { setLogoToDelete(form.logoUrl); updateForm("logoUrl", ""); }} className="rounded-lg border border-red-200 px-3 py-2 text-sm font-bold text-red-700">Quitar logo</button>}
+                    {form.logoUrl && (
+                      <img
+                        src={form.logoUrl}
+                        alt="Logo actual"
+                        className="h-16 w-16 rounded-xl border border-gray-200 object-contain"
+                      />
+                    )}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(event) => {
+                        setLogoFile(event.target.files?.[0] || null);
+                        setIsDirty(true);
+                      }}
+                      className="text-sm"
+                      aria-describedby="store-logo-help"
+                    />
+                    {form.logoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLogoToDelete(form.logoUrl);
+                          updateForm("logoUrl", "");
+                        }}
+                        className="rounded-lg border border-red-200 px-3 py-2 text-sm font-bold text-red-700"
+                      >
+                        Quitar logo
+                      </button>
+                    )}
                   </div>
-                  <p id="store-logo-help" className="mt-2 text-xs text-gray-500">{logoFile ? `Listo para subir: ${logoFile.name}` : uploadingLogo ? "Subiendo logo…" : "El logo se guarda al guardar la tienda."}</p>
+                  <p
+                    id="store-logo-help"
+                    className="mt-2 text-xs text-gray-500"
+                  >
+                    {logoFile
+                      ? `Listo para subir: ${logoFile.name}`
+                      : uploadingLogo
+                        ? "Subiendo logo…"
+                        : "El logo se guarda al guardar la tienda."}
+                  </p>
                 </section>
                 <Field label="Tema">
                   <select
@@ -1232,8 +1325,30 @@ export default function StoreEditorPage() {
                     className={INPUT_CLASS}
                   />
                 </Field>
-                <Field label="Latitud"><input name="latitude" inputMode="decimal" value={form.latitude} onChange={(event) => updateForm("latitude", event.target.value)} className={INPUT_CLASS} placeholder="Ej. 4.6533" /></Field>
-                <Field label="Longitud"><input name="longitude" inputMode="decimal" value={form.longitude} onChange={(event) => updateForm("longitude", event.target.value)} className={INPUT_CLASS} placeholder="Ej. -74.0837" /></Field>
+                <Field label="Latitud">
+                  <input
+                    name="latitude"
+                    inputMode="decimal"
+                    value={form.latitude}
+                    onChange={(event) =>
+                      updateForm("latitude", event.target.value)
+                    }
+                    className={INPUT_CLASS}
+                    placeholder="Ej. 4.6533"
+                  />
+                </Field>
+                <Field label="Longitud">
+                  <input
+                    name="longitude"
+                    inputMode="decimal"
+                    value={form.longitude}
+                    onChange={(event) =>
+                      updateForm("longitude", event.target.value)
+                    }
+                    className={INPUT_CLASS}
+                    placeholder="Ej. -74.0837"
+                  />
+                </Field>
                 <Field label="Zona horaria de operación">
                   <select
                     name="timeZone"
@@ -1254,7 +1369,17 @@ export default function StoreEditorPage() {
                 </Field>
               </div>
 
-              {hasValidCoordinates(form.latitude, form.longitude) && <section className="mt-6 overflow-hidden rounded-2xl border border-gray-200"><iframe title="Vista previa de ubicación" className="h-64 w-full" loading="lazy" referrerPolicy="no-referrer-when-downgrade" src={`https://www.google.com/maps?q=${encodeURIComponent(`${form.latitude},${form.longitude}`)}&output=embed`} /></section>}
+              {hasValidCoordinates(form.latitude, form.longitude) && (
+                <section className="mt-6 overflow-hidden rounded-2xl border border-gray-200">
+                  <iframe
+                    title="Vista previa de ubicación"
+                    className="h-64 w-full"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    src={`https://www.google.com/maps?q=${encodeURIComponent(`${form.latitude},${form.longitude}`)}&output=embed`}
+                  />
+                </section>
+              )}
 
               <SectionTitle title="Horario" />
               <div className="mt-4 grid gap-3 md:grid-cols-2">
