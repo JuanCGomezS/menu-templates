@@ -146,6 +146,7 @@ function MinimalLayout(props: StoreViewProps) {
             <p className="text-xs font-black uppercase tracking-[0.32em] text-stone-500">Carta de productos</p>
             <span className="font-serif text-4xl italic text-stone-300">Menu</span>
           </div>
+          <CategoryNav store={store} />
           <CategoryList store={store} variant="minimal" />
         </section>
         <aside className="space-y-4">
@@ -175,6 +176,7 @@ function NaturalLayout(props: StoreViewProps) {
             <ContactActions store={store} variant="natural" />
             <ScheduleCard schedule={schedule} variant="natural" />
           </aside>
+          <CategoryNav store={store} />
           <CategoryList store={store} variant="natural" />
         </div>
       </div>
@@ -193,6 +195,7 @@ function WarmLayout(props: StoreViewProps) {
       <div className="mx-auto max-w-6xl px-4 py-8">
         {featured.length > 0 && <FeaturedStrip store={store} items={featured} />}
         <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_18rem]">
+          <CategoryNav store={store} />
           <CategoryList store={store} variant="warm" />
           <aside className="space-y-4">
             <ContactActions store={store} variant="warm" />
@@ -216,6 +219,7 @@ function ElegantLayout(props: StoreViewProps) {
           <ContactActions store={store} variant="elegant" />
           <ScheduleCard schedule={schedule} variant="elegant" />
         </div>
+        <CategoryNav store={store} />
         <CategoryList store={store} variant="elegant" />
       </div>
       <StoreFooter store={store} />
@@ -302,6 +306,11 @@ function MenuPoster({ variant, store }: { variant: 'minimal' | 'natural' | 'warm
   );
 }
 
+function CategoryNav({ store }: { store: StoreContentModel }) {
+  if (!store.navigation.length) return null;
+  return <nav aria-label="Categorías" className="mb-7 flex gap-2 overflow-x-auto border-y border-[var(--store-border)] py-3"><span className="shrink-0 text-xs font-bold uppercase tracking-[.16em] text-[var(--store-muted)]">Explorar</span>{store.navigation.map((category) => <a key={category.id} href={`#category-${category.id}`} className="shrink-0 rounded-full border border-[var(--store-border)] px-3 py-1 text-xs font-bold transition hover:border-[var(--store-accent)] hover:text-[var(--store-accent)]">{category.label}</a>)}</nav>;
+}
+
 function CategoryList({ store, variant }: { store: StoreData; variant: 'minimal' | 'natural' | 'warm' | 'elegant' }) {
   if (!store.categories.length) {
     return <EmptyMenu />;
@@ -325,7 +334,7 @@ function CategorySection({ store, category, variant }: { store: StoreData; categ
   }[variant];
 
   return (
-    <section>
+    <section id={`category-${category.id}`} className="scroll-mt-6">
       <div className={`mb-5 flex items-center gap-3 ${headingClass}`}>
         <span aria-hidden="true" className={`h-2 w-2 rounded-full ${variant === 'warm' ? 'bg-white' : 'bg-[var(--store-accent)]'}`} />
         <h2 className={`font-black ${variant === 'warm' ? 'text-3xl uppercase tracking-tight' : variant === 'elegant' ? 'font-serif text-3xl italic' : 'text-2xl'}`}>{category.name}</h2>
