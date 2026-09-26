@@ -245,3 +245,7 @@ Al confirmar, el cliente recibe un código de alta entropía y un enlace de segu
 La cola activa escucha en tiempo real solo cuando está visible: una consulta por tienda, día, estados activos y máximo 25 pedidos. La primera carga establece una base y no alerta pedidos históricos. Las notificaciones locales de escritorio son voluntarias.
 
 La push con FCM es opcional y usa `functions/notifyStoreAdminOfNewOrder`, por lo que exige Blaze, Firebase Cloud Messaging configurado y una cuenta de servicio de deploy. La Function hace como máximo dos lecturas por pedido (tienda y token del admin), no hace queries de colección ni polling. Configurá un presupuesto/alertas de Google Cloud antes de desplegar Functions; sin FCM configurado, la cola local continúa funcionando.
+
+## Tienda cerrada
+
+La carta sigue visible fuera del horario de operación, pero el carrito bloquea agregar y confirmar pedidos. El cálculo usa la zona horaria configurada y permite tiendas sin horario como compatibilidad. El aviso informa la próxima apertura conocida y dirige al cliente a explorar la carta.
