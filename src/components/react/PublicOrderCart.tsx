@@ -198,7 +198,8 @@ export function PublicOrderCartProvider({
       );
     } catch (error) {
       console.error("No se pudo crear el pedido:", error);
-      setNotice("No se pudo enviar. Reintenta; tu carrito se conserva.");
+      const message = error instanceof Error ? error.message : "";
+      setNotice(message.includes("cerrada") ? "El negocio está cerrado. Guarda esta carta y vuelve cuando abra." : "No se pudo enviar. Reintenta; tu carrito se conserva.");
     } finally {
       setSubmitting(false);
     }

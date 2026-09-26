@@ -12,10 +12,9 @@ import {
   startAfter,
   Timestamp,
   where,
-  writeBatch,
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
-import { db } from "./firebase";
+import { app, db } from "./firebase";
 
 export const ORDER_MODES = ["in_store", "delivery"] as const;
 export type OrderMode = (typeof ORDER_MODES)[number];
@@ -199,31 +198,13 @@ export function validatePublicOrder(
   };
 }
 
-/** Writes only an already validated, normalized public order. */
-export async function createPublicOrder(
-  storeId: string,
-  order: PublicOrderInput,
-  trackingCode: string,
-) {
-  if (!/^[a-zA-Z0-9_-]{16,100}$/.test(trackingCode))
-    throw new Error("El código de seguimiento no es válido.");
-  const batch = writeBatch(db);
-  batch.set(doc(db, "stores", storeId, "orders", trackingCode), {
-    ...order,
-    clientRequestId: trackingCode,
-    trackingCode,
-    status: "pending",
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-  batch.set(doc(db, "stores", storeId, "orderTracking", trackingCode), {
-    type: order.type,
-    status: "pending",
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-  await batch.commit();
-  return trackingCode;
+/** Writes only an already validated order through the server-side schedule guard. */
+export async function createPublicOrder(storeId: string, order: PublicOrderInput, trackingCode: string) {
+  if (!/^[a-zA-Z0-9_-]{16,100}$/.test(trackingCode)) throw new Error("El código de seguimiento no es válido.");
+  const { getFunctions, httpsCallable } = await import("firebase/functions");
+  const createOrder = httpsCallable<{ storeId: string; order: PublicOrderInput; trackingCode: string }, { trackingCode: string }>(getFunctions(app), "createPublicOrder");
+  const result = await createOrder({ storeId, order, trackingCode });
+  return result.data.trackingCode;
 }
 
 export interface StoreOrder {

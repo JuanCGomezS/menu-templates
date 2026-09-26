@@ -202,7 +202,8 @@ service cloud.firestore {
       }
 
       match /orders/{orderId} {
-        allow create: if isPublicOrderCreate(storeId);
+        // Public creation goes through the callable Function so server time can enforce store hours.
+        allow create: if false;
         allow read: if isSuperAdmin() || isStoreAdminFor(storeId);
         allow update: if isSuperAdmin() || (isStoreAdminFor(storeId) && storeAdminChangesOnly(['status', 'updatedAt']) && isValidOrderStatusTransition());
         allow delete: if isSuperAdmin();
