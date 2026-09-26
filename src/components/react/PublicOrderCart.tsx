@@ -25,9 +25,11 @@ export function usePublicOrderCart() {
 
 export function PublicOrderCartProvider({
   store,
+  orderingOpen,
   children,
 }: {
   store: PublicStore;
+  orderingOpen: boolean;
   children: React.ReactNode;
 }) {
   const [mode, setMode] = useState<OrderMode | null>(
@@ -53,6 +55,7 @@ export function PublicOrderCartProvider({
   const [trackingCode, setTrackingCode] = useState("");
 
   const addItem = (item: PublicItem) => {
+    if (!orderingOpen) { setNotice("El negocio está cerrado. Puedes revisar la carta y volver cuando abra."); setMinimized(false); return; }
     const available =
       mode === "delivery"
         ? item.availableForDelivery !== false
@@ -129,6 +132,7 @@ export function PublicOrderCartProvider({
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!orderingOpen) { setNotice("El negocio está cerrado. No podemos recibir pedidos todavía."); return; }
     if (!mode || submitting) return;
 
     const unavailable = lines.find(
@@ -431,7 +435,7 @@ export function PublicOrderCartProvider({
                   className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-orange-600 focus:ring-2 focus:ring-orange-100"
                 />
                 <button
-                  disabled={submitting || needsLocationConfirmation}
+                  disabled={!orderingOpen || submitting || needsLocationConfirmation}
                   className="w-full rounded-lg bg-gray-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? "Enviando…" : "Confirmar pedido"}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { formatDayName, formatPrice, sortScheduleDays } from "../../lib/utils";
+import { getStoreOpeningStatus } from "../../lib/store-hours";
 import { getPublicStoreBySlug } from "../../lib/public-store-data";
 import {
   getTemplateComponent,
@@ -118,24 +119,29 @@ export function PublicStoreTemplateView({ store }: { store: StoreData }) {
   const schedule = contentModel.schedule
     ? sortScheduleDays(contentModel.schedule)
     : [];
-  const isOpen = getCurrentOpenStatus(contentModel.schedule);
+  const opening = getStoreOpeningStatus(contentModel.schedule, contentModel.timeZone || "America/Bogota");
+  const isOpen = opening.isOpen;
   const content = (
-    <StoreTemplateContent
+    <><StoreTemplateContent
       store={contentModel}
       schedule={schedule}
       theme={theme}
       isOpen={isOpen}
       template={template}
-    />
+    />{!opening.isOpen && <StoreClosedNotice message={opening.message} />}</>
   );
   return contentModel.capabilities?.inStoreOrdering ||
     contentModel.capabilities?.deliveryOrdering ? (
-    <PublicOrderCartProvider store={contentModel}>
+    <PublicOrderCartProvider store={contentModel} orderingOpen={opening.isOpen}>
       {content}
     </PublicOrderCartProvider>
   ) : (
     content
   );
+}
+
+function StoreClosedNotice({ message }: { message: string }) {
+  return <aside className="fixed inset-x-4 bottom-4 z-40 mx-auto max-w-xl border border-[#ffb08a] bg-[#101828] p-4 text-white shadow-2xl"><p className="font-black">El negocio está cerrado</p><p className="mt-1 text-sm text-white/75">{message || "Puedes explorar la carta y volver cuando abramos."}</p></aside>;
 }
 
 function StoreTemplateContent({
@@ -1630,37 +1636,4 @@ function getThemeBadge(theme: ThemeConfig) {
   };
 
   return badges[theme.component] || null;
-}
-
-function getCurrentOpenStatus(schedule: StoreData["schedule"]): boolean | null {
-  if (!schedule || typeof window === "undefined") return null;
-
-  const dayKeys = [
-    "sunday",
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-  ];
-  const now = new Date();
-  const today = schedule[dayKeys[now.getDay()]];
-
-  if (!today || typeof today === "string") return null;
-  if (today.closed || !today.open || !today.close) return false;
-
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-  const openMinutes = timeToMinutes(today.open);
-  const closeMinutes = timeToMinutes(today.close);
-
-  if (openMinutes === null || closeMinutes === null) return null;
-
-  return currentMinutes >= openMinutes && currentMinutes <= closeMinutes;
-}
-
-function timeToMinutes(value: string): number | null {
-  const [hours, minutes] = value.split(":").map(Number);
-  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
-  return hours * 60 + minutes;
 }
