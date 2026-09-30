@@ -16,7 +16,7 @@ import {
   ref,
   uploadBytes,
 } from "firebase/storage";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { auth, db, storage } from "../../lib/firebase";
 import { getUserProfile, ROLES } from "../../lib/auth";
@@ -31,12 +31,21 @@ import { withBasePath } from "../../lib/base-path";
 import AppHeader from "./AppHeader";
 import AppFooter from "./AppFooter";
 import Messaging, { type MessageTone } from "./Messaging";
+import StoreOperationsPanel from "./StoreOperationsPanel";
+import LocationMap, { type MapLocation } from "./LocationMap";
 
 type StoreType = "restaurant" | "food_business" | "product_store";
 type PlanType = "free_trial" | "standard" | "plus" | "premium";
 type Currency = "COP" | "USD" | "EUR";
 type EditorMode = "create" | "edit";
-type TabId = "general" | "design" | "operation" | "products" | "superadmin";
+type TabId =
+  | "operation"
+  | "operation-settings"
+  | "general"
+  | "design"
+  | "products"
+  | "statistics"
+  | "superadmin";
 
 interface StoreData {
   id: string;
@@ -146,6 +155,16 @@ const CURRENCIES: Currency[] = ["COP", "USD", "EUR"];
 
 const TABS: Array<{ id: TabId; label: string; description: string }> = [
   {
+    id: "operation",
+    label: "Operación diaria",
+    description: "Pedidos y acciones del día.",
+  },
+  {
+    id: "operation-settings",
+    label: "Configuración de operación",
+    description: "Canales, ubicación y horario de atención.",
+  },
+  {
     id: "general",
     label: "Datos principales",
     description: "Información editable por la tienda.",
@@ -156,11 +175,6 @@ const TABS: Array<{ id: TabId; label: string; description: string }> = [
     description: "Template y apariencia pública.",
   },
   {
-    id: "operation",
-    label: "Operación",
-    description: "Contacto, domicilio y horarios.",
-  },
-  {
     id: "products",
     label: "Productos",
     description: "Categorías, productos y stock.",
@@ -169,6 +183,11 @@ const TABS: Array<{ id: TabId; label: string; description: string }> = [
     id: "superadmin",
     label: "Superadmin",
     description: "Plan, límites, slug y control interno.",
+  },
+  {
+    id: "statistics",
+    label: "Estadísticas",
+    description: "Historial y resultados de la tienda.",
   },
 ];
 
@@ -291,7 +310,8 @@ function formFromStore(store: StoreData): StoreFormState {
           open: store.schedule?.[day]?.open || defaults.schedule[day].open,
           close: store.schedule?.[day]?.close || defaults.schedule[day].close,
           closed:
-            store.schedule?.[day]?.closed ?? defaults.schedule[day].closed,
+            store.schedule?.[day]?.closed ??
+            (store.schedule ? true : defaults.schedule[day].closed),
         },
       ]),
     ) as StoreFormState["schedule"],
@@ -309,6 +329,7 @@ function toOptionalNumber(value: string) {
 }
 
 function hasValidCoordinates(latitude: string, longitude: string) {
+  if (!latitude.trim() || !longitude.trim()) return false;
   const lat = Number(latitude);
   const lng = Number(longitude);
   return (
@@ -410,7 +431,7 @@ export default function StoreEditorPage() {
   const [messageTone, setMessageTone] = useState<MessageTone>("info");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabId>("general");
+  const [activeTab, setActiveTab] = useState<TabId>("operation");
   const [isDirty, setIsDirty] = useState(false);
   const [categoryDrafts, setCategoryDrafts] = useState<CategoryDraft[]>([]);
   const [productDrafts, setProductDrafts] = useState<ProductDraft[]>([]);
@@ -421,6 +442,12 @@ export default function StoreEditorPage() {
     Record<string, string>
   >({});
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [searchingLocation, setSearchingLocation] = useState(false);
+  const [locationSearchError, setLocationSearchError] = useState("");
+  const [locationResults, setLocationResults] = useState<
+    Array<{ displayName: string; latitude: number; longitude: number }>
+  >([]);
+  const locationSearchRequestRef = useRef(0);
 
   const templates = useMemo(() => getAllTemplates(), []);
   const themes = useMemo(() => getAllThemes(), []);
@@ -548,6 +575,76 @@ export default function StoreEditorPage() {
       },
     }));
     setIsDirty(true);
+  };
+
+  const updateBusinessLocation = (
+    location: MapLocation,
+    invalidatePendingSearch = true,
+  ) => {
+    if (invalidatePendingSearch) {
+      locationSearchRequestRef.current += 1;
+      setSearchingLocation(false);
+    }
+    setForm((current) => ({
+      ...current,
+      latitude: String(location.latitude),
+      longitude: String(location.longitude),
+    }));
+    setIsDirty(true);
+  };
+
+  const searchBusinessAddress = async () => {
+    const address = form.address.trim();
+    if (address.length < 5) {
+      setLocationSearchError(
+        "Escribe una dirección más completa para ubicarla en el mapa.",
+      );
+      return;
+    }
+
+    const requestId = ++locationSearchRequestRef.current;
+    setSearchingLocation(true);
+    setLocationSearchError("");
+    setLocationResults([]);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q=${encodeURIComponent(address)}`,
+      );
+      const results = (await response.json()) as Array<{
+        display_name?: string;
+        lat?: string;
+        lon?: string;
+      }>;
+      if (requestId !== locationSearchRequestRef.current) return;
+      const validResults = results
+        .map((result) => ({
+          displayName: result.display_name || "Resultado sin dirección",
+          latitude: Number(result.lat),
+          longitude: Number(result.lon),
+        }))
+        .filter((result) =>
+          hasValidCoordinates(
+            String(result.latitude),
+            String(result.longitude),
+          ),
+        );
+      if (!response.ok || !validResults.length) {
+        setLocationSearchError(
+          "No encontramos esa dirección. Ajusta el texto o mueve el pin manualmente.",
+        );
+        return;
+      }
+      updateBusinessLocation(validResults[0], false);
+      setLocationResults(validResults);
+    } catch {
+      if (requestId === locationSearchRequestRef.current)
+        setLocationSearchError(
+          "No se pudo buscar la dirección. Mueve el pin manualmente.",
+        );
+    } finally {
+      if (requestId === locationSearchRequestRef.current)
+        setSearchingLocation(false);
+    }
   };
 
   const loadStoreProducts = async (storeId: string) => {
@@ -725,7 +822,11 @@ export default function StoreEditorPage() {
   const uploadProductImages = async (
     storeId: string,
     products: Array<
-      ProductDraft & { price: number; order: number; stock: number }
+      Omit<ProductDraft, "price" | "order" | "stock"> & {
+        price: number;
+        order: number;
+        stock: number;
+      }
     >,
   ) => {
     return Promise.all(
@@ -1100,7 +1201,13 @@ export default function StoreEditorPage() {
       </div>
 
       <form
-        onSubmit={handleSubmit}
+        onSubmit={(event) => {
+          if (activeTab === "operation") {
+            event.preventDefault();
+            return;
+          }
+          void handleSubmit(event);
+        }}
         className="mt-6 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-200"
       >
         <div className="border-b border-gray-200 bg-gray-50/80 px-4 py-3">
@@ -1275,155 +1382,242 @@ export default function StoreEditorPage() {
 
           {activeTab === "operation" && (
             <div id="store-editor-operation" role="tabpanel">
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                <Field label="WhatsApp">
-                  <input
-                    name="whatsapp"
-                    type="tel"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    value={form.whatsapp}
-                    onChange={(event) =>
-                      updateForm("whatsapp", event.target.value)
-                    }
-                    className={INPUT_CLASS}
-                    placeholder="Ej. +57 300 123 4567…"
-                  />
-                </Field>
-                <Field label="Instagram">
-                  <input
-                    name="instagram"
-                    autoComplete="off"
-                    spellCheck={false}
-                    value={form.instagram}
-                    onChange={(event) =>
-                      updateForm("instagram", event.target.value)
-                    }
-                    className={INPUT_CLASS}
-                    placeholder="Ej. @mitienda…"
-                  />
-                </Field>
-                <Field label="Dirección">
-                  <input
-                    name="address"
-                    autoComplete="street-address"
-                    value={form.address}
-                    onChange={(event) =>
-                      updateForm("address", event.target.value)
-                    }
-                    className={INPUT_CLASS}
-                  />
-                </Field>
-                <Field label="Notas de domicilio">
-                  <input
-                    name="deliveryNotes"
-                    autoComplete="off"
-                    value={form.deliveryNotes}
-                    onChange={(event) =>
-                      updateForm("deliveryNotes", event.target.value)
-                    }
-                    className={INPUT_CLASS}
-                  />
-                </Field>
-                <Field label="Latitud">
-                  <input
-                    name="latitude"
-                    inputMode="decimal"
-                    value={form.latitude}
-                    onChange={(event) =>
-                      updateForm("latitude", event.target.value)
-                    }
-                    className={INPUT_CLASS}
-                    placeholder="Ej. 4.6533"
-                  />
-                </Field>
-                <Field label="Longitud">
-                  <input
-                    name="longitude"
-                    inputMode="decimal"
-                    value={form.longitude}
-                    onChange={(event) =>
-                      updateForm("longitude", event.target.value)
-                    }
-                    className={INPUT_CLASS}
-                    placeholder="Ej. -74.0837"
-                  />
-                </Field>
-                <Field label="Zona horaria de operación">
-                  <select
-                    name="timeZone"
-                    value={form.timeZone}
-                    onChange={(event) =>
-                      updateForm("timeZone", event.target.value)
-                    }
-                    className={INPUT_CLASS}
+              {form.id ? (
+                <section aria-labelledby="store-operations-title">
+                  <SectionTitle title="Operación diaria" />
+                  <p
+                    id="store-operations-title"
+                    className="mt-1 text-sm text-gray-500"
                   >
-                    <option value="America/Bogota">Colombia (Bogotá)</option>
-                    <option value="America/Mexico_City">México central</option>
-                    <option value="America/Lima">Perú</option>
-                    <option value="America/Santiago">Chile</option>
-                    <option value="America/Argentina/Buenos_Aires">
-                      Argentina
-                    </option>
-                  </select>
-                </Field>
-              </div>
-
-              {hasValidCoordinates(form.latitude, form.longitude) && (
-                <section className="mt-6 overflow-hidden rounded-2xl border border-gray-200">
-                  <iframe
-                    title="Vista previa de ubicación"
-                    className="h-64 w-full"
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    src={`https://www.google.com/maps?q=${encodeURIComponent(`${form.latitude},${form.longitude}`)}&output=embed`}
+                    Gestiona los pedidos que mueven la operación de hoy.
+                  </p>
+                  <StoreOperationsPanel
+                    store={{
+                      id: form.id,
+                      name: form.name,
+                      slug: form.slug,
+                      currency: form.currency,
+                      timeZone: form.timeZone,
+                    }}
+                    view="orders"
                   />
                 </section>
+              ) : (
+                <section className="rounded-xl bg-gray-50 p-4 text-sm text-gray-600">
+                  Guarda la tienda para empezar a gestionar sus pedidos diarios.
+                </section>
               )}
+            </div>
+          )}
 
-              <SectionTitle title="Horario" />
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                {WEEK_DAYS.map(([day, label]) => (
-                  <div
-                    key={day}
-                    className="grid grid-cols-[1fr_auto_auto] items-center gap-3 rounded-xl border border-gray-200 p-3 text-sm"
-                  >
-                    <label className="flex items-center gap-2 font-semibold text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={form.schedule[day].closed}
-                        onChange={(event) =>
-                          updateSchedule(day, "closed", event.target.checked)
-                        }
-                        className="h-4 w-4 accent-orange-600"
-                      />
-                      {label}
+          {activeTab === "operation-settings" && (
+            <div id="store-editor-operation-settings" role="tabpanel">
+              <section
+                className="border-t border-gray-200 pt-8"
+                aria-labelledby="operation-settings-title"
+              >
+                <SectionTitle title="Configuración de operación" />
+                <div
+                  id="operation-settings-title"
+                  className="mt-4 grid gap-4 md:grid-cols-2"
+                >
+                  <Field label="WhatsApp">
+                    <input
+                      name="whatsapp"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      value={form.whatsapp}
+                      onChange={(event) =>
+                        updateForm("whatsapp", event.target.value)
+                      }
+                      className={INPUT_CLASS}
+                      placeholder="Ej. +57 300 123 4567…"
+                    />
+                  </Field>
+                  <Field label="Instagram">
+                    <input
+                      name="instagram"
+                      autoComplete="off"
+                      spellCheck={false}
+                      value={form.instagram}
+                      onChange={(event) =>
+                        updateForm("instagram", event.target.value)
+                      }
+                      className={INPUT_CLASS}
+                      placeholder="Ej. @mitienda…"
+                    />
+                  </Field>
+                  <div className="md:col-span-2">
+                    <label
+                      className="block text-sm font-semibold text-gray-700"
+                      htmlFor="business-address"
+                    >
+                      Dirección
                     </label>
-                    <input
-                      aria-label={`Hora de apertura ${label}`}
-                      name={`${day}Open`}
-                      type="time"
-                      value={form.schedule[day].open}
-                      disabled={form.schedule[day].closed}
-                      onChange={(event) =>
-                        updateSchedule(day, "open", event.target.value)
-                      }
-                      className="rounded-lg border border-gray-300 px-2 py-1 disabled:opacity-40"
-                    />
-                    <input
-                      aria-label={`Hora de cierre ${label}`}
-                      name={`${day}Close`}
-                      type="time"
-                      value={form.schedule[day].close}
-                      disabled={form.schedule[day].closed}
-                      onChange={(event) =>
-                        updateSchedule(day, "close", event.target.value)
-                      }
-                      className="rounded-lg border border-gray-300 px-2 py-1 disabled:opacity-40"
-                    />
+                    <div className="mt-2 flex gap-2">
+                      <input
+                        id="business-address"
+                        name="address"
+                        autoComplete="street-address"
+                        value={form.address}
+                        onChange={(event) => {
+                          locationSearchRequestRef.current += 1;
+                          setSearchingLocation(false);
+                          setLocationResults([]);
+                          setForm((current) => ({
+                            ...current,
+                            address: event.target.value,
+                            latitude: "",
+                            longitude: "",
+                          }));
+                          setIsDirty(true);
+                        }}
+                        className={INPUT_CLASS}
+                        placeholder="Ej. Calle 123 #45-67, Bogotá"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void searchBusinessAddress()}
+                        disabled={searchingLocation}
+                        className="shrink-0 rounded-xl bg-gray-950 px-4 py-2 text-sm font-bold text-white disabled:cursor-wait disabled:opacity-60"
+                      >
+                        {searchingLocation ? "Buscando…" : "Buscar"}
+                      </button>
+                    </div>
+                    {locationSearchError && (
+                      <p
+                        role="alert"
+                        className="mt-2 text-sm font-medium text-red-700"
+                      >
+                        {locationSearchError}
+                      </p>
+                    )}
+                    {locationResults.length > 0 && (
+                      <ul
+                        className="mt-3 space-y-2"
+                        aria-label="Resultados de dirección"
+                      >
+                        {locationResults.map((result) => (
+                          <li key={`${result.latitude}:${result.longitude}`}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateBusinessLocation(result, false);
+                                setLocationResults([]);
+                              }}
+                              className="w-full rounded-xl border border-gray-200 px-3 py-2 text-left text-sm font-medium text-gray-700 transition hover:border-gray-950 hover:text-gray-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"
+                            >
+                              {result.displayName}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <p className="mt-2 text-sm text-gray-500">
+                      Busca la dirección y ajusta el pin en el mapa para guardar
+                      el punto exacto.
+                    </p>
                   </div>
-                ))}
-              </div>
+                  <Field label="Notas de domicilio">
+                    <input
+                      name="deliveryNotes"
+                      autoComplete="off"
+                      value={form.deliveryNotes}
+                      onChange={(event) =>
+                        updateForm("deliveryNotes", event.target.value)
+                      }
+                      className={INPUT_CLASS}
+                    />
+                  </Field>
+
+                  <Field label="Zona horaria de operación">
+                    <select
+                      name="timeZone"
+                      value={form.timeZone}
+                      onChange={(event) =>
+                        updateForm("timeZone", event.target.value)
+                      }
+                      className={INPUT_CLASS}
+                    >
+                      <option value="America/Bogota">Colombia (Bogotá)</option>
+                      <option value="America/Mexico_City">
+                        México central
+                      </option>
+                      <option value="America/Lima">Perú</option>
+                      <option value="America/Santiago">Chile</option>
+                      <option value="America/Argentina/Buenos_Aires">
+                        Argentina
+                      </option>
+                    </select>
+                  </Field>
+                </div>
+
+                <section className="mt-6 overflow-hidden rounded-2xl border border-gray-200">
+                  <LocationMap
+                    location={
+                      hasValidCoordinates(form.latitude, form.longitude)
+                        ? {
+                            latitude: Number(form.latitude),
+                            longitude: Number(form.longitude),
+                          }
+                        : null
+                    }
+                    editable
+                    onChange={updateBusinessLocation}
+                    title="Mapa para ubicar el negocio"
+                  />
+                </section>
+
+                <SectionTitle title="Horario" />
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  {WEEK_DAYS.map(([day, label]) => (
+                    <div
+                      key={day}
+                      className="grid grid-cols-[1fr_auto_auto] items-center gap-3 rounded-xl border border-gray-200 p-3 text-sm"
+                    >
+                      <label className="flex items-center gap-2 font-semibold text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={!form.schedule[day].closed}
+                          onChange={(event) =>
+                            updateSchedule(day, "closed", !event.target.checked)
+                          }
+                          className="h-4 w-4 accent-orange-600"
+                        />
+                        <span>{label}</span>
+                        <span
+                          className={`text-xs ${form.schedule[day].closed ? "text-gray-400" : "text-emerald-700"}`}
+                        >
+                          {form.schedule[day].closed ? "Cerrado" : "Abierto"}
+                        </span>
+                      </label>
+                      <input
+                        aria-label={`Hora de apertura ${label}`}
+                        name={`${day}Open`}
+                        type="time"
+                        value={form.schedule[day].open}
+                        disabled={form.schedule[day].closed}
+                        onChange={(event) =>
+                          updateSchedule(day, "open", event.target.value)
+                        }
+                        className="rounded-lg border border-gray-300 px-2 py-1 disabled:opacity-40"
+                      />
+                      <input
+                        aria-label={`Hora de cierre ${label}`}
+                        name={`${day}Close`}
+                        type="time"
+                        value={form.schedule[day].close}
+                        disabled={form.schedule[day].closed}
+                        onChange={(event) =>
+                          updateSchedule(day, "close", event.target.value)
+                        }
+                        className="rounded-lg border border-gray-300 px-2 py-1 disabled:opacity-40"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
             </div>
           )}
 
@@ -1758,6 +1952,27 @@ export default function StoreEditorPage() {
             </div>
           )}
 
+          {activeTab === "statistics" && (
+            <div id="store-editor-statistics" role="tabpanel">
+              {form.id ? (
+                <StoreOperationsPanel
+                  store={{
+                    id: form.id,
+                    name: form.name,
+                    slug: form.slug,
+                    currency: form.currency,
+                    timeZone: form.timeZone,
+                  }}
+                  view="history"
+                />
+              ) : (
+                <p className="rounded-xl bg-gray-50 p-4 text-sm text-gray-600">
+                  Guarda la tienda para consultar sus estadísticas.
+                </p>
+              )}
+            </div>
+          )}
+
           {activeTab === "superadmin" && (
             <div id="store-editor-superadmin" role="tabpanel">
               <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -1885,19 +2100,21 @@ export default function StoreEditorPage() {
           )}
         </div>
 
-        <div className="m-6 flex justify-end">
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-xl bg-orange-600 px-5 py-3 font-bold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {saving
-              ? "Guardando…"
-              : mode === "create"
-                ? "Crear tienda"
-                : "Guardar cambios"}
-          </button>
-        </div>
+        {activeTab !== "operation" && (
+          <div className="m-6 flex justify-end">
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-xl bg-orange-600 px-5 py-3 font-bold text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saving
+                ? "Guardando…"
+                : mode === "create"
+                  ? "Crear tienda"
+                  : "Actualizar tienda"}
+            </button>
+          </div>
+        )}
       </form>
     </EditorShell>
   );

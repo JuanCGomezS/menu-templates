@@ -1,23 +1,21 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import RestaurantMenuView from "./RestaurantMenuView";
 import { stripBasePath, withBasePath } from "../../lib/base-path";
 
-const StoreAdminPanel = lazy(() => import("./StoreAdminPanel"));
-
-type StoreRouteState = { slug: string; isAdmin: boolean };
+type StoreRouteState = { slug: string };
 
 function getStoreRouteFromPath(pathname: string): StoreRouteState {
   const normalizedPath = stripBasePath(pathname);
-  const storeMatch = normalizedPath.match(/^\/t\/([^/]+)(?:\/(admin))?\/?$/);
+  const storeMatch = normalizedPath.match(/^\/t\/([^/]+)\/?$/);
   const legacyMenuMatch = normalizedPath.match(/^\/m\/([^/]+)\/?$/);
 
   if (legacyMenuMatch) {
     const slug = legacyMenuMatch[1];
     window.location.replace(withBasePath(`/t/${slug}`));
-    return { slug, isAdmin: false };
+    return { slug };
   }
 
-  return { slug: storeMatch?.[1] || "", isAdmin: storeMatch?.[2] === "admin" };
+  return { slug: storeMatch?.[1] || "" };
 }
 
 function RouteLoadingState() {
@@ -59,14 +57,6 @@ export default function StoreRoute() {
           </a>
         </div>
       </main>
-    );
-  }
-
-  if (route.isAdmin) {
-    return (
-      <Suspense fallback={<RouteLoadingState />}>
-        <StoreAdminPanel slug={decodeURIComponent(route.slug)} />
-      </Suspense>
     );
   }
 

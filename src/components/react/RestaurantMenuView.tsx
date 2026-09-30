@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type JSX, useEffect, useState } from "react";
 import { formatDayName, formatPrice, sortScheduleDays } from "../../lib/utils";
 import { getStoreOpeningStatus } from "../../lib/store-hours";
 import { getPublicStoreBySlug } from "../../lib/public-store-data";
@@ -20,9 +20,28 @@ import {
 } from "../../lib/store-content";
 import { PublicOrderCartProvider, usePublicOrderCart } from "./PublicOrderCart";
 import OrderTrackingView from "./OrderTrackingView";
+import LocationMap from "./LocationMap";
 
 type StoreData = PublicStore;
 type ScheduleEntry = [string, string];
+
+function getValidLocation(location: StoreData["location"]) {
+  const latitude = location?.latitude;
+  const longitude = location?.longitude;
+  if (
+    typeof latitude !== "number" ||
+    typeof longitude !== "number" ||
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  )
+    return null;
+
+  return { latitude, longitude };
+}
 
 interface Props {
   slug: string;
@@ -59,7 +78,9 @@ export default function RestaurantMenuView({ slug }: Props) {
         setLoading(true);
         setError(null);
 
-        const publicStore = await getPublicStoreBySlug(slug);
+        const publicStore = await getPublicStoreBySlug(slug, {
+          freshStore: true,
+        });
 
         if (cancelled) return;
 
@@ -94,7 +115,32 @@ export default function RestaurantMenuView({ slug }: Props) {
 }
 
 export function PublicStoreTemplateView({ store }: { store: StoreData }) {
+  const [now, setNow] = useState(() => new Date());
   const contentModel = normalizeStoreContent(store);
+
+  useEffect(() => {
+    const refresh = () => setNow(new Date());
+    let interval: number | undefined;
+    const timeout = window.setTimeout(
+      () => {
+        refresh();
+        interval = window.setInterval(refresh, 60_000);
+      },
+      60_000 - (Date.now() % 60_000),
+    );
+    const onVisibilityChange = () => {
+      if (!document.hidden) refresh();
+    };
+
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.clearTimeout(timeout);
+      if (interval !== undefined) window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
   const trackingCode =
     typeof window === "undefined"
       ? ""
@@ -119,16 +165,23 @@ export function PublicStoreTemplateView({ store }: { store: StoreData }) {
   const schedule = contentModel.schedule
     ? sortScheduleDays(contentModel.schedule)
     : [];
-  const opening = getStoreOpeningStatus(contentModel.schedule, contentModel.timeZone || "America/Bogota");
+  const opening = getStoreOpeningStatus(
+    contentModel.schedule,
+    contentModel.timeZone || "America/Bogota",
+    now,
+  );
   const isOpen = opening.isOpen;
   const content = (
-    <><StoreTemplateContent
-      store={contentModel}
-      schedule={schedule}
-      theme={theme}
-      isOpen={isOpen}
-      template={template}
-    />{!opening.isOpen && <StoreClosedNotice message={opening.message} />}</>
+    <ThemeFrame theme={theme}>
+      {!opening.isOpen && <StoreClosedNotice message={opening.message} />}
+      <StoreTemplateContent
+        store={contentModel}
+        schedule={schedule}
+        theme={theme}
+        isOpen={isOpen}
+        template={template}
+      />
+    </ThemeFrame>
   );
   return contentModel.capabilities?.inStoreOrdering ||
     contentModel.capabilities?.deliveryOrdering ? (
@@ -141,7 +194,48 @@ export function PublicStoreTemplateView({ store }: { store: StoreData }) {
 }
 
 function StoreClosedNotice({ message }: { message: string }) {
-  return <aside className="fixed inset-x-4 bottom-4 z-40 mx-auto max-w-xl border border-[#ffb08a] bg-[#101828] p-4 text-white shadow-2xl"><p className="font-black">El negocio está cerrado</p><p className="mt-1 text-sm text-white/75">{message || "Puedes explorar la carta y volver cuando abramos."}</p></aside>;
+  return (
+    <section
+      className="pointer-events-none fixed left-1/2 top-3 z-40 w-fit max-w-[calc(100%-2rem)] -translate-x-1/2 px-1 sm:top-6"
+      aria-labelledby="store-closed-title"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <div className="flex items-center gap-3 rounded-full border border-[var(--store-border)] bg-[var(--store-surface)] py-2 pl-2 pr-4 text-[var(--store-text)] shadow-[0_16px_36px_rgba(16,24,40,0.16)] motion-safe:animate-[store-closed-float_4s_ease-in-out_infinite]">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--store-bg)] ring-1 ring-[var(--store-border)]">
+          <img
+            src={withBasePath("/shop-close.svg")}
+            alt=""
+            aria-hidden="true"
+            className="h-6 w-6 object-contain"
+          />
+        </div>
+        <div className="min-w-0 pr-1">
+          <h2
+            id="store-closed-title"
+            className="text-xs font-black leading-tight tracking-tight"
+          >
+            Cerrado ahora
+          </h2>
+          <p className="text-[11px] font-semibold leading-tight text-[var(--store-muted)]">
+            Te invitamos a consultar los horarios
+          </p>
+        </div>
+        <p className="sr-only">
+          No estamos recibiendo pedidos en este momento.{" "}
+          {message || "Consulta nuestro horario para volver a pedir."} Puedes
+          explorar la carta mientras tanto.
+        </p>
+      </div>
+      <style>{`
+        @keyframes store-closed-float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-0.35rem); }
+        }
+      `}</style>
+    </section>
+  );
 }
 
 function StoreTemplateContent({
@@ -155,15 +249,13 @@ function StoreTemplateContent({
   const Layout = layoutRenderers[template] || MinimalLayout;
 
   return (
-    <ThemeFrame theme={theme}>
-      <Layout
-        store={store}
-        schedule={schedule}
-        theme={theme}
-        isOpen={isOpen}
-        onAddToCart={addItem}
-      />
-    </ThemeFrame>
+    <Layout
+      store={store}
+      schedule={schedule}
+      theme={theme}
+      isOpen={isOpen}
+      onAddToCart={addItem}
+    />
   );
 }
 
@@ -416,10 +508,13 @@ function PosterMenuItem({
   imageOnRight: boolean;
   onAddToCart: (item: PublicItem) => void;
 }) {
+  const { orderingOpen } = usePublicOrderCart();
   const soldOut =
     item.trackStock && typeof item.stock === "number" && item.stock <= 0;
   const orderingEnabled =
-    store.capabilities?.inStoreOrdering || store.capabilities?.deliveryOrdering;
+    orderingOpen &&
+    (store.capabilities?.inStoreOrdering ||
+      store.capabilities?.deliveryOrdering);
 
   return (
     <article
@@ -588,13 +683,16 @@ function WarmHero({
   featured: PublicItem[];
   onAddToCart: (item: PublicItem) => void;
 }) {
+  const { orderingOpen } = usePublicOrderCart();
   const heroItem = featured.find((item) => item.imageUrl) || featured[0];
   const supportingItems = featured
     .filter((item) => item.id !== heroItem?.id)
     .slice(0, 2);
   const themeBadge = getThemeBadge(theme);
   const orderingEnabled =
-    store.capabilities?.inStoreOrdering || store.capabilities?.deliveryOrdering;
+    orderingOpen &&
+    (store.capabilities?.inStoreOrdering ||
+      store.capabilities?.deliveryOrdering);
 
   return (
     <header className="relative isolate min-h-[38rem] overflow-hidden border-b border-[#f5dba3]/20 bg-[#17130f] px-4 pb-16 pt-5 text-[#fff8eb] sm:min-h-[42rem] sm:px-6 lg:min-h-[43rem] lg:px-8">
@@ -802,9 +900,12 @@ function WarmMenuItem({
   store: StoreData;
   onAddToCart: (item: PublicItem) => void;
 }) {
+  const { orderingOpen } = usePublicOrderCart();
   const soldOut = isSoldOut(item);
   const orderingEnabled =
-    store.capabilities?.inStoreOrdering || store.capabilities?.deliveryOrdering;
+    orderingOpen &&
+    (store.capabilities?.inStoreOrdering ||
+      store.capabilities?.deliveryOrdering);
 
   return (
     <article
@@ -1217,11 +1318,13 @@ function MenuItemCard({
   store: StoreData;
   variant: "minimal" | "natural" | "warm" | "elegant";
 }) {
-  const { addItem } = usePublicOrderCart();
+  const { addItem, orderingOpen } = usePublicOrderCart();
   const soldOut =
     item.trackStock && typeof item.stock === "number" && item.stock <= 0;
   const orderingEnabled =
-    store.capabilities?.inStoreOrdering || store.capabilities?.deliveryOrdering;
+    orderingOpen &&
+    (store.capabilities?.inStoreOrdering ||
+      store.capabilities?.deliveryOrdering);
   const base =
     "border p-4 transition-transform transition-shadow hover:-translate-y-0.5 hover:shadow-lg motion-reduce:transform-none motion-reduce:transition-none";
   const variants = {
@@ -1291,203 +1394,6 @@ function MenuItemCard({
   );
 }
 
-function _OrderCart({
-  store,
-  cart,
-  onUpdateQuantity,
-  onClear,
-}: {
-  store: StoreData;
-  cart: CartLine[];
-  onUpdateQuantity: (itemId: string, quantity: number) => void;
-  onClear: () => void;
-}) {
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [notes, setNotes] = useState("");
-  const [type, setType] = useState<OrderType>(
-    store.capabilities?.inStoreOrdering ? "in_store" : "delivery",
-  );
-  const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const total = useMemo(
-    () => cart.reduce((sum, line) => sum + line.item.price * line.quantity, 0),
-    [cart],
-  );
-  const orderingEnabled =
-    store.capabilities?.inStoreOrdering || store.capabilities?.deliveryOrdering;
-
-  if (!orderingEnabled || cart.length === 0) return null;
-
-  const submitOrder = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setError(null);
-    setMessage(null);
-
-    if (!customerName.trim() || !customerPhone.trim()) {
-      setError("Nombre y teléfono son obligatorios.");
-      return;
-    }
-
-    if (type === "delivery" && !deliveryAddress.trim()) {
-      setError("La dirección es obligatoria para domicilio.");
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      await addDoc(collection(db, "stores", store.id, "orders"), {
-        customerName: customerName.trim(),
-        customerPhone: customerPhone.trim(),
-        type,
-        status: "pending",
-        items: cart.map((line) => ({
-          itemId: line.item.id,
-          name: line.item.name,
-          price: line.item.price,
-          quantity: line.quantity,
-          subtotal: line.item.price * line.quantity,
-        })),
-        total,
-        deliveryAddress: type === "delivery" ? deliveryAddress.trim() : "",
-        notes: notes.trim(),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-
-      setCustomerName("");
-      setCustomerPhone("");
-      setDeliveryAddress("");
-      setNotes("");
-      onClear();
-      setMessage("Pedido enviado. La tienda lo revisará en breve.");
-    } catch (err) {
-      console.error("Error al crear pedido:", err);
-      setError(
-        "No pudimos enviar el pedido. Intenta de nuevo o contacta por WhatsApp.",
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <aside className="fixed inset-x-3 bottom-3 z-40 mx-auto max-w-3xl rounded-[1.5rem] border border-gray-200 bg-white p-4 text-gray-950 shadow-2xl shadow-black/20 md:bottom-5">
-      <form
-        onSubmit={submitOrder}
-        className="grid gap-4 md:grid-cols-[1fr_1fr] md:items-end"
-      >
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">
-            Tu pedido
-          </p>
-          <div className="mt-2 max-h-32 space-y-2 overflow-auto pr-1 text-sm">
-            {cart.map((line) => (
-              <div
-                key={line.item.id}
-                className="flex items-center justify-between gap-3"
-              >
-                <span className="min-w-0 truncate font-semibold">
-                  {line.item.name}
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onUpdateQuantity(line.item.id, line.quantity - 1)
-                    }
-                    className="h-7 w-7 rounded-full bg-gray-100 font-black"
-                  >
-                    −
-                  </button>
-                  <span className="w-5 text-center font-black">
-                    {line.quantity}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      onUpdateQuantity(line.item.id, line.quantity + 1)
-                    }
-                    className="h-7 w-7 rounded-full bg-gray-100 font-black"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="mt-3 text-lg font-black">
-            Total: {formatPrice(total, store.currency)}
-          </p>
-          {message && (
-            <p className="mt-2 rounded-xl bg-green-50 px-3 py-2 text-sm font-semibold text-green-700">
-              {message}
-            </p>
-          )}
-          {error && (
-            <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
-              {error}
-            </p>
-          )}
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-2">
-          <select
-            value={type}
-            onChange={(event) => setType(event.target.value as OrderType)}
-            className="rounded-xl border border-gray-300 px-3 py-2 text-sm font-semibold outline-none focus:border-orange-500"
-          >
-            {store.capabilities?.inStoreOrdering && (
-              <option value="in_store">En tienda</option>
-            )}
-            {store.capabilities?.deliveryOrdering && (
-              <option value="delivery">Domicilio</option>
-            )}
-          </select>
-          <input
-            value={customerName}
-            onChange={(event) => setCustomerName(event.target.value)}
-            placeholder="Nombre"
-            className="rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-orange-500"
-            required
-          />
-          <input
-            value={customerPhone}
-            onChange={(event) => setCustomerPhone(event.target.value)}
-            placeholder="Teléfono"
-            className="rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-orange-500"
-            required
-          />
-          <input
-            value={deliveryAddress}
-            onChange={(event) => setDeliveryAddress(event.target.value)}
-            placeholder="Dirección domicilio"
-            className="rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-orange-500 disabled:opacity-50"
-            disabled={type !== "delivery"}
-            required={type === "delivery"}
-          />
-          <input
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            placeholder="Notas"
-            className="rounded-xl border border-gray-300 px-3 py-2 text-sm outline-none focus:border-orange-500 sm:col-span-2"
-          />
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-xl bg-orange-600 px-4 py-3 text-sm font-black text-white transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2"
-          >
-            {submitting ? "Enviando…" : "Enviar pedido"}
-          </button>
-        </div>
-      </form>
-    </aside>
-  );
-}
-
 function ContactActions({
   store,
   variant = "minimal",
@@ -1495,13 +1401,9 @@ function ContactActions({
   store: StoreData;
   variant?: "minimal" | "natural" | "warm" | "elegant";
 }) {
-  if (
-    !store.contact?.whatsapp &&
-    !store.contact?.instagram &&
-    (typeof store.location?.latitude !== "number" ||
-      typeof store.location?.longitude !== "number")
-  )
-    return null;
+  const contact = store.contact;
+  const location = getValidLocation(store.location);
+  if (!contact?.whatsapp && !contact?.instagram && !location) return null;
 
   const cardClass = {
     minimal:
@@ -1516,40 +1418,60 @@ function ContactActions({
     <section className={`rounded-2xl border p-5 ${cardClass}`}>
       <h2 className="font-black">Contacto</h2>
       <div className="mt-4 grid gap-3">
-        {store.contact.whatsapp && (
+        {contact?.whatsapp && (
           <a
             className="rounded-xl bg-[#25D366] px-4 py-3 text-center font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 focus-visible:ring-offset-2"
-            href={`https://wa.me/${store.contact.whatsapp.replace(/[^0-9]/g, "")}`}
+            href={`https://wa.me/${contact.whatsapp.replace(/[^0-9]/g, "")}`}
             target="_blank"
             rel="noopener noreferrer"
           >
             WhatsApp
           </a>
         )}
-        {store.contact.instagram && (
+        {contact?.instagram && (
           <a
-            className="rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 text-center font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-700 focus-visible:ring-offset-2"
-            href={`https://instagram.com/${store.contact.instagram.replace("@", "")}`}
+            className="rounded-xl bg-[#c13584] px-4 py-3 text-center font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c13584] focus-visible:ring-offset-2"
+            href={`https://instagram.com/${contact.instagram.replace("@", "")}`}
             target="_blank"
             rel="noopener noreferrer"
           >
             Instagram
           </a>
         )}
-        {typeof store.location?.latitude === "number" &&
-          typeof store.location?.longitude === "number" && (
+        {location && (
+          <>
+            <LocationMap
+              location={location}
+              className="h-56 w-full overflow-hidden rounded-xl"
+              title={`Ubicación de ${store.name}`}
+            />
             <a
               className="rounded-xl border border-current px-4 py-3 text-center font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]"
-              href={`https://www.google.com/maps/search/?api=1&query=${store.location.latitude},${store.location.longitude}`}
+              href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
               target="_blank"
               rel="noopener noreferrer"
             >
-              Ver ubicación en el mapa
+              Abrir ubicación en el mapa
             </a>
-          )}
+          </>
+        )}
       </div>
     </section>
   );
+}
+
+function formatScheduleTime(value: string) {
+  const match = /^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return value;
+
+  const formatTime = (hours: string, minutes: string) => {
+    const hour = Number(hours);
+    const suffix = hour < 12 ? "a. m." : "p. m.";
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${suffix}`;
+  };
+
+  return `${formatTime(match[1], match[2])} – ${formatTime(match[3], match[4])}`;
 }
 
 function ScheduleCard({
@@ -1590,7 +1512,7 @@ function ScheduleCard({
                 value === "closed" ? "font-bold text-red-600" : timeClass
               }
             >
-              {value === "closed" ? "Cerrado" : value}
+              {value === "closed" ? "Cerrado" : formatScheduleTime(value)}
             </span>
           </div>
         ))}

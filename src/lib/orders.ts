@@ -1,3 +1,4 @@
+import { getFunctions, httpsCallable } from "firebase/functions";
 import {
   collection,
   doc,
@@ -199,10 +200,17 @@ export function validatePublicOrder(
 }
 
 /** Writes only an already validated order through the server-side schedule guard. */
-export async function createPublicOrder(storeId: string, order: PublicOrderInput, trackingCode: string) {
-  if (!/^[a-zA-Z0-9_-]{16,100}$/.test(trackingCode)) throw new Error("El código de seguimiento no es válido.");
-  const { getFunctions, httpsCallable } = await import("firebase/functions");
-  const createOrder = httpsCallable<{ storeId: string; order: PublicOrderInput; trackingCode: string }, { trackingCode: string }>(getFunctions(app), "createPublicOrder");
+export async function createPublicOrder(
+  storeId: string,
+  order: PublicOrderInput,
+  trackingCode: string,
+) {
+  if (!/^[a-zA-Z0-9_-]{16,100}$/.test(trackingCode))
+    throw new Error("El código de seguimiento no es válido.");
+  const createOrder = httpsCallable<
+    { storeId: string; order: PublicOrderInput; trackingCode: string },
+    { trackingCode: string }
+  >(getFunctions(app), "createPublicOrder");
   const result = await createOrder({ storeId, order, trackingCode });
   return result.data.trackingCode;
 }
@@ -215,6 +223,7 @@ export interface StoreOrder {
   tableNumber?: number;
   deliveryAddress?: string;
   deliveryLocation?: DeliveryLocation;
+  notes?: string;
   status?: OrderStatus;
   trackingCode?: string;
   total?: number;
@@ -225,6 +234,7 @@ export interface StoreOrder {
     price?: number;
   }>;
   createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 export interface OrdersPage {
@@ -387,17 +397,26 @@ export function subscribeToActiveOrdersForStoreDay(
 ) {
   const range = getStoreDayRange(timeZone);
   let initial = true;
-  return onSnapshot(query(
-    collection(db, "stores", storeId, "orders"),
-    where("status", "in", ACTIVE_ORDER_STATUSES),
-    where("createdAt", ">=", Timestamp.fromDate(range.start)),
-    where("createdAt", "<", Timestamp.fromDate(range.end)),
-    orderBy("createdAt", "desc"),
-    limit(ADMIN_ORDER_LIMIT),
-  ), (snapshot) => {
-    onOrders(snapshot.docs.map((orderDoc) => ({ id: orderDoc.id, ...orderDoc.data() }) as StoreOrder), initial);
-    initial = false;
-  }, onError);
+  return onSnapshot(
+    query(
+      collection(db, "stores", storeId, "orders"),
+      where("status", "in", ACTIVE_ORDER_STATUSES),
+      where("createdAt", ">=", Timestamp.fromDate(range.start)),
+      where("createdAt", "<", Timestamp.fromDate(range.end)),
+      orderBy("createdAt", "desc"),
+      limit(ADMIN_ORDER_LIMIT),
+    ),
+    (snapshot) => {
+      onOrders(
+        snapshot.docs.map(
+          (orderDoc) => ({ id: orderDoc.id, ...orderDoc.data() }) as StoreOrder,
+        ),
+        initial,
+      );
+      initial = false;
+    },
+    onError,
+  );
 }
 
 /** Fetches one bounded, paginable queue page for the store's current local day. */

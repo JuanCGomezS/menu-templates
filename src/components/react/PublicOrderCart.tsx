@@ -12,11 +12,15 @@ import { withBasePath } from "../../lib/base-path";
 import DeliveryLocationDialog from "./DeliveryLocationDialog";
 
 type CartLine = { item: PublicItem; quantity: number };
-type CartContextValue = { addItem: (item: PublicItem) => void };
+type CartContextValue = {
+  addItem: (item: PublicItem) => void;
+  orderingOpen: boolean;
+};
 type CheckoutStep = "products" | "details";
 
 const CartContext = createContext<CartContextValue>({
   addItem: () => undefined,
+  orderingOpen: false,
 });
 
 export function usePublicOrderCart() {
@@ -55,7 +59,13 @@ export function PublicOrderCartProvider({
   const [trackingCode, setTrackingCode] = useState("");
 
   const addItem = (item: PublicItem) => {
-    if (!orderingOpen) { setNotice("El negocio está cerrado. Puedes revisar la carta y volver cuando abra."); setMinimized(false); return; }
+    if (!orderingOpen) {
+      setNotice(
+        "El negocio está cerrado. Puedes revisar la carta y volver cuando abra.",
+      );
+      setMinimized(false);
+      return;
+    }
     const available =
       mode === "delivery"
         ? item.availableForDelivery !== false
@@ -132,7 +142,10 @@ export function PublicOrderCartProvider({
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!orderingOpen) { setNotice("El negocio está cerrado. No podemos recibir pedidos todavía."); return; }
+    if (!orderingOpen) {
+      setNotice("El negocio está cerrado. No podemos recibir pedidos todavía.");
+      return;
+    }
     if (!mode || submitting) return;
 
     const unavailable = lines.find(
@@ -203,7 +216,11 @@ export function PublicOrderCartProvider({
     } catch (error) {
       console.error("No se pudo crear el pedido:", error);
       const message = error instanceof Error ? error.message : "";
-      setNotice(message.includes("cerrada") ? "El negocio está cerrado. Guarda esta carta y vuelve cuando abra." : "No se pudo enviar. Reintenta; tu carrito se conserva.");
+      setNotice(
+        message.includes("cerrada")
+          ? "El negocio está cerrado. Guarda esta carta y vuelve cuando abra."
+          : "No se pudo enviar. Reintenta; tu carrito se conserva.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -224,8 +241,16 @@ export function PublicOrderCartProvider({
     }
   };
 
+  if (!orderingOpen) {
+    return (
+      <CartContext.Provider value={{ addItem, orderingOpen }}>
+        {children}
+      </CartContext.Provider>
+    );
+  }
+
   return (
-    <CartContext.Provider value={{ addItem }}>
+    <CartContext.Provider value={{ addItem, orderingOpen }}>
       <>{children}</>
       <aside
         className="fixed bottom-4 right-4 z-50 w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-orange-200 bg-white p-4 shadow-[0_16px_42px_rgba(15,23,42,0.22)]"
@@ -435,7 +460,9 @@ export function PublicOrderCartProvider({
                   className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-orange-600 focus:ring-2 focus:ring-orange-100"
                 />
                 <button
-                  disabled={!orderingOpen || submitting || needsLocationConfirmation}
+                  disabled={
+                    !orderingOpen || submitting || needsLocationConfirmation
+                  }
                   className="w-full rounded-lg bg-gray-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {submitting ? "Enviando…" : "Confirmar pedido"}
@@ -448,6 +475,7 @@ export function PublicOrderCartProvider({
                 <a
                   className="mt-1 block break-all underline"
                   href={trackingUrl}
+                  target="blank"
                 >
                   Ver seguimiento
                 </a>

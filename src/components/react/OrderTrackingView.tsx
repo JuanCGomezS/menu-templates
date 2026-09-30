@@ -1,19 +1,263 @@
-import { useEffect, useState } from 'react';
-import { getPublicOrderTracking, type OrderStatus, type PublicOrderTracking } from '../../lib/orders';
+import { useCallback, useEffect, useState } from "react";
+import {
+  getPublicOrderTracking,
+  type OrderStatus,
+  type PublicOrderTracking,
+} from "../../lib/orders";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
-  pending: 'Solicitado', accepted: 'Confirmado', preparing: 'En preparación', ready: 'Listo', out_for_delivery: 'En camino', delivered: 'Entregado', cancelled: 'Cancelado',
+  pending: "Solicitado",
+  accepted: "Confirmado",
+  preparing: "En preparación",
+  ready: "Listo",
+  out_for_delivery: "En camino",
+  delivered: "Entregado",
+  cancelled: "Cancelado",
 };
 
-export default function OrderTrackingView({ storeId, trackingCode }: { storeId: string; trackingCode: string }) {
-  const [state, setState] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading');
+const DELIVERY_STEPS: OrderStatus[] = [
+  "pending",
+  "accepted",
+  "preparing",
+  "ready",
+  "out_for_delivery",
+  "delivered",
+];
+
+const IN_STORE_STEPS: OrderStatus[] = [
+  "pending",
+  "accepted",
+  "preparing",
+  "ready",
+  "delivered",
+];
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" className="h-5 w-5">
+      <path
+        d="m3.25 8.25 2.9 2.9 6.6-6.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CancelIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="h-6 w-6">
+      <path
+        d="m7 7 10 10M17 7 7 17"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
+function formatUpdatedAt(tracking: PublicOrderTracking) {
+  const updated = tracking.updatedAt?.toDate?.();
+  return updated ? updated.toLocaleString() : null;
+}
+
+export default function OrderTrackingView({
+  storeId,
+  trackingCode,
+}: {
+  storeId: string;
+  trackingCode: string;
+}) {
+  const [state, setState] = useState<"loading" | "ready" | "missing" | "error">(
+    "loading",
+  );
   const [tracking, setTracking] = useState<PublicOrderTracking | null>(null);
-  useEffect(() => {
-    getPublicOrderTracking(storeId, trackingCode).then((result) => { setTracking(result); setState(result ? 'ready' : 'missing'); }).catch(() => setState('error'));
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadTracking = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const result = await getPublicOrderTracking(storeId, trackingCode);
+      setTracking(result);
+      setState(result ? "ready" : "missing");
+    } catch {
+      setState("error");
+    } finally {
+      setRefreshing(false);
+    }
   }, [storeId, trackingCode]);
-  if (state === 'loading') return <div className="rounded-2xl bg-white p-6 text-center shadow" role="status">Consultando estado del pedido…</div>;
-  if (state === 'missing') return <div className="rounded-2xl bg-white p-6 text-center shadow">No encontramos ese código de seguimiento.</div>;
-  if (state === 'error') return <div className="rounded-2xl bg-red-50 p-6 text-center text-red-700">No fue posible consultar el pedido. Intenta nuevamente.</div>;
-  const updated = tracking?.updatedAt?.toDate?.();
-  return <section className="rounded-2xl bg-white p-6 text-center shadow" aria-live="polite"><p className="text-sm font-bold uppercase tracking-[.2em] text-orange-600">Seguimiento de pedido</p><h1 className="mt-3 text-3xl font-black text-gray-950">{tracking && STATUS_LABELS[tracking.status]}</h1><p className="mt-3 text-gray-600">{tracking?.type === 'delivery' ? 'Tu pedido a domicilio está siendo atendido.' : 'Tu pedido para mesa o recogida está siendo atendido.'}</p>{updated && <p className="mt-4 text-xs text-gray-500">Actualizado: {updated.toLocaleString()}</p>}<button type="button" onClick={() => window.location.reload()} className="mt-5 rounded-full border border-gray-300 px-4 py-2 text-sm font-bold">Actualizar estado</button></section>;
+
+  useEffect(() => {
+    void loadTracking();
+  }, [loadTracking]);
+
+  if (state === "loading") {
+    return (
+      <div
+        className="rounded-3xl bg-white p-6 text-center shadow-[0_18px_48px_rgba(16,24,40,0.12)]"
+        role="status"
+      >
+        Consultando estado del pedido…
+      </div>
+    );
+  }
+
+  if (state === "missing") {
+    return (
+      <div className="rounded-3xl bg-white p-6 text-center shadow-[0_18px_48px_rgba(16,24,40,0.12)]">
+        No encontramos ese código de seguimiento.
+      </div>
+    );
+  }
+
+  if (state === "error" || !tracking) {
+    return (
+      <div className="rounded-3xl bg-red-50 p-6 text-center text-red-700 shadow-[0_18px_48px_rgba(16,24,40,0.12)]">
+        No fue posible consultar el pedido. Intenta nuevamente.
+      </div>
+    );
+  }
+
+  const updatedAt = formatUpdatedAt(tracking);
+
+  if (tracking.status === "cancelled") {
+    return (
+      <section
+        className="w-full max-w-3xl rounded-3xl border border-[var(--store-border,#d7dcd5)] bg-white p-6 text-center shadow-[0_18px_48px_rgba(16,24,40,0.12)] sm:p-8"
+        aria-labelledby="tracking-title"
+      >
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-700">
+          <CancelIcon />
+        </div>
+        <h1
+          id="tracking-title"
+          className="mt-4 text-3xl font-black tracking-tight text-gray-950"
+        >
+          Pedido cancelado
+        </h1>
+        <p
+          role="status"
+          aria-live="polite"
+          className="mt-2 text-sm leading-6 text-gray-600"
+        >
+          Este pedido no continuará en la ruta de preparación.
+        </p>
+        {updatedAt && (
+          <p className="mt-5 text-xs tabular-nums text-gray-500">
+            Última actualización: {updatedAt}
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={() => void loadTracking()}
+          disabled={refreshing}
+          className="mt-6 min-h-11 rounded-full border border-gray-300 px-5 py-2 text-sm font-bold text-gray-800 transition hover:border-gray-500 disabled:cursor-wait disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--store-accent,#ff5a1f)]"
+        >
+          {refreshing ? "Actualizando…" : "Actualizar estado"}
+        </button>
+      </section>
+    );
+  }
+
+  const steps = tracking.type === "delivery" ? DELIVERY_STEPS : IN_STORE_STEPS;
+  const currentStep = steps.indexOf(tracking.status);
+
+  return (
+    <section
+      className="w-full max-w-3xl rounded-3xl border border-[var(--store-border,#d7dcd5)] bg-white p-5 shadow-[0_18px_48px_rgba(16,24,40,0.12)] sm:p-8"
+      aria-labelledby="tracking-title"
+    >
+      <header className="text-center">
+        <p
+          role="status"
+          aria-live="polite"
+          className="text-sm font-bold text-[var(--store-accent,#ff5a1f)]"
+        >
+          Estado actual
+        </p>
+        <h1
+          id="tracking-title"
+          className="mt-1 text-3xl font-black tracking-tight text-gray-950 sm:text-4xl"
+        >
+          {STATUS_LABELS[tracking.status]}
+        </h1>
+        <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-gray-600">
+          {tracking.type === "delivery"
+            ? "Tu pedido a domicilio está avanzando en esta ruta."
+            : "Tu pedido está avanzando en esta ruta."}
+        </p>
+      </header>
+
+      <ol
+        aria-label="Etapas del pedido"
+        className="mt-8 flex snap-x overflow-x-auto px-1 pb-3 [scrollbar-color:var(--store-accent,#ff5a1f)_transparent] [scrollbar-width:thin] sm:overflow-visible"
+      >
+        {steps.map((status, index) => {
+          const isCompleted = currentStep > index;
+          const isCurrent = currentStep === index;
+          const isFuture = currentStep < index;
+          const accessibleState = isCurrent
+            ? "estado actual"
+            : isCompleted
+              ? "completado"
+              : "pendiente";
+
+          return (
+            <li
+              key={status}
+              aria-current={isCurrent ? "step" : undefined}
+              className="relative flex min-w-28 flex-1 snap-start flex-col items-center text-center sm:min-w-0"
+            >
+              {index < steps.length - 1 && (
+                <span
+                  aria-hidden="true"
+                  className={`absolute left-[calc(50%+1.25rem)] right-[calc(-50%+1.25rem)] top-5 h-px ${isCompleted ? "bg-[var(--store-accent,#ff5a1f)]" : "bg-[var(--store-border,#d7dcd5)]"}`}
+                />
+              )}
+              <span
+                className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 ${isCompleted ? "border-[var(--store-accent,#ff5a1f)] bg-[var(--store-accent,#ff5a1f)] text-white" : isCurrent ? "border-[var(--store-accent,#ff5a1f)] bg-white text-[var(--store-accent,#ff5a1f)] shadow-[0_0_0_5px_rgba(255,90,31,0.15)] motion-safe:animate-pulse" : "border-[var(--store-border,#d7dcd5)] bg-white text-gray-400"}`}
+              >
+                {isCompleted ? (
+                  <CheckIcon />
+                ) : (
+                  <span
+                    aria-hidden="true"
+                    className={`h-2.5 w-2.5 rounded-full ${isCurrent ? "bg-current" : "bg-current/60"}`}
+                  />
+                )}
+              </span>
+              <span
+                className={`mt-3 min-h-10 px-1 text-xs font-bold leading-5 ${isFuture ? "text-gray-500" : "text-gray-900"}`}
+              >
+                {STATUS_LABELS[status]}
+              </span>
+              <span className="sr-only"> — {accessibleState}</span>
+            </li>
+          );
+        })}
+      </ol>
+
+      <div className="mt-4 flex flex-col items-center gap-4 border-t border-[var(--store-border,#d7dcd5)] pt-5 sm:flex-row sm:justify-between">
+        {updatedAt ? (
+          <p className="text-xs tabular-nums text-gray-500">
+            Última actualización: {updatedAt}
+          </p>
+        ) : (
+          <span />
+        )}
+        <button
+          type="button"
+          onClick={() => void loadTracking()}
+          disabled={refreshing}
+          className="min-h-11 rounded-full border border-gray-300 px-5 py-2 text-sm font-bold text-gray-800 transition hover:border-gray-500 disabled:cursor-wait disabled:opacity-60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--store-accent,#ff5a1f)]"
+        >
+          {refreshing ? "Actualizando…" : "Actualizar estado"}
+        </button>
+      </div>
+    </section>
+  );
 }
