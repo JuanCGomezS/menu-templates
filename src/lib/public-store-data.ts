@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { getStoreWithData, type PublicStore } from "./store-helpers";
+import { isStoreSubscriptionActive } from "./subscription";
 
 const CACHE_PREFIX = "menu-templates:v1";
 const STORE_TTL_MS = 60 * 60 * 1000;
@@ -313,6 +314,13 @@ export async function getPublicStoreBySlug(
       );
 
   if (store) {
+    if (
+      !isStoreSubscriptionActive(
+        (store as { subscription?: unknown }).subscription,
+      )
+    )
+      return null;
+
     const [categories, items, templates] = await Promise.all([
       getCachedOrFetch(
         `store:${store.id}:categories`,

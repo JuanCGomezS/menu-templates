@@ -3,6 +3,10 @@ import type React from "react";
 import { ROLES } from "../../lib/auth";
 import { getLimitedStoresForAdmin } from "../../lib/public-store-data";
 import { withBasePath } from "../../lib/base-path";
+import {
+  isStoreSubscriptionActive,
+  subscriptionDate,
+} from "../../lib/subscription";
 import AppHeader from "./AppHeader";
 import AppFooter from "./AppFooter";
 import Messaging from "./Messaging";
@@ -15,6 +19,15 @@ interface StoreRow {
   slug?: string;
   active?: boolean;
   type?: StoreType;
+  subscription?: {
+    billingPeriod?: "monthly" | "quarterly" | "semiannual" | "annual";
+    startsAt?:
+      | { toDate?: () => Date; seconds?: number; nanoseconds?: number }
+      | Date;
+    endsAt?:
+      | { toDate?: () => Date; seconds?: number; nanoseconds?: number }
+      | Date;
+  };
 }
 const STORE_TYPES: Record<StoreType, string> = {
   restaurant: "Restaurante",
@@ -116,10 +129,11 @@ export default function SuperAdminDashboard() {
         <LoadingPanel message="Cargando tiendas…" />
       ) : (
         <div className="mt-6 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-gray-200">
-          <div className="grid gap-4 bg-gray-950 px-5 py-3 text-sm font-bold text-white md:grid-cols-[1.1fr_0.9fr_0.6fr_0.8fr_auto_auto]">
+          <div className="grid gap-4 bg-gray-950 px-5 py-3 text-sm font-bold text-white md:grid-cols-[1.1fr_0.9fr_0.6fr_0.8fr_0.8fr_auto_auto]">
             <span>Tienda</span>
             <span>Slug</span>
             <span>Estado</span>
+            <span>Vigencia</span>
             <span>Tipo</span>
             <span>Vista</span>
             <span>Acción</span>
@@ -131,49 +145,65 @@ export default function SuperAdminDashboard() {
                 : "Todavía no hay tiendas para mostrar."}
             </p>
           ) : (
-            stores.map((store) => (
-              <div
-                key={store.id}
-                className="grid gap-4 border-t border-gray-100 px-5 py-4 text-sm md:grid-cols-[1.1fr_0.9fr_0.6fr_0.8fr_auto_auto] md:items-center"
-              >
-                <span className="font-semibold text-gray-950">
-                  {store.name || "Sin nombre"}
-                </span>
-                <span className="text-gray-600">
-                  {store.slug || "Sin slug"}
-                </span>
-                <span
-                  className={
-                    store.active === false
-                      ? "font-semibold text-red-600"
-                      : "font-semibold text-green-700"
-                  }
+            stores.map((store) => {
+              const subscriptionActive = isStoreSubscriptionActive(
+                store.subscription,
+              );
+              const available = store.active !== false && subscriptionActive;
+              const expiry = subscriptionDate(store.subscription?.endsAt);
+              return (
+                <div
+                  key={store.id}
+                  className="grid gap-4 border-t border-gray-100 px-5 py-4 text-sm md:grid-cols-[1.1fr_0.9fr_0.6fr_0.8fr_0.8fr_auto_auto] md:items-center"
                 >
-                  {store.active === false ? "Inactiva" : "Activa"}
-                </span>
-                <span className="text-gray-600">
-                  {store.type ? STORE_TYPES[store.type] : "Sin tipo"}
-                </span>
-                {store.slug ? (
-                  <a
-                    href={withBasePath(`/t/${store.slug}`)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-xl border border-gray-300 px-4 py-2 text-center font-bold text-gray-700"
+                  <span className="font-semibold text-gray-950">
+                    {store.name || "Sin nombre"}
+                  </span>
+                  <span className="text-gray-600">
+                    {store.slug || "Sin slug"}
+                  </span>
+                  <span
+                    className={
+                      available
+                        ? "font-semibold text-green-700"
+                        : "font-semibold text-red-600"
+                    }
                   >
-                    Ver tienda
+                    {store.active === false
+                      ? "Inactiva"
+                      : subscriptionActive
+                        ? "Activa"
+                        : "Vencida"}
+                  </span>
+                  <span className="text-gray-600">
+                    {expiry
+                      ? `Hasta ${expiry.toLocaleDateString("es-CO")}`
+                      : "Sin vigencia"}
+                  </span>
+                  <span className="text-gray-600">
+                    {store.type ? STORE_TYPES[store.type] : "Sin tipo"}
+                  </span>
+                  {store.slug ? (
+                    <a
+                      href={withBasePath(`/t/${store.slug}`)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-xl border border-gray-300 px-4 py-2 text-center font-bold text-gray-700"
+                    >
+                      Ver tienda
+                    </a>
+                  ) : (
+                    <span className="text-gray-400">Sin slug</span>
+                  )}
+                  <a
+                    href={withBasePath(`/admin/store/?storeId=${store.id}`)}
+                    className="rounded-xl bg-gray-950 px-4 py-2 text-center font-bold text-white"
+                  >
+                    Editar
                   </a>
-                ) : (
-                  <span className="text-gray-400">Sin slug</span>
-                )}
-                <a
-                  href={withBasePath(`/admin/store/?storeId=${store.id}`)}
-                  className="rounded-xl bg-gray-950 px-4 py-2 text-center font-bold text-white"
-                >
-                  Editar
-                </a>
-              </div>
-            ))
+                </div>
+              );
+            })
           )}
         </div>
       )}

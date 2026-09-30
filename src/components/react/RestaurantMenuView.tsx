@@ -2,6 +2,7 @@ import { type JSX, useEffect, useState } from "react";
 import { formatDayName, formatPrice, sortScheduleDays } from "../../lib/utils";
 import { getStoreOpeningStatus } from "../../lib/store-hours";
 import { getPublicStoreBySlug } from "../../lib/public-store-data";
+import { isStoreSubscriptionActive } from "../../lib/subscription";
 import {
   getTemplateComponent,
   resolveStoreTheme,
@@ -94,7 +95,11 @@ export default function RestaurantMenuView({ slug }: Props) {
       } catch (err) {
         if (cancelled) return;
         console.error("Error loading store:", err);
-        setError("Error al cargar la tienda");
+        setError(
+          (err as { code?: string })?.code === "permission-denied"
+            ? "Tienda no encontrada o inactiva"
+            : "Error al cargar la tienda",
+        );
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -157,6 +162,15 @@ export function PublicStoreTemplateView({ store }: { store: StoreData }) {
             storeId={contentModel.id}
             trackingCode={trackingCode}
           />
+        </main>
+      </ThemeFrame>
+    );
+  }
+  if (!isStoreSubscriptionActive(contentModel.subscription, now)) {
+    return (
+      <ThemeFrame theme={theme}>
+        <main className="flex min-h-screen items-center justify-center bg-[var(--store-bg)] px-4">
+          <StoreClosedNotice message="Esta tienda no está disponible en este momento." />
         </main>
       </ThemeFrame>
     );

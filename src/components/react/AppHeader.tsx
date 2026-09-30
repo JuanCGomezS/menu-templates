@@ -205,10 +205,12 @@ export default function AppHeader({
                     Panel superadmin
                   </a>
                 )}
-                {profile?.role === ROLES.STOREADMIN && profile.storeSlug && (
+                {profile?.role === ROLES.STOREADMIN && profile.storeId && (
                   <a
                     className="flex min-h-11 items-center gap-3 rounded-xl px-3 text-left font-medium text-teal-950 transition hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
-                    href={withBasePath(`/t/${profile.storeSlug}/admin`)}
+                    href={withBasePath(
+                      `/admin/store/?storeId=${profile.storeId}`,
+                    )}
                     onClick={() => setOpen(false)}
                   >
                     <span

@@ -4,6 +4,7 @@ import {
   type OrderStatus,
   type PublicOrderTracking,
 } from "../../lib/orders";
+import { withBasePath } from "../../lib/base-path";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   pending: "Solicitado",
@@ -13,6 +14,15 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
   out_for_delivery: "En camino",
   delivered: "Entregado",
   cancelled: "Cancelado",
+};
+
+const STATUS_ICONS: Partial<Record<OrderStatus, string>> = {
+  pending: "/orders/accept.svg",
+  accepted: "/orders/accept.svg",
+  preparing: "/orders/cooking.svg",
+  ready: "/orders/ready.svg",
+  out_for_delivery: "/orders/send.svg",
+  delivered: "/orders/delivered.svg",
 };
 
 const DELIVERY_STEPS: OrderStatus[] = [
@@ -165,23 +175,18 @@ export default function OrderTrackingView({
 
   const steps = tracking.type === "delivery" ? DELIVERY_STEPS : IN_STORE_STEPS;
   const currentStep = steps.indexOf(tracking.status);
+  const currentIcon = STATUS_ICONS[tracking.status];
 
   return (
     <section
       className="w-full max-w-3xl rounded-3xl border border-[var(--store-border,#d7dcd5)] bg-white p-5 shadow-[0_18px_48px_rgba(16,24,40,0.12)] sm:p-8"
       aria-labelledby="tracking-title"
     >
+      <style>{`@keyframes tracking-status-breathe { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 5px rgba(255,90,31,.15); } 50% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(255,90,31,0); } } @keyframes tracking-status-cook { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } } @keyframes tracking-status-drive { 0%, 100% { transform: translateX(-2px); } 50% { transform: translateX(2px); } } .tracking-status-current { animation: tracking-status-breathe 2.2s ease-in-out infinite; } .tracking-status-preparing img { animation: tracking-status-cook 1.8s ease-in-out infinite; } .tracking-status-out_for_delivery img { animation: tracking-status-drive 1.2s ease-in-out infinite; } @media (prefers-reduced-motion: reduce) { .tracking-status-current, .tracking-status-preparing img, .tracking-status-out_for_delivery img { animation: none; } }`}</style>
       <header className="text-center">
-        <p
-          role="status"
-          aria-live="polite"
-          className="text-sm font-bold text-[var(--store-accent,#ff5a1f)]"
-        >
-          Estado actual
-        </p>
         <h1
           id="tracking-title"
-          className="mt-1 text-3xl font-black tracking-tight text-gray-950 sm:text-4xl"
+          className={`${currentIcon ? "mt-3" : "mt-1"} text-3xl font-black tracking-tight text-gray-950 sm:text-4xl`}
         >
           {STATUS_LABELS[tracking.status]}
         </h1>
@@ -219,14 +224,20 @@ export default function OrderTrackingView({
                 />
               )}
               <span
-                className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 ${isCompleted ? "border-[var(--store-accent,#ff5a1f)] bg-[var(--store-accent,#ff5a1f)] text-white" : isCurrent ? "border-[var(--store-accent,#ff5a1f)] bg-white text-[var(--store-accent,#ff5a1f)] shadow-[0_0_0_5px_rgba(255,90,31,0.15)] motion-safe:animate-pulse" : "border-[var(--store-border,#d7dcd5)] bg-white text-gray-400"}`}
+                className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 ${isCompleted ? "border-[var(--store-accent,#ff5a1f)] bg-[var(--store-accent,#ff5a1f)] text-white" : isCurrent ? `tracking-status-current tracking-status-${status} border-[var(--store-accent,#ff5a1f)] bg-white text-[var(--store-accent,#ff5a1f)]` : "border-[var(--store-border,#d7dcd5)] bg-white text-gray-400"}`}
               >
                 {isCompleted ? (
                   <CheckIcon />
+                ) : STATUS_ICONS[status] ? (
+                  <img
+                    src={withBasePath(STATUS_ICONS[status])}
+                    alt=""
+                    className={`h-5 w-5 ${isFuture ? "opacity-40" : ""}`}
+                  />
                 ) : (
                   <span
                     aria-hidden="true"
-                    className={`h-2.5 w-2.5 rounded-full ${isCurrent ? "bg-current" : "bg-current/60"}`}
+                    className="h-2.5 w-2.5 rounded-full bg-current/60"
                   />
                 )}
               </span>

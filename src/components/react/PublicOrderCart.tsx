@@ -8,6 +8,7 @@ import {
 } from "../../lib/orders";
 import type { PublicItem, PublicStore } from "../../lib/store-helpers";
 import { formatPrice } from "../../lib/utils";
+import { isWithinDeliveryArea } from "../../lib/delivery-area";
 import { withBasePath } from "../../lib/base-path";
 import DeliveryLocationDialog from "./DeliveryLocationDialog";
 
@@ -112,6 +113,11 @@ export function PublicOrderCartProvider({
   );
   const itemCount = lines.reduce((sum, line) => sum + line.quantity, 0);
   const needsLocationConfirmation = mode === "delivery" && !deliveryLocation;
+  const locationWithinDeliveryArea = isWithinDeliveryArea(
+    store.deliveryArea,
+    store.location,
+    deliveryLocation,
+  );
 
   const updateQuantity = (itemId: string, quantity: number) =>
     setLines((current) =>
@@ -186,6 +192,11 @@ export function PublicOrderCartProvider({
       },
       store.capabilities || {},
     );
+
+    if (mode === "delivery" && !locationWithinDeliveryArea) {
+      setNotice("El punto de entrega está fuera del área de cobertura.");
+      return;
+    }
 
     if (!validation.valid) {
       setNotice(validation.message);
@@ -414,12 +425,37 @@ export function PublicOrderCartProvider({
                   <>
                     <input
                       value={customerPhone}
-                      onChange={(event) => setCustomerPhone(event.target.value)}
+                      onChange={(event) =>
+                        setCustomerPhone(
+                          event.target.value.replace(/\D/g, "").slice(0, 10),
+                        )
+                      }
                       type="tel"
-                      placeholder="Teléfono"
+                      inputMode="numeric"
+                      maxLength={10}
+                      placeholder="Teléfono (10 dígitos)"
                       className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-orange-600 focus:ring-2 focus:ring-orange-100"
                       required
                     />
+                    {store.contact?.deliveryNotes && (
+                      <details className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-950">
+                        <summary
+                          className="flex cursor-pointer items-center gap-2 font-bold marker:content-none"
+                          title="Ver indicaciones de domicilio"
+                        >
+                          <span
+                            className="material-icons-outlined text-[18px]"
+                            aria-hidden="true"
+                          >
+                            info
+                          </span>
+                          Indicaciones de domicilio
+                        </summary>
+                        <p className="mt-2 leading-5">
+                          {store.contact.deliveryNotes}
+                        </p>
+                      </details>
+                    )}
                     <input
                       value={deliveryAddress}
                       onChange={(event) => {
@@ -475,7 +511,8 @@ export function PublicOrderCartProvider({
                 <a
                   className="mt-1 block break-all underline"
                   href={trackingUrl}
-                  target="blank"
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
                   Ver seguimiento
                 </a>
@@ -513,6 +550,8 @@ export function PublicOrderCartProvider({
       <DeliveryLocationDialog
         address={deliveryAddress}
         initialLocation={deliveryLocation}
+        storeLocation={store.location}
+        deliveryArea={store.deliveryArea}
         open={locationDialogOpen}
         onClose={() => setLocationDialogOpen(false)}
         onConfirm={(location) => {

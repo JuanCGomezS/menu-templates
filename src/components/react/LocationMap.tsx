@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Map as LeafletMap, Marker } from "leaflet";
+import type { Circle, Map as LeafletMap, Marker } from "leaflet";
 import "leaflet/dist/leaflet.css";
 
 export type MapLocation = { latitude: number; longitude: number };
@@ -23,6 +23,7 @@ function isValidLocation(
 type Props = {
   location: MapLocation | null;
   editable?: boolean;
+  radiusMeters?: number;
   onChange?: (location: MapLocation) => void;
   className?: string;
   title: string;
@@ -31,6 +32,7 @@ type Props = {
 export default function LocationMap({
   location,
   editable = false,
+  radiusMeters,
   onChange,
   className = "h-72 w-full",
   title,
@@ -38,6 +40,7 @@ export default function LocationMap({
   const elementRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const markerRef = useRef<Marker | null>(null);
+  const circleRef = useRef<Circle | null>(null);
   const leafletRef = useRef<typeof import("leaflet") | null>(null);
   const locationRef = useRef(location);
   const onChangeRef = useRef(onChange);
@@ -88,6 +91,7 @@ export default function LocationMap({
       mapRef.current?.remove();
       mapRef.current = null;
       markerRef.current = null;
+      circleRef.current = null;
       leafletRef.current = null;
       setMapReady(false);
     };
@@ -102,6 +106,8 @@ export default function LocationMap({
     if (!isValidLocation(location)) {
       markerRef.current?.remove();
       markerRef.current = null;
+      circleRef.current?.remove();
+      circleRef.current = null;
       return;
     }
 
@@ -122,8 +128,26 @@ export default function LocationMap({
         });
       }
     }
-    map.setView(point, 16);
-  }, [editable, location, mapReady]);
+    if (Number.isFinite(radiusMeters) && radiusMeters && radiusMeters > 0) {
+      if (circleRef.current) {
+        circleRef.current.setLatLng(point);
+        circleRef.current.setRadius(radiusMeters);
+      } else {
+        circleRef.current = L.circle(point, {
+          radius: radiusMeters,
+          color: "#ea580c",
+          fillColor: "#fb923c",
+          fillOpacity: 0.14,
+          weight: 2,
+        }).addTo(map);
+      }
+      map.fitBounds(circleRef.current.getBounds(), { padding: [24, 24] });
+    } else {
+      circleRef.current?.remove();
+      circleRef.current = null;
+      map.setView(point, 16);
+    }
+  }, [editable, location, mapReady, radiusMeters]);
 
   if (failed) {
     return (

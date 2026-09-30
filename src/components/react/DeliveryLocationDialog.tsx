@@ -2,6 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import type { Map as LeafletMap, Marker } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { DeliveryLocation } from "../../lib/orders";
+import { withBasePath } from "../../lib/base-path";
+import {
+  isValidDeliveryArea,
+  isValidDeliveryPoint,
+  isWithinDeliveryArea,
+  type DeliveryArea,
+} from "../../lib/delivery-area";
 
 const DEFAULT_LOCATION: DeliveryLocation = {
   latitude: 4.711,
@@ -11,6 +18,8 @@ const DEFAULT_LOCATION: DeliveryLocation = {
 type Props = {
   address: string;
   initialLocation: DeliveryLocation | null;
+  storeLocation?: { latitude?: number; longitude?: number };
+  deliveryArea?: DeliveryArea;
   open: boolean;
   onClose: () => void;
   onConfirm: (location: DeliveryLocation) => void;
@@ -19,6 +28,8 @@ type Props = {
 export default function DeliveryLocationDialog({
   address,
   initialLocation,
+  storeLocation,
+  deliveryArea,
   open,
   onClose,
   onConfirm,
@@ -42,6 +53,10 @@ export default function DeliveryLocationDialog({
   );
   const [locating, setLocating] = useState(false);
   const [locationError, setLocationError] = useState("");
+  const [mapReady, setMapReady] = useState(false);
+  const outsideCoverage =
+    deliveryArea?.enabled === true &&
+    !isWithinDeliveryArea(deliveryArea, storeLocation, location);
 
   useEffect(() => {
     openRef.current = open;
@@ -60,7 +75,9 @@ export default function DeliveryLocationDialog({
   useEffect(() => {
     if (!open || !mapElementRef.current) return;
 
-    const startLocation = initialLocation || DEFAULT_LOCATION;
+    const startLocation =
+      initialLocation ||
+      (isValidDeliveryPoint(storeLocation) ? storeLocation : DEFAULT_LOCATION);
     let active = true;
     setLocation(startLocation);
     setLocationSelected(initialLocation !== null);
@@ -80,6 +97,39 @@ export default function DeliveryLocationDialog({
         attribution: "&copy; OpenStreetMap contributors",
         maxZoom: 19,
       }).addTo(map);
+      const radiusMeters = deliveryArea?.radiusMeters ?? 0;
+      if (isValidDeliveryPoint(storeLocation)) {
+        const storeIcon = L.divIcon({
+          className: "store-location-marker-wrap",
+          html: `<span class="store-location-marker" aria-hidden="true"><img src="${withBasePath("/orders/shop.svg")}" alt=""></span>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15],
+        });
+        L.marker([storeLocation.latitude, storeLocation.longitude], {
+          icon: storeIcon,
+          interactive: false,
+        })
+          .addTo(map)
+          .bindTooltip("Ubicación del negocio", { direction: "top" });
+      }
+      if (
+        isValidDeliveryArea(deliveryArea) &&
+        isValidDeliveryPoint(storeLocation)
+      ) {
+        const coverage = L.circle(
+          [storeLocation.latitude, storeLocation.longitude],
+          {
+            radius: radiusMeters,
+            color: "#ea580c",
+            fillColor: "#fb923c",
+            fillOpacity: 0.14,
+            weight: 2,
+          },
+        ).addTo(map);
+        if (!initialLocation)
+          map.fitBounds(coverage.getBounds(), { padding: [24, 24] });
+      }
+      setMapReady(true);
 
       const markerIcon = L.divIcon({
         className: "delivery-location-marker-wrap",
@@ -133,6 +183,7 @@ export default function DeliveryLocationDialog({
       markerRef.current = null;
       leafletRef.current = null;
       placeMarkerRef.current = null;
+      setMapReady(false);
     };
   }, [initialLocation, open]);
 
@@ -184,7 +235,7 @@ export default function DeliveryLocationDialog({
       aria-labelledby="delivery-location-title"
       className="m-auto w-[min(100%-1.5rem,34rem)] rounded-2xl border border-slate-200 bg-white p-0 text-slate-950 shadow-[0_24px_64px_rgba(15,23,42,0.28)] backdrop:bg-slate-950/45"
     >
-      <style>{`.delivery-location-marker-wrap { background: transparent; border: 0; } .delivery-location-marker { display: block; width: 22px; height: 22px; border: 3px solid #ffffff; border-radius: 50% 50% 50% 0; background: #e05a2a; box-shadow: 0 3px 8px rgba(15,23,42,.25); transform: rotate(-45deg); }`}</style>
+      <style>{`.delivery-location-marker-wrap, .store-location-marker-wrap { background: transparent; border: 0; } .delivery-location-marker { display: block; width: 22px; height: 22px; border: 3px solid #ffffff; border-radius: 50% 50% 50% 0; background: #e05a2a; box-shadow: 0 3px 8px rgba(15,23,42,.25); transform: rotate(-45deg); } .store-location-marker { display: grid; width: 26px; height: 26px; place-items: center; border: 2px solid #ffffff; border-radius: 999px; background: #ffffff; box-shadow: 0 2px 8px rgba(15,23,42,.3); } .store-location-marker img { width: 15px; height: 15px; }`}</style>
       <div className="border-b border-slate-100 px-5 py-4">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -223,7 +274,7 @@ export default function DeliveryLocationDialog({
         <button
           type="button"
           onClick={requestCurrentLocation}
-          disabled={locating}
+          disabled={locating || !mapReady}
           className="absolute left-3 top-3 z-[500] inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-600"
         >
           <span
@@ -237,6 +288,14 @@ export default function DeliveryLocationDialog({
       </div>
 
       <div className="px-5 py-4">
+        {outsideCoverage && (
+          <p
+            role="alert"
+            className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-800"
+          >
+            Este punto está fuera del área de cobertura.
+          </p>
+        )}
         {locationError && (
           <p
             role="alert"
@@ -262,7 +321,7 @@ export default function DeliveryLocationDialog({
           <button
             type="button"
             onClick={() => onConfirm(location)}
-            disabled={!locationSelected}
+            disabled={!locationSelected || outsideCoverage}
             className="rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-600 focus-visible:ring-offset-2"
           >
             {locationSelected ? "Guardar ubicación" : "Selecciona un punto"}

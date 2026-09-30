@@ -125,6 +125,16 @@ export default function StoreOperationsPanel({
   );
 }
 
+function formatOrderTime(createdAt: StoreOrder["createdAt"], timeZone: string) {
+  if (!createdAt) return null;
+  return new Intl.DateTimeFormat("es-CO", {
+    timeZone,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(createdAt.toDate());
+}
+
 function dateForTimeZone(timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone,
@@ -613,12 +623,13 @@ function OrdersQueue({ store }: { store: StoreAccess }) {
           No hay pedidos para hoy.
         </p>
       ) : (
-        <div className="grid gap-3 lg:grid-cols-2">
+        <div className="grid max-h-[52rem] gap-3 overflow-y-auto overscroll-contain pr-1 lg:grid-cols-2 lg:pr-2">
           {orders.map((order) => (
             <OrderCard
               key={order.id}
               order={order}
               currency={store.currency}
+              timeZone={store.timeZone || "America/Bogota"}
               storeSlug={store.slug}
               busy={updatingId === order.id}
               onStatusChange={changeStatus}
@@ -643,12 +654,14 @@ function OrdersQueue({ store }: { store: StoreAccess }) {
 function OrderCard({
   order,
   currency,
+  timeZone,
   storeSlug,
   busy,
   onStatusChange,
 }: {
   order: StoreOrder;
   currency?: string;
+  timeZone: string;
   storeSlug?: string;
   busy: boolean;
   onStatusChange: (order: StoreOrder, status: OrderStatus) => Promise<void>;
@@ -669,12 +682,14 @@ function OrderCard({
     order.trackingCode && storeSlug
       ? `${window.location.origin}${withBasePath(`/t/${storeSlug}?pedido=${order.trackingCode}`)}`
       : "";
-  const modality =
-    order.type === "delivery"
-      ? "Domicilio"
-      : `Mesa ${order.tableNumber ?? "—"}`;
-  const location =
-    order.type === "delivery" ? order.deliveryLocation : undefined;
+  const requestedAt = formatOrderTime(order.createdAt, timeZone);
+  const isDelivery = order.type === "delivery";
+  const modality = isDelivery ? "Domicilio" : "En tienda";
+  const modalityDetail = isDelivery
+    ? "Entrega a domicilio"
+    : `Mesa ${order.tableNumber ?? "—"}`;
+  const modalityIcon = isDelivery ? "/orders/delivery.svg" : "/orders/shop.svg";
+  const location = isDelivery ? order.deliveryLocation : undefined;
   const mapUrl =
     location &&
     Number.isFinite(location.latitude) &&
@@ -683,47 +698,86 @@ function OrderCard({
       : "";
   return (
     <article
-      className={`h-full rounded-xl border border-gray-200 border-t-4 bg-white p-4 shadow-sm ${statusStyle?.line || "border-t-gray-300"}`}
+      className={`h-full rounded-xl border border-gray-200 border-t-4 bg-white p-3 shadow-sm transition hover:shadow-md ${statusStyle?.line || "border-t-gray-300"}`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-bold text-gray-950">
-            {order.customerName || "Pedido histórico"}
-          </p>
-          <p className="mt-1 text-sm text-gray-600">
-            {modality} · {formatPrice(order.total || 0, currency || "COP")}
-          </p>
-          {order.type === "delivery" && order.deliveryAddress && (
-            <p className="mt-1 text-sm text-gray-600">
-              {order.deliveryAddress}
-            </p>
-          )}
-        </div>
-        <span
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${statusStyle?.badge || "bg-gray-100 text-gray-900"}`}
-        >
-          {statusStyle?.icon && (
-            <img
-              src={withBasePath(statusStyle.icon)}
-              alt=""
-              className="h-3.5 w-3.5"
-            />
-          )}
-          {formatOrderStatus(order.status)}
+      <div className="flex items-start gap-3">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gray-100">
+          <img src={withBasePath(modalityIcon)} alt="" className="h-4 w-4" />
         </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="truncate text-sm font-black text-gray-950">
+                {order.customerName || "Pedido histórico"}
+              </h3>
+              <p className="mt-0.5 text-xs font-medium text-gray-600">
+                {modality} · {modalityDetail}
+              </p>
+              {requestedAt && (
+                <p className="mt-0.5 text-xs font-medium tabular-nums text-gray-500">
+                  Solicitado · {requestedAt}
+                </p>
+              )}
+            </div>
+            <p className="shrink-0 text-sm font-black tabular-nums text-gray-950">
+              {formatPrice(order.total || 0, currency || "COP")}
+            </p>
+          </div>
+
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold ${statusStyle?.badge || "bg-gray-100 text-gray-900"}`}
+            >
+              {statusStyle?.icon && (
+                <img
+                  src={withBasePath(statusStyle.icon)}
+                  alt=""
+                  className="h-3 w-3"
+                />
+              )}
+              {formatOrderStatus(order.status)}
+            </span>
+            {isDelivery && order.deliveryAddress && (
+              <span
+                title={order.deliveryAddress}
+                className="min-w-0 flex-1 truncate text-xs text-gray-600"
+              >
+                {order.deliveryAddress}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
+
+      {order.items && order.items.length > 0 && (
+        <ul className="mt-3 space-y-1 border-t border-gray-100 pt-2 text-xs text-gray-700">
+          {order.items.map((item) => (
+            <li
+              key={item.itemId}
+              className="flex items-baseline justify-between gap-3"
+            >
+              <span>{item.name || "Producto"}</span>
+              <span className="shrink-0 font-bold tabular-nums">
+                ×{item.quantity || 0}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {order.notes && (
-        <p className="mt-3 rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
+        <p className="mt-2 border-t border-gray-100 pt-2 text-xs text-gray-700">
           <span className="font-bold text-gray-950">Notas:</span> {order.notes}
         </p>
       )}
-      <div className="mt-3 flex flex-wrap gap-2">
+
+      <div className="mt-3 flex flex-wrap gap-2 border-t border-gray-100 pt-3">
         {action && (
           <button
             type="button"
             disabled={busy}
             onClick={() => void onStatusChange(order, action[1])}
-            className="rounded-lg bg-gray-950 px-3 py-2 text-sm font-bold text-white disabled:opacity-50"
+            className="rounded-md bg-gray-950 px-2.5 py-1.5 text-xs font-bold text-white transition hover:bg-gray-800 disabled:opacity-50"
           >
             {action[0]}
           </button>
@@ -733,7 +787,7 @@ function OrderCard({
             type="button"
             disabled={busy}
             onClick={() => void onStatusChange(order, "cancelled")}
-            className="rounded-lg border border-red-200 px-3 py-2 text-sm font-bold text-red-900 disabled:opacity-50"
+            className="rounded-md px-2.5 py-1.5 text-xs font-bold text-red-800 transition hover:bg-red-50 disabled:opacity-50"
           >
             Cancelar
           </button>
@@ -743,7 +797,7 @@ function OrderCard({
             href={mapUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg border border-blue-200 px-3 py-2 text-sm font-bold text-blue-700"
+            className="rounded-md px-2.5 py-1.5 text-xs font-bold text-blue-700 transition hover:bg-blue-50"
           >
             Ver mapa
           </a>
@@ -753,7 +807,7 @@ function OrderCard({
             href={`https://wa.me/${(order.customerPhone || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Sigue tu pedido: ${trackingUrl}`)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-lg border border-green-200 px-3 py-2 text-sm font-bold text-green-700"
+            className="rounded-md px-2.5 py-1.5 text-xs font-bold text-green-700 transition hover:bg-green-50"
           >
             Enviar seguimiento
           </a>

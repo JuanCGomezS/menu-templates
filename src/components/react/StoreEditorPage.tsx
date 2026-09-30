@@ -7,6 +7,7 @@ import {
   limit,
   query,
   serverTimestamp,
+  Timestamp,
   writeBatch,
   where,
 } from "firebase/firestore";
@@ -33,6 +34,14 @@ import AppFooter from "./AppFooter";
 import Messaging, { type MessageTone } from "./Messaging";
 import StoreOperationsPanel from "./StoreOperationsPanel";
 import LocationMap, { type MapLocation } from "./LocationMap";
+import {
+  addDays,
+  BILLING_PERIODS,
+  dateInputInTimeZone,
+  subscriptionEndDate,
+  type BillingPeriod,
+  zonedDateStart,
+} from "../../lib/subscription";
 
 type StoreType = "restaurant" | "food_business" | "product_store";
 type PlanType = "free_trial" | "standard" | "plus" | "premium";
@@ -54,13 +63,20 @@ interface StoreData {
   active?: boolean;
   type?: StoreType;
   ownerUid?: string;
+  ownerEmail?: string;
   templateId?: string;
   themeId?: string;
   currency?: Currency;
   plan?: PlanType;
+  subscription?: {
+    billingPeriod?: BillingPeriod;
+    startsAt?: { toDate?: () => Date } | Date;
+    endsAt?: { toDate?: () => Date } | Date;
+  };
   timeZone?: string;
   logoUrl?: string;
   location?: { latitude?: number; longitude?: number };
+  deliveryArea?: { enabled?: boolean; radiusMeters?: number };
   limits?: {
     maxProducts?: number;
     maxCategories?: number;
@@ -89,10 +105,15 @@ interface StoreFormState {
   themeId: string;
   currency: Currency;
   plan: PlanType;
+  billingPeriod: BillingPeriod;
+  subscriptionStartDate: string;
+  subscriptionEndDate: string;
   timeZone: string;
   logoUrl: string;
   latitude: string;
   longitude: string;
+  deliveryAreaEnabled: boolean;
+  deliveryRadiusMeters: string;
   maxProducts: string;
   maxCategories: string;
   maxImages: string;
@@ -229,10 +250,18 @@ function emptyForm(): StoreFormState {
     themeId: "theme-default",
     currency: "COP",
     plan: "free_trial",
+    billingPeriod: "monthly",
+    subscriptionStartDate: dateInputInTimeZone(new Date(), "America/Bogota"),
+    subscriptionEndDate: subscriptionEndDate(
+      dateInputInTimeZone(new Date(), "America/Bogota"),
+      "monthly",
+    ),
     timeZone: "America/Bogota",
     logoUrl: "",
     latitude: "",
     longitude: "",
+    deliveryAreaEnabled: false,
+    deliveryRadiusMeters: "3000",
     maxProducts: "100",
     maxCategories: "20",
     maxImages: "30",
@@ -280,6 +309,26 @@ function formFromStore(store: StoreData): StoreFormState {
     themeId: resolvedTheme.id,
     currency: store.currency || defaults.currency,
     plan: store.plan || defaults.plan,
+    billingPeriod: store.subscription?.billingPeriod || defaults.billingPeriod,
+    subscriptionStartDate: store.subscription?.startsAt
+      ? dateInputInTimeZone(
+          store.subscription.startsAt instanceof Date
+            ? store.subscription.startsAt
+            : store.subscription.startsAt.toDate?.() || new Date(),
+          store.timeZone || defaults.timeZone,
+        )
+      : "",
+    subscriptionEndDate: store.subscription?.endsAt
+      ? dateInputInTimeZone(
+          new Date(
+            (store.subscription.endsAt instanceof Date
+              ? store.subscription.endsAt
+              : store.subscription.endsAt.toDate?.() || new Date()
+            ).getTime() - 1,
+          ),
+          store.timeZone || defaults.timeZone,
+        )
+      : "",
     timeZone: store.timeZone || defaults.timeZone,
     logoUrl: store.logoUrl || "",
     latitude:
@@ -290,6 +339,10 @@ function formFromStore(store: StoreData): StoreFormState {
       store.location?.longitude === undefined
         ? ""
         : String(store.location.longitude),
+    deliveryAreaEnabled: store.deliveryArea?.enabled === true,
+    deliveryRadiusMeters: String(
+      store.deliveryArea?.radiusMeters ?? defaults.deliveryRadiusMeters,
+    ),
     maxProducts: String(store.limits?.maxProducts ?? defaults.maxProducts),
     maxCategories: String(
       store.limits?.maxCategories ?? defaults.maxCategories,
@@ -303,6 +356,7 @@ function formFromStore(store: StoreData): StoreFormState {
     address: store.contact?.address || "",
     deliveryNotes: store.contact?.deliveryNotes || "",
     ownerUid: store.ownerUid || "",
+    storeAdminEmail: store.ownerEmail || "",
     schedule: Object.fromEntries(
       WEEK_DAYS.map(([day]) => [
         day,
@@ -379,17 +433,37 @@ function createProductDraft(categoryId: string, order: number): ProductDraft {
   };
 }
 
-function makeStorePayload(form: StoreFormState) {
+function makeStorePayload(form: StoreFormState, isSuperAdmin: boolean) {
   return {
     name: form.name.trim(),
     slug: normalizeSlug(form.slug),
-    active: form.active,
-    isActive: form.active,
     type: form.type,
     templateId: form.templateId,
     themeId: form.themeId,
     currency: form.currency,
-    plan: form.plan,
+    ...(isSuperAdmin
+      ? {
+          active: form.active,
+          isActive: form.active,
+          plan: form.plan,
+          ...(form.subscriptionStartDate && form.subscriptionEndDate
+            ? {
+                subscription: {
+                  billingPeriod: form.billingPeriod,
+                  startsAt: Timestamp.fromDate(
+                    zonedDateStart(form.subscriptionStartDate, form.timeZone)!,
+                  ),
+                  endsAt: Timestamp.fromDate(
+                    zonedDateStart(
+                      addDays(form.subscriptionEndDate, 1),
+                      form.timeZone,
+                    )!,
+                  ),
+                },
+              }
+            : {}),
+        }
+      : {}),
     timeZone: form.timeZone,
     ...(form.logoUrl ? { logoUrl: form.logoUrl } : { logoUrl: null }),
     ...(form.latitude.trim() && form.longitude.trim()
@@ -400,11 +474,19 @@ function makeStorePayload(form: StoreFormState) {
           },
         }
       : { location: null }),
-    limits: {
-      maxProducts: toPositiveNumber(form.maxProducts, 100),
-      maxCategories: toPositiveNumber(form.maxCategories, 20),
-      maxImages: toPositiveNumber(form.maxImages, 30),
+    deliveryArea: {
+      enabled: form.deliveryAreaEnabled,
+      radiusMeters: toPositiveNumber(form.deliveryRadiusMeters, 3000),
     },
+    ...(isSuperAdmin
+      ? {
+          limits: {
+            maxProducts: toPositiveNumber(form.maxProducts, 100),
+            maxCategories: toPositiveNumber(form.maxCategories, 20),
+            maxImages: toPositiveNumber(form.maxImages, 30),
+          },
+        }
+      : {}),
     capabilities: {
       inStoreOrdering: form.inStoreOrdering,
       deliveryOrdering: form.deliveryOrdering,
@@ -476,16 +558,20 @@ export default function StoreEditorPage() {
 
       const profile = await getUserProfile(user);
 
-      if (profile?.role !== ROLES.SUPERADMIN) {
+      const isSuperAdmin = profile?.role === ROLES.SUPERADMIN;
+      const isStoreAdmin = profile?.role === ROLES.STOREADMIN;
+
+      if (!isSuperAdmin && (!isStoreAdmin || !profile.storeId)) {
         setIsSuperAdmin(false);
         setStatus("denied");
         return;
       }
-      setIsSuperAdmin(true);
+      setIsSuperAdmin(isSuperAdmin);
 
-      const storeId = new URLSearchParams(window.location.search).get(
+      const requestedStoreId = new URLSearchParams(window.location.search).get(
         "storeId",
       );
+      const storeId = isSuperAdmin ? requestedStoreId : profile.storeId;
 
       if (!storeId) {
         setMode("create");
@@ -885,6 +971,31 @@ export default function StoreEditorPage() {
       return;
     }
     if (
+      isSuperAdmin &&
+      (!form.subscriptionStartDate ||
+        !form.subscriptionEndDate ||
+        !zonedDateStart(form.subscriptionStartDate, form.timeZone) ||
+        !zonedDateStart(addDays(form.subscriptionEndDate, 1), form.timeZone) ||
+        form.subscriptionStartDate > form.subscriptionEndDate)
+    ) {
+      setError(
+        "Define una vigencia válida: la fecha final debe ser igual o posterior a la inicial.",
+      );
+      return;
+    }
+    if (
+      form.deliveryAreaEnabled &&
+      (!hasValidCoordinates(form.latitude, form.longitude) ||
+        !Number.isFinite(Number(form.deliveryRadiusMeters)) ||
+        Number(form.deliveryRadiusMeters) < 100 ||
+        Number(form.deliveryRadiusMeters) > 50_000)
+    ) {
+      setError(
+        "Para limitar domicilios, ubica el negocio y define un radio entre 100 y 50.000 metros.",
+      );
+      return;
+    }
+    if (
       logoFile &&
       (!["image/jpeg", "image/png", "image/webp"].includes(logoFile.type) ||
         logoFile.size > 5 * 1024 * 1024)
@@ -943,7 +1054,10 @@ export default function StoreEditorPage() {
         await uploadBytes(logoRef, logoFile, { contentType: logoFile.type });
         logoUrl = await getDownloadURL(logoRef);
       }
-      const payload = makeStorePayload({ ...form, slug, logoUrl });
+      const payload = makeStorePayload(
+        { ...form, slug, logoUrl },
+        isSuperAdmin,
+      );
       const previousOwnerRef =
         storeAdmin &&
         mode === "edit" &&
@@ -955,7 +1069,8 @@ export default function StoreEditorPage() {
         ? await getDoc(previousOwnerRef)
         : null;
 
-      await assertUniqueSlug(slug, mode === "edit" ? storeId : undefined);
+      if (isSuperAdmin)
+        await assertUniqueSlug(slug, mode === "edit" ? storeId : undefined);
 
       const [existingCategoriesSnapshot, existingItemsSnapshot] =
         await Promise.all([
@@ -1061,7 +1176,11 @@ export default function StoreEditorPage() {
         });
         batch.set(
           storeRef,
-          { ownerUid: storeAdmin.userId, updatedAt: serverTimestamp() },
+          {
+            ownerUid: storeAdmin.userId,
+            ownerEmail: storeAdmin.email,
+            updatedAt: serverTimestamp(),
+          },
           { merge: true },
         );
       } else if (mode === "edit" && form.ownerUid) {
@@ -1091,7 +1210,7 @@ export default function StoreEditorPage() {
         id: storeId,
         slug,
         logoUrl,
-        storeAdminEmail: "",
+        storeAdminEmail: storeAdmin?.email || form.storeAdminEmail,
         ownerUid: storeAdmin?.userId || form.ownerUid,
       });
       setLogoFile(null);
@@ -1172,12 +1291,14 @@ export default function StoreEditorPage() {
       )}
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <a
-          href={withBasePath("/admin")}
-          className="rounded-xl border border-gray-300 px-4 py-2 font-bold text-gray-700 transition hover:border-gray-950"
-        >
-          Volver al listado
-        </a>
+        {isSuperAdmin && (
+          <a
+            href={withBasePath("/admin")}
+            className="rounded-xl border border-gray-300 px-4 py-2 font-bold text-gray-700 transition hover:border-gray-950"
+          >
+            Volver al listado
+          </a>
+        )}
         {mode === "edit" && (
           <>
             {form.slug && (
@@ -1190,12 +1311,14 @@ export default function StoreEditorPage() {
                 Ver tienda
               </a>
             )}
-            <a
-              href={withBasePath("/admin/store/")}
-              className="rounded-xl bg-gray-950 px-4 py-2 font-bold text-white transition hover:bg-gray-800"
-            >
-              Crear otra tienda
-            </a>
+            {isSuperAdmin && (
+              <a
+                href={withBasePath("/admin/store/")}
+                className="rounded-xl bg-gray-950 px-4 py-2 font-bold text-white transition hover:bg-gray-800"
+              >
+                Crear otra tienda
+              </a>
+            )}
           </>
         )}
       </div>
@@ -1553,6 +1676,49 @@ export default function StoreEditorPage() {
                   </Field>
                 </div>
 
+                {form.deliveryOrdering && (
+                  <section className="mt-6 rounded-2xl border border-gray-200 p-4">
+                    <label className="flex items-center gap-3 text-sm font-bold text-gray-950">
+                      <input
+                        type="checkbox"
+                        checked={form.deliveryAreaEnabled}
+                        onChange={(event) =>
+                          updateForm(
+                            "deliveryAreaEnabled",
+                            event.target.checked,
+                          )
+                        }
+                        className="h-4 w-4 accent-orange-600"
+                      />
+                      Limitar cobertura de domicilios
+                    </label>
+                    {form.deliveryAreaEnabled && (
+                      <div className="mt-3 max-w-xs">
+                        <Field label="Radio máximo (metros)">
+                          <input
+                            type="number"
+                            min="100"
+                            max="50000"
+                            step="100"
+                            value={form.deliveryRadiusMeters}
+                            onChange={(event) =>
+                              updateForm(
+                                "deliveryRadiusMeters",
+                                event.target.value,
+                              )
+                            }
+                            className={INPUT_CLASS}
+                          />
+                        </Field>
+                      </div>
+                    )}
+                    <p className="mt-2 text-sm text-gray-500">
+                      El cliente verá este radio y no podrá confirmar un punto
+                      fuera del área.
+                    </p>
+                  </section>
+                )}
+
                 <section className="mt-6 overflow-hidden rounded-2xl border border-gray-200">
                   <LocationMap
                     location={
@@ -1562,6 +1728,11 @@ export default function StoreEditorPage() {
                             longitude: Number(form.longitude),
                           }
                         : null
+                    }
+                    radiusMeters={
+                      form.deliveryAreaEnabled
+                        ? toPositiveNumber(form.deliveryRadiusMeters, 3000)
+                        : undefined
                     }
                     editable
                     onChange={updateBusinessLocation}
@@ -1616,6 +1787,29 @@ export default function StoreEditorPage() {
                       />
                     </div>
                   ))}
+                </div>
+
+                <SectionTitle title="Canales y control de inventario" />
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <CapabilityToggle
+                    label="Pedidos en tienda"
+                    checked={form.inStoreOrdering}
+                    onChange={(checked) =>
+                      updateForm("inStoreOrdering", checked)
+                    }
+                  />
+                  <CapabilityToggle
+                    label="Pedidos a domicilio"
+                    checked={form.deliveryOrdering}
+                    onChange={(checked) =>
+                      updateForm("deliveryOrdering", checked)
+                    }
+                  />
+                  <CapabilityToggle
+                    label="Control de stock"
+                    checked={form.stockControl}
+                    onChange={(checked) => updateForm("stockControl", checked)}
+                  />
                 </div>
               </section>
             </div>
@@ -2006,6 +2200,66 @@ export default function StoreEditorPage() {
                     ))}
                   </select>
                 </Field>
+                <Field label="Vigencia del plan">
+                  <select
+                    name="billingPeriod"
+                    value={form.billingPeriod}
+                    onChange={(event) => {
+                      const billingPeriod = event.target.value as BillingPeriod;
+                      updateForm("billingPeriod", billingPeriod);
+                      updateForm(
+                        "subscriptionEndDate",
+                        subscriptionEndDate(
+                          form.subscriptionStartDate,
+                          billingPeriod,
+                        ),
+                      );
+                    }}
+                    className={INPUT_CLASS}
+                  >
+                    {BILLING_PERIODS.map((period) => (
+                      <option key={period.value} value={period.value}>
+                        {period.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Field label="Inicio de vigencia">
+                  <input
+                    name="subscriptionStartDate"
+                    type="date"
+                    value={form.subscriptionStartDate}
+                    onChange={(event) => {
+                      const subscriptionStartDate = event.target.value;
+                      updateForm(
+                        "subscriptionStartDate",
+                        subscriptionStartDate,
+                      );
+                      updateForm(
+                        "subscriptionEndDate",
+                        subscriptionEndDate(
+                          subscriptionStartDate,
+                          form.billingPeriod,
+                        ),
+                      );
+                    }}
+                    className={INPUT_CLASS}
+                    required
+                  />
+                </Field>
+                <Field label="Finaliza el">
+                  <input
+                    name="subscriptionEndDate"
+                    type="date"
+                    min={form.subscriptionStartDate}
+                    value={form.subscriptionEndDate}
+                    onChange={(event) =>
+                      updateForm("subscriptionEndDate", event.target.value)
+                    }
+                    className={INPUT_CLASS}
+                    required
+                  />
+                </Field>
                 <Field label="Asignar storeadmin por correo">
                   <input
                     name="storeAdminEmail"
@@ -2018,7 +2272,14 @@ export default function StoreEditorPage() {
                     }
                     className={INPUT_CLASS}
                     placeholder="Ej. correo@ejemplo.com…"
+                    aria-describedby="store-admin-email-help"
                   />
+                  <span
+                    id="store-admin-email-help"
+                    className="mt-2 block text-xs font-medium text-gray-500"
+                  >
+                    Debe corresponder a una cuenta que ya se haya registrado.
+                  </span>
                 </Field>
                 <label className="flex items-center gap-3 rounded-xl border border-gray-200 px-4 py-3 font-semibold text-gray-700">
                   <input
@@ -2074,27 +2335,6 @@ export default function StoreEditorPage() {
                     className={INPUT_CLASS}
                   />
                 </Field>
-              </div>
-
-              <SectionTitle title="Capacidades de la tienda" />
-              <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <CapabilityToggle
-                  label="Pedidos en tienda"
-                  checked={form.inStoreOrdering}
-                  onChange={(checked) => updateForm("inStoreOrdering", checked)}
-                />
-                <CapabilityToggle
-                  label="Pedidos a domicilio"
-                  checked={form.deliveryOrdering}
-                  onChange={(checked) =>
-                    updateForm("deliveryOrdering", checked)
-                  }
-                />
-                <CapabilityToggle
-                  label="Control de stock"
-                  checked={form.stockControl}
-                  onChange={(checked) => updateForm("stockControl", checked)}
-                />
               </div>
             </div>
           )}

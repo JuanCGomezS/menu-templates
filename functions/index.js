@@ -6,6 +6,8 @@ const admin = require("firebase-admin");
 admin.initializeApp();
 const db = admin.firestore();
 const { storeIsOpen } = require("./store-hours");
+const { isValidPoint, isWithinDeliveryArea } = require("./delivery-area");
+const { isStoreSubscriptionActive } = require("./subscription");
 
 exports.createPublicOrder = onCall(async (request) => {
   const { storeId, order, trackingCode } = request.data || {};
@@ -25,7 +27,7 @@ exports.createPublicOrder = onCall(async (request) => {
   const storeRef = db.doc(`stores/${storeId}`);
   const storeSnapshot = await storeRef.get();
   const store = storeSnapshot.data();
-  if (!store?.active)
+  if (!store?.active || !isStoreSubscriptionActive(store.subscription))
     throw new HttpsError(
       "failed-precondition",
       "La tienda no está disponible.",
@@ -42,6 +44,29 @@ exports.createPublicOrder = onCall(async (request) => {
     throw new HttpsError(
       "failed-precondition",
       "Esta modalidad no está disponible.",
+    );
+  if (
+    order.type === "delivery" &&
+    (typeof order.customerPhone !== "string" ||
+      !/^\d{10}$/.test(order.customerPhone))
+  )
+    throw new HttpsError(
+      "invalid-argument",
+      "El teléfono debe tener 10 dígitos.",
+    );
+  if (order.type === "delivery" && !isValidPoint(order.deliveryLocation))
+    throw new HttpsError("invalid-argument", "Ubicación de entrega inválida.");
+  if (
+    order.type === "delivery" &&
+    !isWithinDeliveryArea(
+      store.deliveryArea,
+      store.location,
+      order.deliveryLocation,
+    )
+  )
+    throw new HttpsError(
+      "failed-precondition",
+      "La ubicación de entrega está fuera del área de cobertura.",
     );
   const orderRef = storeRef.collection("orders").doc(trackingCode);
   if ((await orderRef.get()).exists) return { trackingCode }; // Safe retry with same client key.

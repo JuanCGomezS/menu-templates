@@ -165,10 +165,10 @@ export function validatePublicOrder(
     };
   const customerPhone = input.customerPhone?.trim();
   const deliveryAddress = input.deliveryAddress?.trim();
-  if (!customerPhone || customerPhone.length < 7 || customerPhone.length > 30)
+  if (!customerPhone || !/^\d{10}$/.test(customerPhone))
     return {
       valid: false,
-      message: "Ingresa un teléfono entre 7 y 30 caracteres.",
+      message: "Ingresa un teléfono de 10 dígitos.",
     };
   if (
     !deliveryAddress ||

@@ -40,6 +40,12 @@ export interface PublicStore {
   timeZone?: string;
   logoUrl?: string;
   location?: { latitude?: number; longitude?: number };
+  deliveryArea?: { enabled?: boolean; radiusMeters?: number };
+  subscription?: {
+    billingPeriod?: "monthly" | "quarterly" | "semiannual" | "annual";
+    startsAt?: { toDate?: () => Date } | Date;
+    endsAt?: { toDate?: () => Date } | Date;
+  };
   template?: { id: string; name: string } | null;
   capabilities?: {
     inStoreOrdering?: boolean;

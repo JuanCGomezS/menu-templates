@@ -24,18 +24,60 @@ service cloud.firestore {
       return hasRole('storeadmin') && userDoc().data.storeId == storeId;
     }
 
+    function hasCurrentSubscription(store) {
+      return !store.keys().hasAny(['subscription']) || (
+        store.subscription is map
+        && store.subscription.keys().hasOnly(['billingPeriod', 'startsAt', 'endsAt'])
+        && store.subscription.billingPeriod in ['monthly', 'quarterly', 'semiannual', 'annual']
+        && store.subscription.startsAt is timestamp
+        && store.subscription.endsAt is timestamp
+        && store.subscription.startsAt < store.subscription.endsAt
+        && store.subscription.startsAt <= request.time
+        && request.time < store.subscription.endsAt
+      );
+    }
+
+    function hasValidSubscription(store) {
+      return !store.keys().hasAny(['subscription']) || (
+        store.subscription is map
+        && store.subscription.keys().hasOnly(['billingPeriod', 'startsAt', 'endsAt'])
+        && store.subscription.billingPeriod in ['monthly', 'quarterly', 'semiannual', 'annual']
+        && store.subscription.startsAt is timestamp
+        && store.subscription.endsAt is timestamp
+        && store.subscription.startsAt < store.subscription.endsAt
+      );
+    }
+
+    function preservesSubscription() {
+      return !resource.data.keys().hasAny(['subscription'])
+        || request.resource.data.keys().hasAny(['subscription']);
+    }
+
     function storeIsActive(storeId) {
       return exists(/databases/$(database)/documents/stores/$(storeId))
-        && get(/databases/$(database)/documents/stores/$(storeId)).data.active == true;
+        && get(/databases/$(database)/documents/stores/$(storeId)).data.active == true
+        && hasCurrentSubscription(get(/databases/$(database)/documents/stores/$(storeId)).data);
     }
 
     function storeAdminChangesOnly(fields) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
 
+    function hasValidDeliveryArea() {
+      return !request.resource.data.keys().hasAny(['deliveryArea']) || (
+        request.resource.data.deliveryArea is map
+        && request.resource.data.deliveryArea.keys().hasOnly(['enabled', 'radiusMeters'])
+        && request.resource.data.deliveryArea.enabled is bool
+        && request.resource.data.deliveryArea.radiusMeters is number
+        && request.resource.data.deliveryArea.radiusMeters > 0
+        && request.resource.data.deliveryArea.radiusMeters <= 50000
+      );
+    }
+
     function isStoreAdminStoreUpdate(storeId) {
       return isStoreAdminFor(storeId)
-        && storeAdminChangesOnly(['name', 'templateId', 'themeId', 'currency', 'contact', 'schedule', 'timeZone', 'logoUrl', 'location', 'updatedAt']);
+        && storeAdminChangesOnly(['name', 'type', 'templateId', 'themeId', 'currency', 'contact', 'schedule', 'timeZone', 'logoUrl', 'location', 'deliveryArea', 'capabilities', 'updatedAt'])
+        && hasValidDeliveryArea();
     }
 
     function isStoreAdminCategoryWrite(storeId) {
@@ -109,8 +151,7 @@ service cloud.firestore {
         ])
         && request.resource.data.type == 'delivery'
         && request.resource.data.customerPhone is string
-        && request.resource.data.customerPhone.size() >= 7
-        && request.resource.data.customerPhone.size() <= 30
+        && request.resource.data.customerPhone.matches('^[0-9]{10}$')
         && request.resource.data.deliveryAddress is string
         && request.resource.data.deliveryAddress.size() >= 5
         && request.resource.data.deliveryAddress.size() <= 200
@@ -185,9 +226,10 @@ service cloud.firestore {
     }
 
     match /stores/{storeId} {
-      allow read: if resource.data.active == true || isSuperAdmin() || isStoreAdminFor(storeId);
-      allow create, delete: if isSuperAdmin();
-      allow update: if isSuperAdmin() || isStoreAdminStoreUpdate(storeId);
+      allow read: if (resource.data.active == true && hasCurrentSubscription(resource.data)) || isSuperAdmin() || isStoreAdminFor(storeId);
+      allow create: if isSuperAdmin() && hasValidSubscription(request.resource.data);
+      allow delete: if isSuperAdmin();
+      allow update: if (isSuperAdmin() && hasValidSubscription(request.resource.data) && preservesSubscription()) || isStoreAdminStoreUpdate(storeId);
 
       match /categories/{categoryId} {
         allow read: if (storeIsActive(storeId) && resource.data.active == true) || isSuperAdmin() || isStoreAdminFor(storeId);
