@@ -64,6 +64,11 @@ const layoutRenderers: Record<
   natural: NaturalLayout,
   warm: WarmLayout,
   elegant: ElegantLayout,
+  confetti: ConfettiLayout,
+  brasa: BrasaLayout,
+  illustrated: IllustratedLayout,
+  mascot: MascotLayout,
+  frutal: FrutalLayout,
 };
 
 export default function RestaurantMenuView({ slug }: Props) {
@@ -320,7 +325,13 @@ function ThemeFrame({
           "--store-muted": `color-mix(in srgb, ${theme.tokens.text} 62%, ${theme.tokens.background})`,
           "--store-border": `color-mix(in srgb, ${theme.tokens.text} 18%, ${theme.tokens.surface})`,
           "--store-accent-soft": `color-mix(in srgb, ${theme.tokens.accent} 14%, ${theme.tokens.surface})`,
-          "--store-on-accent": "#ffffff",
+          "--store-accent-secondary":
+            theme.tokens.accentSecondary ??
+            `color-mix(in srgb, ${theme.tokens.accent} 62%, #67d1d0)`,
+          "--store-accent-tertiary":
+            theme.tokens.accentTertiary ??
+            `color-mix(in srgb, ${theme.tokens.accent} 42%, #f7d86a)`,
+          "--store-on-accent": theme.tokens.onAccent ?? "#ffffff",
         } as React.CSSProperties
       }
     >
@@ -329,133 +340,158 @@ function ThemeFrame({
   );
 }
 
-function MinimalLayout(props: StoreViewProps) {
-  const { store, schedule, theme, isOpen, onAddToCart } = props;
-  const itemCount = store.categories.reduce(
-    (count, category) => count + category.items.length,
-    0,
-  );
+function FrutalLayout(props: StoreViewProps) {
+  const { store, schedule, isOpen, onAddToCart } = props;
+  const photographs = store.items.filter((item) => item.imageUrl).slice(0, 3);
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#fff7f0] px-3 py-3 text-slate-900 sm:px-5 sm:py-5">
-      <div
-        aria-hidden="true"
-        className="absolute -left-20 top-80 h-64 w-64 rounded-full bg-[#bcebe2]/60 blur-3xl"
-      />
-      <div
-        aria-hidden="true"
-        className="absolute -right-20 top-[38rem] h-72 w-72 rounded-full bg-[#ffced1]/55 blur-3xl"
-      />
-      <div className="relative mx-auto max-w-5xl overflow-hidden rounded-[2.25rem] border-4 border-slate-900 bg-[#fffdf8] shadow-[0_28px_80px_rgba(71,48,53,0.16)] sm:rounded-[3rem]">
-        <MinimalHero
-          store={store}
-          theme={theme}
-          isOpen={isOpen}
-          itemCount={itemCount}
-        />
-        <section className="relative px-4 py-8 sm:px-8 sm:py-12 lg:px-12">
-          <div
-            aria-hidden="true"
-            className="absolute left-4 top-8 h-14 w-14 rounded-full border-2 border-dashed border-[#f3bd51] opacity-70 sm:left-8"
-          />
-          <div
-            aria-hidden="true"
-            className="absolute right-4 top-32 h-9 w-9 rotate-12 rounded-[35%_65%_60%_40%] bg-[var(--store-accent)]/20 sm:right-10"
-          />
-          <div className="relative">
-            <CategoryNav store={store} />
-            {store.categories.length ? (
-              <div className="space-y-7 sm:space-y-10">
-                {store.categories.map((category, index) => (
-                  <PosterCategorySection
-                    key={category.id}
-                    store={store}
-                    category={category}
-                    index={index}
-                    onAddToCart={onAddToCart}
-                  />
-                ))}
-              </div>
-            ) : (
-              <EmptyMenu />
+    <main className="min-h-screen overflow-hidden bg-[var(--store-bg)] text-[var(--store-text)] selection:bg-[var(--store-accent)] selection:text-[var(--store-on-accent)]">
+      <header className="relative isolate min-h-[44rem] overflow-hidden border-b border-[var(--store-text)]/15 px-5 pb-20 pt-8 sm:px-10 lg:px-16">
+        <FrutalBotanicalOrnament className="pointer-events-none absolute -right-20 top-8 h-72 w-72 rotate-12 opacity-15" />
+        <nav
+          aria-label="Categorías del catálogo"
+          className="relative z-20 mx-auto flex max-w-5xl flex-col items-start gap-4 border-b border-[var(--store-text)]/20 pb-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
+        >
+          <span className="font-serif text-lg font-semibold">{store.name}</span>
+          {store.categories.length > 0 && (
+            <div className="flex w-full gap-5 overflow-x-auto pb-1 text-sm sm:max-w-[70%] sm:pb-0">
+              {store.categories.map((category) => (
+                <a
+                  key={category.id}
+                  href={`#category-${category.id}`}
+                  className="shrink-0 underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]"
+                >
+                  {category.name}
+                </a>
+              ))}
+            </div>
+          )}
+        </nav>
+
+        <div className="relative mx-auto mt-16 flex max-w-6xl flex-col items-center text-center sm:mt-24">
+          {photographs[0]?.imageUrl && (
+            <FrutalPhotoFrame
+              item={photographs[0]}
+              className="hidden -rotate-6 sm:absolute sm:-left-6 sm:top-6 sm:block sm:w-56 lg:-left-16 lg:w-72"
+              eager
+            />
+          )}
+          {photographs[1]?.imageUrl && (
+            <FrutalPhotoFrame
+              item={photographs[1]}
+              className="hidden rotate-6 sm:absolute sm:-right-5 sm:top-0 sm:block sm:w-48 lg:-right-12 lg:w-64"
+              eager
+            />
+          )}
+          {store.logoUrl && (
+            <div className="relative z-10 mb-10 flex min-h-28 w-[min(24rem,88vw)] items-center justify-center border-y border-[var(--store-text)]/30 bg-[var(--store-surface)]/80 px-5 py-4 shadow-[0_18px_45px_rgba(40,25,20,0.12)] sm:min-h-32">
+              <FrutalBotanicalOrnament className="pointer-events-none absolute -left-8 -top-8 h-20 w-20 -rotate-12 text-[var(--store-accent)] opacity-25" />
+              <img
+                src={store.logoUrl}
+                alt={`Logo de ${store.name}`}
+                className="relative max-h-28 w-full object-contain [filter:drop-shadow(0_1px_1px_rgba(0,0,0,0.48))_drop-shadow(0_-1px_1px_rgba(255,255,255,0.5))] sm:max-h-32"
+              />
+            </div>
+          )}
+          <h1 className="relative z-10 max-w-4xl break-words font-serif text-6xl leading-[0.84] tracking-[-0.04em] [text-wrap:balance] sm:text-8xl lg:text-9xl">
+            {store.name}
+          </h1>
+          <div className="relative z-10 mt-9 flex flex-wrap justify-center gap-3">
+            {isOpen !== null && (
+              <span className="border border-[var(--store-text)] px-4 py-2 text-xs font-bold uppercase tracking-[0.16em]">
+                {isOpen ? "Abierto ahora" : "Cerrado ahora"}
+              </span>
             )}
+            <button
+              type="button"
+              onClick={() =>
+                document
+                  .getElementById("frutal-catalog")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
+              className="bg-[var(--store-text)] px-5 py-2.5 text-sm font-bold text-[var(--store-bg)] transition-colors hover:bg-[var(--store-accent)] hover:text-[var(--store-on-accent)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--store-accent)]/35"
+            >
+              Explorar catálogo
+            </button>
           </div>
-        </section>
-        <MinimalInfoFooter store={store} schedule={schedule} />
-      </div>
+          {photographs[2]?.imageUrl && (
+            <FrutalPhotoFrame
+              item={photographs[2]}
+              className="absolute -bottom-48 right-[8%] hidden w-40 -rotate-3 lg:block"
+            />
+          )}
+        </div>
+      </header>
+
+      <section
+        id="frutal-catalog"
+        className="relative px-5 py-20 sm:px-10 lg:px-16 lg:py-28"
+      >
+        <div className="mx-auto max-w-6xl">
+          {store.categories.length ? (
+            <div className="space-y-28 lg:space-y-36">
+              {store.categories.map((category, index) => (
+                <FrutalCategory
+                  key={category.id}
+                  store={store}
+                  category={category}
+                  index={index}
+                  onAddToCart={onAddToCart}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyMenu />
+          )}
+        </div>
+      </section>
+      <FrutalServiceFolio store={store} schedule={schedule} />
     </main>
   );
 }
 
-function MinimalHero({
-  store,
-  theme,
-  isOpen,
-  itemCount,
+function FrutalPhotoFrame({
+  item,
+  className,
+  eager = false,
 }: {
-  store: StoreData;
-  theme: ThemeConfig;
-  isOpen: boolean | null;
-  itemCount: number;
+  item: PublicItem;
+  className: string;
+  eager?: boolean;
 }) {
-  const themeBadge = getThemeBadge(theme);
-
   return (
-    <header className="relative overflow-hidden text-center">
-      <div
-        aria-hidden="true"
-        className="h-12 border-b-4 border-slate-900 bg-[repeating-linear-gradient(90deg,#f5a8ac_0_38px,#fff8ee_38px_76px)] sm:h-16 sm:bg-[repeating-linear-gradient(90deg,#f5a8ac_0_58px,#fff8ee_58px_116px)]"
+    <figure
+      className={`relative z-10 border border-[var(--store-text)]/15 bg-[var(--store-surface)] p-2 shadow-[0_22px_50px_rgba(40,25,20,0.16)] ${className}`}
+    >
+      <img
+        src={item.imageUrl}
+        alt={item.name}
+        loading={eager ? "eager" : "lazy"}
+        className="aspect-[4/3] w-full object-contain"
       />
-      <div className="relative px-5 pb-10 pt-8 sm:px-10 sm:pb-14 sm:pt-11">
-        <div
-          aria-hidden="true"
-          className="absolute left-[8%] top-8 h-16 w-16 rounded-[48%_52%_37%_63%] bg-[#bcebe2] sm:h-24 sm:w-24"
-        />
-        <div
-          aria-hidden="true"
-          className="absolute right-[9%] top-14 h-11 w-11 rotate-12 rounded-full bg-[#f6d86b] sm:h-16 sm:w-16"
-        />
-        {store.logoUrl && (
-          <img
-            src={store.logoUrl}
-            alt={`Logo de ${store.name}`}
-            className="relative mx-auto mb-4 h-20 w-20 rounded-2xl border border-slate-900/15 bg-[#fffdf8] object-contain p-1"
-          />
-        )}
-        <p className="relative font-mono text-[10px] font-bold uppercase tracking-[0.24em] text-slate-600">
-          Selección de la casa
-        </p>
-        <h1 className="relative mx-auto mt-4 max-w-3xl break-words font-serif text-5xl font-black leading-[0.82] tracking-[-0.06em] [text-wrap:balance] sm:text-7xl lg:text-8xl">
-          {store.name}
-        </h1>
-        <div className="relative mx-auto mt-6 flex max-w-xl flex-wrap items-center justify-center gap-2.5 text-sm font-semibold text-slate-700">
-          <span className="rounded-full bg-[#bcebe2] px-3 py-1.5">
-            {itemCount} opciones
-          </span>
-          {themeBadge && (
-            <span className="rounded-full border border-slate-900/15 bg-[var(--store-accent)]/15 px-3 py-1.5">
-              {themeBadge}
-            </span>
-          )}
-          {isOpen !== null && (
-            <span
-              className={`rounded-full px-3 py-1.5 ${isOpen ? "bg-emerald-100 text-emerald-900" : "bg-red-100 text-red-800"}`}
-            >
-              {isOpen ? "Abierto ahora" : "Cerrado ahora"}
-            </span>
-          )}
-        </div>
-        {store.contact?.address && (
-          <p className="relative mt-4 text-sm font-medium text-slate-600">
-            {store.contact.address}
-          </p>
-        )}
-      </div>
-    </header>
+      <figcaption className="px-1 pb-1 pt-2 text-left font-serif text-sm leading-tight">
+        {item.name}
+      </figcaption>
+    </figure>
   );
 }
 
-function PosterCategorySection({
+function FrutalBotanicalOrnament({ className }: { className: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 240 240" className={className}>
+      <path
+        d="M121 224c-3-76 7-137 52-196M128 167c-35-9-62-35-72-70 34 0 64 17 77 44M151 105c8-36 29-62 61-76 2 35-12 65-42 84M116 196c-35 1-64-14-84-43 31-10 63-1 86 23"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function FrutalCategory({
   store,
   category,
   index,
@@ -466,65 +502,792 @@ function PosterCategorySection({
   index: number;
   onAddToCart: (item: PublicItem) => void;
 }) {
-  const panelClasses = ["bg-[#ffdfe0]", "bg-[#d9f3ef]", "bg-[#fff0ad]"];
+  const categoryImage = category.items.find((item) => item.imageUrl);
+  const imageFirst = index % 2 === 0;
+  const categoryGrid = categoryImage
+    ? `grid items-center gap-10 lg:gap-20 ${imageFirst ? "lg:grid-cols-[minmax(15rem,0.7fr)_minmax(0,1.3fr)]" : "lg:grid-cols-[minmax(0,1.3fr)_minmax(15rem,0.7fr)]"}`
+    : "mx-auto max-w-3xl";
 
+  return (
+    <section id={`category-${category.id}`} className="relative scroll-mt-8">
+      <div className={categoryGrid}>
+        {categoryImage?.imageUrl && (
+          <FrutalPhotoFrame
+            item={categoryImage}
+            className={`mx-auto w-full max-w-sm ${imageFirst ? "lg:order-1 lg:-rotate-2" : "lg:order-2 lg:rotate-2"}`}
+          />
+        )}
+        <div className={imageFirst ? "lg:order-2" : "lg:order-1"}>
+          <div className="mb-8 flex justify-center lg:justify-start">
+            <h2 className="inline-block max-w-full break-words bg-[var(--store-text)] px-5 py-2 font-serif text-3xl italic leading-tight text-[var(--store-bg)] sm:text-4xl">
+              {category.name}
+            </h2>
+          </div>
+          {category.items.length ? (
+            <div className="divide-y divide-[var(--store-text)]/15 border-y border-[var(--store-text)]/20">
+              {category.items.map((item) => (
+                <FrutalProduct
+                  key={item.id}
+                  item={item}
+                  store={store}
+                  onAddToCart={onAddToCart}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="border-y border-[var(--store-text)]/20 py-6 text-sm text-[var(--store-text)]/70">
+              No hay productos en esta categoría.
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FrutalProduct({
+  item,
+  store,
+  onAddToCart,
+}: {
+  item: PublicItem;
+  store: StoreData;
+  onAddToCart: (item: PublicItem) => void;
+}) {
+  const { orderingOpen } = usePublicOrderCart();
+  const soldOut = isSoldOut(item);
+  const orderingEnabled =
+    orderingOpen &&
+    (store.capabilities?.inStoreOrdering ||
+      store.capabilities?.deliveryOrdering);
+
+  return (
+    <article className="grid grid-cols-1 gap-3 py-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-5 sm:py-6">
+      <div className="min-w-0">
+        <div className="flex items-start gap-3">
+          {item.imageUrl && (
+            <img
+              src={item.imageUrl}
+              alt=""
+              loading="lazy"
+              className={`mt-1 h-12 w-12 shrink-0 bg-[var(--store-surface)] object-contain ${soldOut ? "opacity-45" : ""}`}
+            />
+          )}
+          <div className="min-w-0">
+            <h3 className="break-words font-serif text-xl leading-tight sm:text-2xl">
+              {item.name}
+            </h3>
+            {item.description && (
+              <p className="mt-1 break-words text-sm leading-6 text-[var(--store-text)]/70">
+                {item.description}
+              </p>
+            )}
+          </div>
+        </div>
+        {soldOut ? (
+          <p className="mt-3 text-sm font-bold text-rose-700">Agotado</p>
+        ) : (
+          orderingEnabled && (
+            <button
+              type="button"
+              onClick={() => onAddToCart(item)}
+              className="mt-3 min-h-11 border-b-2 border-[var(--store-accent)] px-1 text-sm font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--store-accent)]/35"
+            >
+              Agregar al pedido
+            </button>
+          )
+        )}
+      </div>
+      <span className="shrink-0 font-serif text-lg tabular-nums sm:justify-self-end sm:text-xl">
+        {formatPrice(item.price, store.currency)}
+      </span>
+    </article>
+  );
+}
+
+function FrutalServiceFolio({
+  store,
+  schedule,
+}: Pick<StoreViewProps, "store" | "schedule">) {
+  const contact = store.contact;
+  const location = getValidLocation(store.location);
+  const hasContact = Boolean(
+    contact?.whatsapp || contact?.instagram || contact?.address || location,
+  );
+  if (!schedule.length && !hasContact) return null;
+
+  return (
+    <footer className="relative isolate overflow-hidden bg-[var(--store-text)] px-5 py-20 text-[var(--store-bg)] sm:px-10 lg:px-16 lg:py-28">
+      <FrutalBotanicalOrnament className="pointer-events-none absolute -bottom-20 -left-20 h-80 w-80 -rotate-12 opacity-10" />
+      <div className="relative mx-auto max-w-6xl">
+        <h2 className="max-w-4xl break-words font-serif text-5xl leading-[0.9] tracking-[-0.04em] [text-wrap:balance] sm:text-7xl">
+          Información para tu próxima visita o pedido.
+        </h2>
+        <div className="mt-16 grid gap-14 lg:grid-cols-2 lg:gap-20">
+          {schedule.length > 0 && (
+            <section>
+              <h3 className="border-b border-[var(--store-bg)]/25 pb-4 font-serif text-3xl italic">
+                Horarios
+              </h3>
+              <dl className="mt-4 divide-y divide-[var(--store-bg)]/15">
+                {schedule.map(([day, value]) => (
+                  <div
+                    key={day}
+                    className="flex justify-between gap-5 py-3 text-sm"
+                  >
+                    <dt>{formatDayName(day)}</dt>
+                    <dd className="font-bold text-right">
+                      {value === "closed"
+                        ? "Cerrado"
+                        : formatScheduleTime(value)}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          )}
+          {hasContact && (
+            <section>
+              <h3 className="border-b border-[var(--store-bg)]/25 pb-4 font-serif text-3xl italic">
+                Contacto
+              </h3>
+              <div className="mt-5 flex flex-wrap gap-5">
+                {contact?.whatsapp && (
+                  <a
+                    href={`https://wa.me/${contact.whatsapp.replace(/[^0-9]/g, "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline decoration-[var(--store-accent)] decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]"
+                  >
+                    WhatsApp
+                  </a>
+                )}
+                {contact?.instagram && (
+                  <a
+                    href={`https://instagram.com/${contact.instagram.replace("@", "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline decoration-[var(--store-accent)] decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]"
+                  >
+                    Instagram
+                  </a>
+                )}
+              </div>
+              {contact?.address && (
+                <p className="mt-5 max-w-lg text-sm leading-6 text-[var(--store-bg)]/75">
+                  {contact.address}
+                </p>
+              )}
+            </section>
+          )}
+        </div>
+        {location && (
+          <section className="mt-16 border-t border-[var(--store-bg)]/20 pt-8">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <h3 className="font-serif text-3xl italic">Ubicación</h3>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-bold underline decoration-[var(--store-accent)] decoration-2 underline-offset-4"
+              >
+                Abrir en Google Maps
+              </a>
+            </div>
+            <LocationMap
+              location={location}
+              className="h-72 w-full sm:h-96"
+              title={`Ubicación de ${store.name}`}
+            />
+          </section>
+        )}
+      </div>
+    </footer>
+  );
+}
+
+function MascotLayout(props: StoreViewProps) {
+  const { store, schedule, isOpen, onAddToCart } = props;
+  const heroItem = store.items.find((item) => item.imageUrl);
+
+  return (
+    <main className="min-h-screen overflow-hidden bg-[#23443e] px-3 py-3 text-[#23443e] sm:px-5 sm:py-5">
+      <div className="mx-auto max-w-7xl overflow-hidden rounded-[2.5rem] bg-[#fff5d9] shadow-[0_30px_90px_rgba(5,28,24,0.42)] sm:rounded-[4rem]">
+        <header className="relative isolate overflow-hidden px-5 pb-14 pt-20 sm:px-10 lg:px-16 lg:pb-20 lg:pt-28">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 1200 170"
+            preserveAspectRatio="none"
+            className="absolute inset-x-0 top-0 h-32 w-full text-[#23443e]"
+          >
+            <path
+              d="M0 0h1200v62c-45 0-38 74-83 74-53 0-20-102-79-102-48 0-25 78-75 78-61 0-24-112-91-112H0Z"
+              fill="currentColor"
+            />
+          </svg>
+          <div className="relative grid items-center gap-10 lg:grid-cols-[1fr_0.9fr]">
+            <div className="relative z-10">
+              {store.logoUrl && (
+                <div className="mb-9 flex min-h-32 w-[min(22rem,86vw)] -rotate-3 items-center justify-center rounded-[2rem] border-[0.45rem] border-[#23443e] bg-[#fff5d9] p-4 shadow-[0_18px_38px_rgba(35,68,62,0.2)]">
+                  <img
+                    src={store.logoUrl}
+                    alt={`Logo de ${store.name}`}
+                    className="max-h-32 w-full object-contain [filter:drop-shadow(0_1px_1px_rgba(0,0,0,0.48))_drop-shadow(0_-1px_1px_rgba(255,255,255,0.5))]"
+                  />
+                </div>
+              )}
+              <h1 className="mt-8 max-w-4xl break-words text-6xl font-black leading-[0.82] tracking-[-0.055em] [text-wrap:balance] sm:text-8xl lg:text-[7rem]">
+                {store.name}
+              </h1>
+              <div className="mt-7 flex flex-wrap items-center gap-3">
+                {isOpen !== null && (
+                  <span
+                    className={`rounded-full border-2 border-[#23443e] px-4 py-2 text-xs font-black uppercase tracking-[0.12em] ${isOpen ? "bg-[#8ed8c5]" : "bg-[#f3a8bd]"}`}
+                  >
+                    {isOpen ? "Abierto ahora" : "Cerrado ahora"}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() =>
+                    document
+                      .getElementById("mascot-catalog")
+                      ?.scrollIntoView({ behavior: "smooth" })
+                  }
+                  className="rounded-full bg-[var(--store-accent)] px-5 py-3 text-sm font-black text-[var(--store-on-accent)] transition hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#23443e]/30 motion-reduce:transform-none"
+                >
+                  Ver catálogo
+                </button>
+              </div>
+            </div>
+            <div className="relative mx-auto w-full max-w-xl pb-4">
+              {heroItem?.imageUrl && (
+                <img
+                  src={heroItem.imageUrl}
+                  alt={heroItem.name}
+                  fetchPriority="high"
+                  className="absolute right-0 top-0 z-10 aspect-square w-[58%] rotate-6 rounded-[2rem] border-[0.65rem] border-[#fff5d9] object-cover shadow-[0_25px_55px_rgba(35,68,62,0.3)]"
+                />
+              )}
+              <MascotCharacter />
+            </div>
+          </div>
+        </header>
+        <section
+          id="mascot-catalog"
+          className="px-5 py-12 sm:px-10 lg:px-16 lg:py-20"
+        >
+          <CategoryNav store={store} />
+          {store.categories.length ? (
+            <div className="mt-12 grid gap-8 lg:grid-cols-2">
+              {store.categories.map((category, index) => (
+                <MascotCategory
+                  key={category.id}
+                  store={store}
+                  category={category}
+                  index={index}
+                  onAddToCart={onAddToCart}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyMenu />
+          )}
+        </section>
+        <MascotServiceDeck store={store} schedule={schedule} />
+      </div>
+    </main>
+  );
+}
+
+function MascotCharacter() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 420 500"
+      className="relative w-full max-w-md text-[#23443e]"
+    >
+      <path
+        d="M125 116h188l28 285c3 34-23 63-57 63H145c-34 0-60-29-57-63l37-285Z"
+        fill="#f2a54a"
+        stroke="currentColor"
+        strokeWidth="12"
+      />
+      <path
+        d="M154 116c0-62 112-62 112 0"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="12"
+        strokeLinecap="round"
+      />
+      <circle cx="163" cy="235" r="12" fill="currentColor" />
+      <circle cx="263" cy="235" r="12" fill="currentColor" />
+      <path
+        d="M173 281c25 24 52 24 80 0"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="10"
+        strokeLinecap="round"
+      />
+      <path
+        d="M90 270c-46 10-62 42-55 75M336 270c44 12 59 43 51 76M145 458l-22 31M278 458l24 31"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="13"
+        strokeLinecap="round"
+      />
+      <path
+        d="M122 491h-45M302 491h46"
+        stroke="currentColor"
+        strokeWidth="13"
+        strokeLinecap="round"
+      />
+      <path
+        d="M107 170l58 20M294 169l-56 21"
+        stroke="#ef76ad"
+        strokeWidth="12"
+        strokeLinecap="round"
+      />
+      <circle
+        cx="322"
+        cy="120"
+        r="38"
+        fill="#8ed8c5"
+        stroke="currentColor"
+        strokeWidth="10"
+      />
+      <path
+        d="m310 120 9 9 18-21"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function MascotCategory({
+  store,
+  category,
+  index,
+  onAddToCart,
+}: {
+  store: StoreData;
+  category: PublicCategory;
+  index: number;
+  onAddToCart: (item: PublicItem) => void;
+}) {
+  const featured = category.items.find((item) => item.imageUrl);
+  const ribbonClass =
+    index % 2 === 0
+      ? "bg-[#23443e] text-[#fff5d9]"
+      : "bg-[var(--store-accent)] text-[var(--store-on-accent)]";
   return (
     <section
       id={`category-${category.id}`}
-      className={`relative overflow-hidden rounded-[2rem] border-2 border-slate-900 px-4 py-6 shadow-[5px_6px_0_#172033] sm:rounded-[2.5rem] sm:px-7 sm:py-8 ${panelClasses[index % panelClasses.length]}`}
+      className="relative overflow-hidden rounded-[2.25rem] border-2 border-[#23443e]/25 bg-[#fffaf0] p-5 sm:p-7"
     >
       <div
-        aria-hidden="true"
-        className={`absolute -right-5 -top-5 h-20 w-20 rounded-full border-2 border-slate-900/15 ${index % 2 ? "bg-[#f6d86b]" : "bg-[var(--store-accent)]/20"}`}
-      />
-      <div className="relative mb-6 flex items-end justify-between gap-4 border-b-2 border-slate-900/80 pb-4">
-        <div>
-          <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600">
-            {String(index + 1).padStart(2, "0")} · Para elegir
-          </p>
-          <h2 className="mt-1 break-words font-serif text-3xl font-black leading-none tracking-[-0.04em] sm:text-4xl">
-            {category.name}
-          </h2>
-        </div>
-        <span className="shrink-0 rounded-full border-2 border-slate-900 bg-[#fffdf8] px-3 py-1 text-xs font-black">
+        className={`-mx-8 -mt-1 flex items-center justify-between gap-4 px-8 py-4 ${ribbonClass}`}
+      >
+        <h2 className="break-words text-3xl font-black leading-none tracking-[-0.04em]">
+          {category.name}
+        </h2>
+        <span className="shrink-0 text-sm font-black">
           {category.items.length}
         </span>
       </div>
+      {featured?.imageUrl && (
+        <img
+          src={featured.imageUrl}
+          alt={featured.name}
+          loading="lazy"
+          className="mt-7 aspect-[16/8] w-full rotate-[-1deg] rounded-[1.5rem] border-4 border-[#23443e] object-cover shadow-[0_16px_30px_rgba(35,68,62,0.16)]"
+        />
+      )}
       {category.items.length ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {category.items.map((item, itemIndex) => (
-            <PosterMenuItem
+        <div className="mt-6 divide-y divide-[#23443e]/15">
+          {category.items.map((item) => (
+            <MascotProduct
               key={item.id}
               item={item}
               store={store}
-              imageOnRight={(itemIndex + index) % 2 === 1}
               onAddToCart={onAddToCart}
             />
           ))}
         </div>
       ) : (
-        <p className="rounded-2xl border-2 border-dashed border-slate-900/35 bg-[#fffdf8]/70 p-5 text-center font-semibold text-slate-600">
-          No hay productos en esta categoría
+        <p className="mt-6 text-sm font-semibold text-[#23443e]/70">
+          No hay productos en esta categoría.
         </p>
       )}
     </section>
   );
 }
 
-function PosterMenuItem({
+function MascotProduct({
   item,
   store,
-  imageOnRight,
   onAddToCart,
 }: {
   item: PublicItem;
   store: StoreData;
-  imageOnRight: boolean;
   onAddToCart: (item: PublicItem) => void;
 }) {
   const { orderingOpen } = usePublicOrderCart();
-  const soldOut =
-    item.trackStock && typeof item.stock === "number" && item.stock <= 0;
+  const soldOut = isSoldOut(item);
+  const orderingEnabled =
+    orderingOpen &&
+    (store.capabilities?.inStoreOrdering ||
+      store.capabilities?.deliveryOrdering);
+
+  return (
+    <article className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-4 py-4 sm:grid-cols-[auto_minmax(0,1fr)_auto]">
+      {item.imageUrl ? (
+        <img
+          src={item.imageUrl}
+          alt={item.name}
+          loading="lazy"
+          className={`h-16 w-16 rotate-[-2deg] rounded-2xl border-2 border-[#23443e] object-cover ${soldOut ? "opacity-45" : ""}`}
+        />
+      ) : (
+        <span
+          aria-hidden="true"
+          className="mt-1 h-3 w-3 rounded-full bg-[#ef76ad]"
+        />
+      )}
+      <div>
+        <h3 className="break-words text-lg font-black leading-tight">
+          {item.name}
+        </h3>
+        {item.description && (
+          <p className="mt-1 break-words text-sm leading-5 text-[#23443e]/75">
+            {item.description}
+          </p>
+        )}
+      </div>
+      <div className="col-span-2 flex items-center justify-between gap-4 text-left sm:col-span-1 sm:block sm:text-right">
+        <p className="font-black tabular-nums">
+          {formatPrice(item.price, store.currency)}
+        </p>
+        {soldOut ? (
+          <span className="text-sm font-black text-rose-800 sm:mt-2 sm:block">
+            Agotado
+          </span>
+        ) : (
+          orderingEnabled && (
+            <button
+              type="button"
+              onClick={() => onAddToCart(item)}
+              className="min-h-11 rounded-full bg-[#8ed8c5] px-4 py-2 text-sm font-black focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#23443e]/30 sm:mt-2"
+            >
+              Agregar
+            </button>
+          )
+        )}
+      </div>
+    </article>
+  );
+}
+
+function MascotServiceDeck({
+  store,
+  schedule,
+}: Pick<StoreViewProps, "store" | "schedule">) {
+  const contact = store.contact;
+  const location = getValidLocation(store.location);
+  const hasContact = Boolean(
+    contact?.whatsapp || contact?.instagram || contact?.address || location,
+  );
+  const serviceTitle =
+    store.type === "product_store"
+      ? "Tu próxima compra empieza aquí."
+      : "Tu próxima visita empieza aquí.";
+  if (!schedule.length && !hasContact) return null;
+  return (
+    <footer className="relative overflow-hidden border-t-2 border-[#23443e]/20 bg-[#8ed8c5] px-5 py-12 sm:px-10 lg:px-16 lg:py-16">
+      <div
+        aria-hidden="true"
+        className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-[#ef76ad] opacity-55"
+      />
+      <div className="relative mx-auto max-w-7xl">
+        <h2 className="max-w-2xl text-4xl font-black leading-[0.9] tracking-[-0.04em] sm:text-6xl">
+          {serviceTitle}
+        </h2>
+        <div className="mt-10 grid gap-8 lg:grid-cols-[0.72fr_1.28fr]">
+          <section className="rounded-[2rem] border-2 border-[#23443e] bg-[#fff5d9] p-6">
+            <h3 className="text-xl font-black">Horarios</h3>
+            {schedule.length ? (
+              <dl className="mt-5 divide-y divide-[#23443e]/15">
+                {schedule.map(([day, value]) => (
+                  <div
+                    key={day}
+                    className="flex justify-between gap-4 py-3 text-sm"
+                  >
+                    <dt className="font-bold">{formatDayName(day)}</dt>
+                    <dd
+                      className={
+                        value === "closed"
+                          ? "font-black text-rose-700"
+                          : "font-black"
+                      }
+                    >
+                      {value === "closed"
+                        ? "Cerrado"
+                        : formatScheduleTime(value)}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="mt-4 text-sm text-[#23443e]/70">
+                Consulta el horario con el negocio.
+              </p>
+            )}
+          </section>
+          {hasContact && (
+            <section className="rounded-[2rem] border-2 border-[#23443e] bg-[#fff5d9] p-2">
+              <div className="flex flex-wrap gap-3 p-4">
+                {contact?.whatsapp && (
+                  <a
+                    href={`https://wa.me/${contact.whatsapp.replace(/[^0-9]/g, "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full bg-[#23443e] px-5 py-3 text-sm font-black text-[#fff5d9]"
+                  >
+                    WhatsApp
+                  </a>
+                )}
+                {contact?.instagram && (
+                  <a
+                    href={`https://instagram.com/${contact.instagram.replace("@", "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full bg-[#ef76ad] px-5 py-3 text-sm font-black"
+                  >
+                    Instagram
+                  </a>
+                )}
+              </div>
+              {!location && contact?.address && (
+                <p className="px-4 pb-5 text-sm font-semibold text-[#23443e]/70">
+                  {contact.address}
+                </p>
+              )}
+              {location && (
+                <>
+                  <LocationMap
+                    location={location}
+                    className="h-64 w-full rounded-[1.5rem]"
+                    title={`Ubicación de ${store.name}`}
+                  />
+                  <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm font-semibold text-[#23443e]/70">
+                      {contact?.address || "Ubicación del negocio"}
+                    </p>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-black underline decoration-2 underline-offset-4"
+                    >
+                      Abrir mapa
+                    </a>
+                  </div>
+                </>
+              )}
+            </section>
+          )}
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+function IllustratedLayout(props: StoreViewProps) {
+  const { store, schedule, isOpen, onAddToCart } = props;
+
+  return (
+    <main className="min-h-screen overflow-hidden bg-[var(--store-bg)] text-[var(--store-text)]">
+      <header className="relative isolate overflow-hidden border-b [border-color:color-mix(in_srgb,var(--store-accent)_28%,transparent)] px-5 py-16 text-center sm:px-10 sm:py-24">
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 220 160"
+          className="absolute -left-12 top-4 w-56 rotate-[-8deg] text-[var(--store-accent)] opacity-35"
+        >
+          <path
+            d="M12 104C44 29 102 17 201 53M20 130C72 73 130 67 205 91M47 145C91 116 140 111 190 124"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          <path
+            d="M62 87c18-28 42-38 70-31-7 24-24 42-53 53-11-6-17-13-17-22Z"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+          />
+        </svg>
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 180 180"
+          className="absolute -right-10 bottom-0 w-52 rotate-12 text-[var(--store-accent)] opacity-30"
+        >
+          <path
+            d="M31 140c6-64 38-101 96-111 18 52 2 92-49 121M55 130c22-38 43-62 65-73M62 98l-28-11M91 69l-10-31M110 91l34-17"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="relative mx-auto max-w-4xl">
+          {store.logoUrl && (
+            <div className="relative mx-auto mb-12 flex min-h-32 w-[min(24rem,86vw)] items-center justify-center border-y [border-color:color-mix(in_srgb,var(--store-accent)_55%,transparent)] bg-[var(--store-surface)]/75 px-7 py-5 shadow-[0_20px_50px_color-mix(in_srgb,var(--store-text)_12%,transparent)]">
+              <span
+                aria-hidden="true"
+                className="absolute -left-5 top-1/2 h-px w-10 bg-[var(--store-accent)]"
+              />
+              <span
+                aria-hidden="true"
+                className="absolute -right-5 top-1/2 h-px w-10 bg-[var(--store-accent)]"
+              />
+              <img
+                src={store.logoUrl}
+                alt={`Logo de ${store.name}`}
+                className="max-h-32 w-full object-contain [filter:drop-shadow(0_1px_1px_rgba(0,0,0,0.48))_drop-shadow(0_-1px_1px_rgba(255,255,255,0.5))]"
+              />
+            </div>
+          )}
+          <h1 className="break-words font-serif text-6xl font-black leading-[0.82] tracking-[-0.055em] [text-wrap:balance] sm:text-8xl lg:text-[7rem]">
+            {store.name}
+          </h1>
+          <div className="mx-auto mt-7 h-px max-w-sm bg-[var(--store-accent)]" />
+          <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm font-bold text-[var(--store-text)]/70">
+            {isOpen !== null && (
+              <span className={isOpen ? "text-emerald-800" : "text-rose-800"}>
+                {isOpen ? "Abierto ahora" : "Cerrado ahora"}
+              </span>
+            )}
+            {store.contact?.address && <span>{store.contact.address}</span>}
+          </div>
+        </div>
+      </header>
+      <section className="px-5 py-10 sm:px-10 lg:px-16 lg:py-16">
+        <div className="mx-auto max-w-7xl">
+          <IllustratedNav store={store} />
+          {store.categories.length ? (
+            <div className="mt-14 space-y-20 lg:space-y-28">
+              {store.categories.map((category, index) => (
+                <IllustratedCategory
+                  key={category.id}
+                  store={store}
+                  category={category}
+                  index={index}
+                  onAddToCart={onAddToCart}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyMenu />
+          )}
+        </div>
+      </section>
+      <IllustratedFooter store={store} schedule={schedule} />
+    </main>
+  );
+}
+
+function IllustratedCategory({
+  store,
+  category,
+  index,
+  onAddToCart,
+}: {
+  store: StoreData;
+  category: PublicCategory;
+  index: number;
+  onAddToCart: (item: PublicItem) => void;
+}) {
+  const featured = category.items.find((item) => item.imageUrl);
+  const reversed = index % 2 === 1;
+  return (
+    <section
+      id={`category-${category.id}`}
+      className={`grid items-start gap-8 border-t [border-color:color-mix(in_srgb,var(--store-accent)_35%,transparent)] pt-7 lg:grid-cols-[0.86fr_1.14fr] lg:gap-16 ${reversed ? "lg:[&>*:first-child]:order-2" : ""}`}
+    >
+      <div className="relative">
+        {featured?.imageUrl ? (
+          <img
+            src={featured.imageUrl}
+            alt={featured.name}
+            loading="lazy"
+            className="aspect-[4/3] w-full border [border-color:color-mix(in_srgb,var(--store-accent)_30%,transparent)] object-cover p-2 shadow-[0_24px_55px_color-mix(in_srgb,var(--store-text)_14%,transparent)]"
+          />
+        ) : (
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 320 220"
+            className="w-full text-[var(--store-accent)] opacity-45"
+          >
+            <path
+              d="M30 164c31-77 84-119 159-125 46 30 76 78 91 143-85 18-168 12-250-18Z"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+            />
+            <path
+              d="M70 155c35-47 76-74 124-81M100 177c39-31 83-46 132-45"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+            />
+          </svg>
+        )}
+        <span className="absolute -bottom-4 -right-2 bg-[var(--store-accent)] px-4 py-2 font-serif text-2xl font-black text-[var(--store-on-accent)]">
+          {String(index + 1).padStart(2, "0")}
+        </span>
+      </div>
+      <div>
+        <h2 className="break-words font-serif text-4xl font-black leading-[0.92] tracking-[-0.04em] sm:text-6xl">
+          {category.name}
+        </h2>
+        {category.items.length ? (
+          <div className="mt-7 divide-y [divide-color:color-mix(in_srgb,var(--store-text)_14%,transparent)]">
+            {category.items.map((item) => (
+              <IllustratedProduct
+                key={item.id}
+                item={item}
+                store={store}
+                onAddToCart={onAddToCart}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="mt-5 text-sm text-[var(--store-text)]/70">
+            No hay productos en esta categoría.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function IllustratedProduct({
+  item,
+  store,
+  onAddToCart,
+}: {
+  item: PublicItem;
+  store: StoreData;
+  onAddToCart: (item: PublicItem) => void;
+}) {
+  const { orderingOpen } = usePublicOrderCart();
+  const soldOut = isSoldOut(item);
   const orderingEnabled =
     orderingOpen &&
     (store.capabilities?.inStoreOrdering ||
@@ -532,309 +1295,1783 @@ function PosterMenuItem({
 
   return (
     <article
-      className={`group grid min-w-0 gap-4 rounded-[1.6rem] border-2 border-slate-900 bg-[#fffdf8] p-4 shadow-[3px_4px_0_rgba(23,32,51,0.85)] transition-transform hover:-translate-y-1 motion-reduce:transform-none motion-reduce:transition-none ${item.imageUrl ? "grid-cols-[minmax(0,1fr)_5.5rem] sm:grid-cols-[minmax(0,1fr)_7rem]" : ""} ${soldOut ? "opacity-60" : ""}`}
+      className={`grid grid-cols-[minmax(0,1fr)_auto] gap-5 py-5 ${soldOut ? "opacity-55" : ""}`}
     >
-      <div className={`min-w-0 ${imageOnRight ? "order-2" : ""}`}>
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="break-words text-lg font-black leading-tight tracking-[-0.025em]">
-            {item.name}
-          </h3>
-          <span className="shrink-0 rounded-full bg-slate-900 px-2.5 py-1 text-xs font-black text-white">
-            {formatPrice(item.price, store.currency)}
-          </span>
-        </div>
+      <div className="min-w-0">
+        <h3 className="break-words text-lg font-black leading-tight">
+          {item.name}
+        </h3>
         {item.description && (
-          <p className="mt-2 break-words text-sm leading-5 text-slate-600">
+          <p className="mt-2 text-sm leading-6 text-[var(--store-text)]/70">
             {item.description}
           </p>
         )}
         {soldOut ? (
-          <p className="mt-3 text-sm font-black text-red-700">Agotado</p>
+          <p className="mt-3 text-sm font-black text-rose-700">Agotado</p>
         ) : (
           orderingEnabled && (
             <button
               type="button"
               onClick={() => onAddToCart(item)}
-              className="mt-3 rounded-full border-2 border-slate-900 bg-[#f6d86b] px-3 py-1.5 text-xs font-black text-slate-900 transition hover:bg-[var(--store-accent)]/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-2"
+              className="mt-3 text-sm font-black text-[var(--store-text)] underline decoration-[var(--store-accent)] decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--store-accent)]/35"
             >
-              Agregar
+              Agregar al pedido
             </button>
           )
         )}
       </div>
-      {item.imageUrl && (
-        <img
-          src={item.imageUrl}
-          alt={item.name}
-          className={`aspect-square min-h-[5.5rem] w-full self-center border-2 border-slate-900 object-cover shadow-[2px_3px_0_rgba(23,32,51,0.8)] sm:min-h-[7rem] ${imageOnRight ? "order-1 rounded-[62%_38%_58%_42%]" : "rounded-[38%_62%_42%_58%]"}`}
-          loading="lazy"
-        />
-      )}
+      <span className="shrink-0 font-serif text-lg font-bold text-[var(--store-text)] tabular-nums">
+        {formatPrice(item.price, store.currency)}
+      </span>
     </article>
   );
 }
 
-function MinimalInfoFooter({
+function IllustratedNav({ store }: { store: StoreContentModel }) {
+  if (!store.navigation.length) return null;
+
+  return (
+    <nav aria-label="Categorías" className="flex gap-2 overflow-x-auto pb-2">
+      {store.navigation.map((category) => (
+        <a
+          key={category.id}
+          href={`#category-${category.id}`}
+          className="shrink-0 border-b-2 border-[#bd4d73]/35 px-1 py-2 text-sm font-black text-[#6f4154] transition hover:border-[#bd4d73] hover:text-[#221d21] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#bd4d73]/35"
+        >
+          {category.label}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+function IllustratedFooter({
   store,
   schedule,
-}: {
-  store: StoreData;
-  schedule: ScheduleEntry[];
-}) {
+}: Pick<StoreViewProps, "store" | "schedule">) {
+  const contact = store.contact;
+  const location = getValidLocation(store.location);
+  const hasContact = Boolean(
+    contact?.whatsapp || contact?.instagram || contact?.address || location,
+  );
+  if (!schedule.length && !hasContact) return null;
+
   return (
-    <footer className="border-t-4 border-slate-900 bg-[#bcebe2] px-4 py-8 sm:px-8 sm:py-10 lg:px-12">
-      <div className="grid gap-4 md:grid-cols-2">
-        <ContactActions store={store} variant="minimal" />
-        <ScheduleCard schedule={schedule} variant="minimal" />
-      </div>
-      <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-slate-900/20 pt-5 text-sm font-medium text-slate-700">
-        <span>
-          {store.contact?.address || "Hecho para compartir buenos momentos."}
-        </span>
-        <span>
-          © {new Date().getFullYear()} {store.name}
-        </span>
+    <footer className="relative overflow-hidden border-t [border-color:color-mix(in_srgb,var(--store-accent)_35%,transparent)] [background-color:color-mix(in_srgb,var(--store-accent)_16%,var(--store-bg))] px-5 py-12 sm:px-10 lg:px-16 lg:py-20">
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 240 150"
+        className="absolute -right-10 top-4 w-64 text-[var(--store-accent)] opacity-25"
+      >
+        <path
+          d="M20 124c34-73 91-108 172-103 21 42 18 81-9 116M54 121c38-42 81-69 129-79M91 126c36-25 72-40 108-45"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+      </svg>
+      <div className="relative mx-auto max-w-7xl">
+        <h2 className="max-w-2xl font-serif text-4xl font-black leading-[0.92] tracking-[-0.04em] sm:text-6xl">
+          Colofón de visita
+        </h2>
+        <div className="mt-10 grid gap-10 lg:grid-cols-[0.72fr_1.28fr]">
+          <section aria-labelledby="illustrated-hours">
+            <h3
+              id="illustrated-hours"
+              className="border-b [border-color:color-mix(in_srgb,var(--store-accent)_35%,transparent)] pb-3 text-xl font-black"
+            >
+              Horarios
+            </h3>
+            {schedule.length ? (
+              <dl className="divide-y [divide-color:color-mix(in_srgb,var(--store-text)_14%,transparent)]">
+                {schedule.map(([day, value]) => (
+                  <div
+                    key={day}
+                    className="flex justify-between gap-4 py-3 text-sm"
+                  >
+                    <dt className="font-bold">{formatDayName(day)}</dt>
+                    <dd
+                      className={
+                        value === "closed"
+                          ? "font-black text-rose-700"
+                          : "font-black text-[var(--store-accent)]"
+                      }
+                    >
+                      {value === "closed"
+                        ? "Cerrado"
+                        : formatScheduleTime(value)}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="mt-4 text-sm text-[var(--store-text)]/70">
+                Consulta el horario directamente con el negocio.
+              </p>
+            )}
+          </section>
+          {hasContact && (
+            <section aria-labelledby="illustrated-contact">
+              <h3
+                id="illustrated-contact"
+                className="border-b [border-color:color-mix(in_srgb,var(--store-accent)_35%,transparent)] pb-3 text-xl font-black"
+              >
+                Contacto y ubicación
+              </h3>
+              <div className="mt-5 flex flex-wrap gap-3">
+                {contact?.whatsapp && (
+                  <a
+                    href={`https://wa.me/${contact.whatsapp.replace(/[^0-9]/g, "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-[var(--store-accent)] px-5 py-3 text-sm font-black text-[var(--store-on-accent)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--store-accent)]/35"
+                  >
+                    WhatsApp
+                  </a>
+                )}
+                {contact?.instagram && (
+                  <a
+                    href={`https://instagram.com/${contact.instagram.replace("@", "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="border [border-color:color-mix(in_srgb,var(--store-accent)_50%,transparent)] px-5 py-3 text-sm font-black focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--store-accent)]/35"
+                  >
+                    Instagram
+                  </a>
+                )}
+              </div>
+              {!location && contact?.address && (
+                <p className="mt-5 text-sm font-semibold text-[var(--store-text)]/70">
+                  {contact.address}
+                </p>
+              )}
+              {location && (
+                <div className="mt-6 grid overflow-hidden border [border-color:color-mix(in_srgb,var(--store-accent)_35%,transparent)] bg-[var(--store-surface)] lg:grid-cols-[1fr_auto]">
+                  <LocationMap
+                    location={location}
+                    className="h-64 w-full"
+                    title={`Ubicación de ${store.name}`}
+                  />
+                  <div className="flex max-w-xs flex-col justify-between gap-5 p-5">
+                    <p className="text-sm font-semibold text-[var(--store-text)]/70">
+                      {contact?.address || "Ubicación del negocio"}
+                    </p>
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm font-black text-[var(--store-accent)] underline decoration-2 underline-offset-4"
+                    >
+                      Abrir mapa
+                    </a>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+        </div>
       </div>
     </footer>
   );
 }
 
-function NaturalLayout(props: StoreViewProps) {
-  const { store, schedule, isOpen } = props;
+function BrasaLayout(props: StoreViewProps) {
+  const { store, schedule, isOpen, onAddToCart } = props;
+  const heroItem = store.items.find((item) => item.imageUrl);
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[var(--store-bg)] text-[var(--store-text)]">
-      <StoreHero
-        store={store}
-        isOpen={isOpen}
-        align="left"
-        badge="Fresco · Natural · Artesanal"
-        variant="natural"
-      />
-      <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
-        <div className="grid gap-6 lg:grid-cols-[19rem_1fr]">
-          <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-            <div className="rounded-[2rem] border border-white/80 bg-white/75 p-5 shadow-[0_18px_55px_rgba(6,78,59,0.10)] ring-1 ring-emerald-100/70 backdrop-blur">
-              <p className="text-xs font-black uppercase tracking-[0.28em] text-[var(--store-accent)]">
-                Del día
-              </p>
-              <p className="mt-3 text-2xl font-black leading-tight text-emerald-950">
-                Ingredientes frescos, preparados con calma.
-              </p>
-              <p className="mt-3 text-sm leading-6 text-emerald-900/70">
-                Una carta simple de leer, con secciones claras y productos
-                destacados sin ruido visual.
-              </p>
+    <main className="min-h-screen overflow-hidden bg-[#080808] text-[#fffaf0]">
+      <header
+        className={`relative isolate overflow-hidden border-b border-white/10 px-5 py-10 sm:px-10 lg:px-16 lg:py-16 ${heroItem ? "min-h-[46rem]" : "min-h-[30rem]"}`}
+      >
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[radial-gradient(circle_at_74%_35%,rgba(234,167,44,0.2),transparent_24%),linear-gradient(115deg,#080808_45%,#17120a)]"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute -left-24 top-1/3 h-72 w-72 rounded-full bg-[#f3c856]/10 blur-3xl"
+        />
+        <div
+          className={`relative mx-auto grid items-center gap-10 ${heroItem ? "max-w-7xl lg:grid-cols-[0.82fr_1.18fr]" : "max-w-5xl"}`}
+        >
+          <div className="relative z-10">
+            <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:justify-between">
+              {store.logoUrl && (
+                <div className="flex min-h-32 w-[min(24rem,88vw)] items-center justify-center border border-[#f3c856]/65 bg-[#fffaf0] px-5 py-4 shadow-[0_22px_55px_rgba(0,0,0,0.42)]">
+                  <img
+                    src={store.logoUrl}
+                    alt={`Logo de ${store.name}`}
+                    className="max-h-32 w-full object-contain [filter:drop-shadow(0_1px_1px_rgba(0,0,0,0.48))_drop-shadow(0_-1px_1px_rgba(255,255,255,0.5))]"
+                  />
+                </div>
+              )}
+              {isOpen !== null && (
+                <span
+                  className={`border px-3 py-2 text-xs font-black uppercase tracking-[0.14em] ${isOpen ? "border-emerald-300/45 text-emerald-200" : "border-rose-300/45 text-rose-200"}`}
+                >
+                  {isOpen ? "Abierto" : "Cerrado"}
+                </span>
+              )}
             </div>
-            <ContactActions store={store} variant="natural" />
-            <ScheduleCard schedule={schedule} variant="natural" />
-          </aside>
-          <CategoryNav store={store} />
-          <CategoryList store={store} variant="natural" />
+            <h1 className="mt-10 max-w-4xl break-words text-6xl font-black uppercase leading-[0.8] tracking-[-0.055em] [text-wrap:balance] sm:text-8xl lg:text-[7rem]">
+              {store.name}
+            </h1>
+            <div className="mt-8 h-3 w-44 -rotate-2 bg-[#f3c856]" />
+          </div>
+          {heroItem?.imageUrl && (
+            <div className="relative mx-auto w-full max-w-3xl">
+              <div
+                aria-hidden="true"
+                className="absolute -inset-10 bg-[#f3c856]/10 blur-3xl"
+              />
+              <img
+                src={heroItem.imageUrl}
+                alt={heroItem.name}
+                fetchPriority="high"
+                className="relative aspect-[4/5] max-h-[42rem] w-full object-cover shadow-[0_38px_90px_rgba(0,0,0,0.62)] [clip-path:polygon(8%_0,100%_0,92%_100%,0_94%)]"
+              />
+            </div>
+          )}
         </div>
+      </header>
+      <section className="px-5 py-10 sm:px-10 lg:px-16 lg:py-16">
+        <div className="mx-auto max-w-7xl">
+          <CategoryNav store={store} />
+          {store.categories.length ? (
+            <div className="mt-12 space-y-20 lg:space-y-28">
+              {store.categories.map((category, index) => (
+                <BrasaCategory
+                  key={category.id}
+                  store={store}
+                  category={category}
+                  index={index}
+                  onAddToCart={onAddToCart}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyMenu />
+          )}
+        </div>
+      </section>
+      <div className="mx-auto max-w-7xl">
+        <BrasaServiceDeck store={store} schedule={schedule} />
       </div>
-      <StoreFooter store={store} />
     </main>
   );
 }
 
-function WarmLayout(props: StoreViewProps) {
-  const { store, schedule, theme, isOpen, onAddToCart } = props;
-  const featured = getFeaturedItems(store);
-
+function BrasaCategory({
+  store,
+  category,
+  index,
+  onAddToCart,
+}: {
+  store: StoreData;
+  category: PublicCategory;
+  index: number;
+  onAddToCart: (item: PublicItem) => void;
+}) {
+  const featured = category.items.find((item) => item.imageUrl);
+  const reversed = index % 2 === 1;
   return (
-    <main className="min-h-screen overflow-hidden bg-[#17130f] text-[#271b13]">
-      <WarmHero
-        store={store}
-        theme={theme}
-        isOpen={isOpen}
-        featured={featured}
-        onAddToCart={onAddToCart}
-      />
-      <div className="relative mx-auto max-w-7xl px-4 pb-12 pt-8 sm:px-6 lg:px-8 lg:pt-12">
-        <div
-          aria-hidden="true"
-          className="absolute left-0 top-24 hidden h-72 w-72 rounded-full bg-[var(--store-accent)]/15 blur-3xl lg:block"
-        />
-        {store.categories.length ? (
-          <div className="relative space-y-8 lg:space-y-12">
-            <CategoryNav store={store} />
-            {store.categories.map((category, index) => (
-              <WarmCategoryChapter
-                key={category.id}
+    <section
+      id={`category-${category.id}`}
+      className={`grid items-center gap-8 lg:gap-16 ${featured ? "lg:grid-cols-[0.95fr_1.05fr]" : "max-w-4xl"} ${reversed && featured ? "lg:[&>*:first-child]:order-2" : ""}`}
+    >
+      {featured?.imageUrl && (
+        <div>
+          <img
+            src={featured.imageUrl}
+            alt={featured.name}
+            loading="lazy"
+            className="aspect-[5/4] w-full object-cover shadow-[0_28px_70px_rgba(0,0,0,0.5)] [clip-path:polygon(0_7%,94%_0,100%_92%,6%_100%)]"
+          />
+        </div>
+      )}
+      <div>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <h2 className="max-w-2xl break-words text-4xl font-black uppercase leading-[0.86] tracking-[-0.04em] sm:text-6xl">
+            {category.name}
+          </h2>
+          <span className="text-sm font-black text-[#f3c856]">
+            {category.items.length} opciones
+          </span>
+        </div>
+        {category.items.length ? (
+          <div className="mt-7 divide-y divide-white/10 border-y border-white/10">
+            {category.items.map((item) => (
+              <BrasaProduct
+                key={item.id}
+                item={item}
                 store={store}
-                category={category}
-                index={index}
                 onAddToCart={onAddToCart}
               />
             ))}
           </div>
         ) : (
-          <div className="relative">
-            <EmptyMenu />
-          </div>
+          <p className="mt-6 text-sm text-[#fffaf0]/65">
+            No hay productos en esta categoría.
+          </p>
         )}
-        <WarmServiceDeck store={store} schedule={schedule} />
       </div>
-      <footer className="border-t border-[#f6e7c7]/15 px-4 py-8 text-center text-sm text-[#f6e7c7]/60">
-        © {new Date().getFullYear()} {store.name}. Todos los derechos
-        reservados.
-      </footer>
-    </main>
+    </section>
   );
 }
 
-function WarmHero({
+function BrasaProduct({
+  item,
   store,
-  theme,
-  isOpen,
-  featured,
   onAddToCart,
 }: {
+  item: PublicItem;
   store: StoreData;
-  theme: ThemeConfig;
-  isOpen: boolean | null;
-  featured: PublicItem[];
   onAddToCart: (item: PublicItem) => void;
 }) {
   const { orderingOpen } = usePublicOrderCart();
-  const heroItem = featured.find((item) => item.imageUrl) || featured[0];
-  const supportingItems = featured
-    .filter((item) => item.id !== heroItem?.id)
-    .slice(0, 2);
-  const themeBadge = getThemeBadge(theme);
+  const soldOut = isSoldOut(item);
   const orderingEnabled =
     orderingOpen &&
     (store.capabilities?.inStoreOrdering ||
       store.capabilities?.deliveryOrdering);
 
   return (
-    <header className="relative isolate min-h-[38rem] overflow-hidden border-b border-[#f5dba3]/20 bg-[#17130f] px-4 pb-16 pt-5 text-[#fff8eb] sm:min-h-[42rem] sm:px-6 lg:min-h-[43rem] lg:px-8">
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(193,132,51,0.27),transparent_23%),radial-gradient(circle_at_17%_85%,rgba(111,50,20,0.34),transparent_35%)]"
-      />
-      <div
-        aria-hidden="true"
-        className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#17130f] to-transparent"
-      />
-      <div className="relative mx-auto max-w-7xl">
-        <div className="flex items-center justify-between gap-4 border-b border-[#f5dba3]/25 pb-4 text-[10px] font-bold uppercase tracking-[0.22em] text-[#f5dba3]/80 sm:text-xs">
-          <span>La mesa de la casa</span>
-          <span className="hidden sm:block">Cocina · Encuentro · Sabor</span>
-          {themeBadge && (
-            <span className="rounded-full border border-[var(--store-accent)]/50 bg-[var(--store-accent)]/15 px-3 py-1 text-[#fff8eb]">
-              {themeBadge}
-            </span>
-          )}
-        </div>
-        <div className="grid items-center gap-10 pt-12 lg:grid-cols-[0.78fr_1.22fr] lg:pt-16">
-          <div className="relative z-10 max-w-xl lg:pb-20">
-            {store.logoUrl && (
-              <img
-                src={store.logoUrl}
-                alt={`Logo de ${store.name}`}
-                className="mb-5 h-20 w-20 border border-[#f5dba3]/40 bg-[#fff8eb] object-contain p-1"
-              />
-            )}
-            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#f1c978]">
-              Cocina con carácter
+    <article
+      className={`grid gap-5 py-5 sm:grid-cols-[minmax(0,1fr)_auto_7rem] sm:items-center sm:gap-7 ${soldOut ? "opacity-55" : ""}`}
+    >
+      <div className="min-w-0">
+        <h3 className="break-words text-xl font-black leading-tight sm:text-2xl">
+          {item.name}
+        </h3>
+        {item.description && (
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#fffaf0]/65">
+            {item.description}
+          </p>
+        )}
+        {soldOut ? (
+          <p className="mt-3 text-sm font-black text-rose-300">Agotado</p>
+        ) : (
+          orderingEnabled && (
+            <button
+              type="button"
+              onClick={() => onAddToCart(item)}
+              className="mt-4 border-b-2 border-[#f3c856] pb-1 text-sm font-black text-[#f3c856] transition hover:text-[#fffaf0] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#f3c856]/45"
+            >
+              Agregar al pedido
+            </button>
+          )
+        )}
+      </div>
+      <p className="order-first text-xl font-black text-[#f3c856] sm:order-none sm:text-right">
+        {formatPrice(item.price, store.currency)}
+      </p>
+      {item.imageUrl ? (
+        <img
+          src={item.imageUrl}
+          alt={item.name}
+          className="h-28 w-28 rounded-full border-2 border-[var(--store-accent)] object-cover sm:h-28 sm:w-28"
+          loading="lazy"
+        />
+      ) : (
+        <div
+          aria-hidden="true"
+          className="hidden h-28 w-28 rounded-full border-2 border-dashed border-[var(--store-accent)]/60 sm:block"
+        />
+      )}
+    </article>
+  );
+}
+
+function BrasaServiceDeck({
+  store,
+  schedule,
+}: Pick<StoreViewProps, "store" | "schedule">) {
+  const hasContact = Boolean(
+    store.contact?.whatsapp ||
+      store.contact?.instagram ||
+      store.contact?.address ||
+      getValidLocation(store.location),
+  );
+
+  if (!hasContact && !schedule.length) return null;
+
+  return (
+    <section className="border-t border-white/15 px-5 py-10 sm:px-10 sm:py-14">
+      <h2 className="max-w-2xl text-4xl font-black uppercase leading-[0.88] tracking-[-0.04em] sm:text-6xl">
+        Visita {store.name}
+      </h2>
+      <div className="mt-5 h-2 w-32 -rotate-1 bg-[#f3c856]" />
+      <div className="mt-9 grid gap-10 lg:grid-cols-[0.7fr_1.3fr]">
+        <BrasaSchedule schedule={schedule} />
+        <BrasaContact store={store} />
+      </div>
+    </section>
+  );
+}
+
+function BrasaSchedule({ schedule }: { schedule: ScheduleEntry[] }) {
+  return (
+    <section
+      aria-labelledby="brasa-schedule-title"
+      className="border-y border-white/15 py-5"
+    >
+      <h3 id="brasa-schedule-title" className="text-xl font-black">
+        Horarios
+      </h3>
+      {schedule.length ? (
+        <dl className="mt-5 divide-y divide-white/10">
+          {schedule.map(([day, value]) => (
+            <div
+              key={day}
+              className="flex items-baseline justify-between gap-4 py-3 text-sm"
+            >
+              <dt className="font-bold">{formatDayName(day)}</dt>
+              <dd
+                className={
+                  value === "closed"
+                    ? "font-black text-rose-300"
+                    : "font-black text-[#f3c856]"
+                }
+              >
+                {value === "closed" ? "Cerrado" : formatScheduleTime(value)}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p className="mt-4 text-sm leading-6 text-[#fffaf0]/65">
+          Consulta la disponibilidad directamente con el negocio.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function BrasaContact({ store }: { store: StoreData }) {
+  const contact = store.contact;
+  const location = getValidLocation(store.location);
+  const hasContact =
+    contact?.whatsapp || contact?.instagram || contact?.address || location;
+
+  if (!hasContact) return null;
+
+  return (
+    <section aria-labelledby="brasa-contact-title">
+      <h3 id="brasa-contact-title" className="text-xl font-black">
+        Contacto y ubicación
+      </h3>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        {contact?.whatsapp && (
+          <a
+            href={`https://wa.me/${contact.whatsapp.replace(/[^0-9]/g, "")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="border border-[#f3c856] bg-[#f3c856] px-5 py-4 text-center text-sm font-black text-[#111111] transition hover:-translate-y-0.5 hover:bg-[#fffaf0] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#f3c856]/45 motion-reduce:transform-none motion-reduce:transition-none"
+          >
+            Escribir por WhatsApp
+          </a>
+        )}
+        {contact?.instagram && (
+          <a
+            href={`https://instagram.com/${contact.instagram.replace("@", "")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="border border-white/25 px-5 py-4 text-center text-sm font-black transition hover:-translate-y-0.5 hover:border-[#f3c856] hover:text-[#f3c856] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#f3c856]/45 motion-reduce:transform-none motion-reduce:transition-none"
+          >
+            Ver Instagram
+          </a>
+        )}
+      </div>
+      {!location && contact?.address && (
+        <p className="mt-5 text-sm font-semibold text-[#fffaf0]/70">
+          {contact.address}
+        </p>
+      )}
+      {location && (
+        <div className="mt-5 overflow-hidden border border-white/20 bg-[#151515] p-2 shadow-[0_18px_38px_rgba(0,0,0,0.35)]">
+          <LocationMap
+            location={location}
+            className="h-64 w-full"
+            title={`Ubicación de ${store.name}`}
+          />
+          <div className="flex flex-col gap-3 px-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-semibold text-[#fffaf0]/70">
+              {contact?.address || "Ubicación del negocio"}
             </p>
-            <h1 className="mt-5 break-words font-serif text-5xl font-semibold leading-[0.9] tracking-[-0.055em] [text-wrap:balance] sm:text-7xl lg:text-8xl">
-              {store.name}
-            </h1>
-            <div className="mt-7 flex flex-wrap items-center gap-2 text-sm">
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 text-sm font-black text-[#f3c856] underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#f3c856]/45"
+            >
+              Abrir en Google Maps
+            </a>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ConfettiLayout(props: StoreViewProps) {
+  const { store, schedule, isOpen, onAddToCart } = props;
+  const heroItem = store.items.find((item) => item.imageUrl);
+
+  return (
+    <main className="min-h-screen overflow-hidden bg-[var(--store-bg)] text-[var(--store-text)]">
+      <header
+        className={`relative isolate overflow-hidden px-5 pb-14 pt-24 sm:px-10 lg:px-16 lg:pb-20 lg:pt-32 ${heroItem ? "min-h-[42rem]" : "min-h-[30rem]"}`}
+      >
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 flex h-20 gap-2 px-2 sm:h-28"
+        >
+          {[
+            "bg-[var(--store-accent)]",
+            "bg-[var(--store-accent-secondary)]",
+            "bg-[var(--store-accent-tertiary)]",
+            "bg-[var(--store-accent-secondary)]",
+            "bg-[var(--store-accent)]",
+          ].map((colorClass, index) => (
+            <span
+              key={index}
+              className={`flex-1 rounded-b-[2.5rem] ${colorClass}`}
+            />
+          ))}
+        </div>
+        <div
+          className={`relative mx-auto grid items-center gap-10 ${heroItem ? "max-w-7xl lg:grid-cols-[1.05fr_0.95fr]" : "max-w-5xl"}`}
+        >
+          <div className="relative z-10">
+            <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center">
+              {store.logoUrl && (
+                <div className="relative flex min-h-32 w-[min(23rem,88vw)] -rotate-2 items-center justify-center rounded-[2rem] border-[0.45rem] border-white bg-white px-5 py-4 shadow-[0_20px_45px_rgba(58,35,54,0.2)]">
+                  <span
+                    aria-hidden="true"
+                    className="absolute -right-4 -top-4 h-8 w-8 rounded-full bg-[var(--store-accent-tertiary)]"
+                  />
+                  <img
+                    src={store.logoUrl}
+                    alt={`Logo de ${store.name}`}
+                    className="max-h-32 w-full object-contain [filter:drop-shadow(0_1px_1px_rgba(0,0,0,0.48))_drop-shadow(0_-1px_1px_rgba(255,255,255,0.5))]"
+                  />
+                </div>
+              )}
               {isOpen !== null && (
                 <span
-                  className={`rounded-full border px-3 py-1.5 font-bold ${isOpen ? "border-emerald-300/45 bg-emerald-200/10 text-emerald-100" : "border-red-300/40 bg-red-200/10 text-red-100"}`}
+                  className={`rounded-full px-4 py-2 text-xs font-black uppercase tracking-[0.12em] ${isOpen ? "bg-emerald-100 text-emerald-900" : "bg-rose-100 text-rose-900"}`}
                 >
                   {isOpen ? "Abierto ahora" : "Cerrado ahora"}
                 </span>
               )}
-              {store.contact?.address && (
-                <span className="max-w-full truncate text-[#f6e7c7]/75">
-                  {store.contact.address}
-                </span>
-              )}
             </div>
-            <p className="mt-8 max-w-md text-base leading-7 text-[#f6e7c7]/75">
-              Una carta pensada para sentarse, compartir y volver por ese plato
-              que se queda en la memoria.
-            </p>
-            {heroItem && orderingEnabled && !isSoldOut(heroItem) && (
-              <button
-                type="button"
-                onClick={() => onAddToCart(heroItem)}
-                className="mt-8 inline-flex items-center gap-3 rounded-full bg-[#f1c978] px-5 py-3 text-sm font-black text-[#1e150e] shadow-[0_12px_35px_rgba(0,0,0,0.35)] transition hover:-translate-y-0.5 hover:bg-[#ffd98a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#fff8eb] focus-visible:ring-offset-2 focus-visible:ring-offset-[#17130f] motion-reduce:transform-none motion-reduce:transition-none"
+            <h1 className="mt-8 max-w-4xl break-words text-6xl font-black leading-[0.82] tracking-[-0.055em] [text-wrap:balance] sm:text-8xl lg:text-[7rem]">
+              {store.name}
+            </h1>
+            <button
+              type="button"
+              onClick={() =>
+                document
+                  .getElementById("store-catalog")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
+              className="mt-9 rounded-full bg-[var(--store-accent)] px-6 py-3.5 text-sm font-black text-[var(--store-on-accent)] shadow-[0_16px_32px_color-mix(in_srgb,var(--store-accent)_30%,transparent)] transition hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--store-accent-secondary)] motion-reduce:transform-none motion-reduce:transition-none"
+            >
+              Explorar catálogo
+            </button>
+          </div>
+          {heroItem?.imageUrl && (
+            <div className="relative mx-auto w-full max-w-xl">
+              <div
+                aria-hidden="true"
+                className="absolute -inset-5 rotate-3 rounded-[42%_58%_63%_37%] bg-[var(--store-accent-secondary)]"
+              />
+              <img
+                src={heroItem.imageUrl}
+                alt={heroItem.name}
+                fetchPriority="high"
+                className="relative aspect-square w-full -rotate-2 rounded-[55%_45%_38%_62%] border-[0.65rem] border-white object-cover shadow-[0_28px_60px_rgba(58,35,54,0.24)]"
+              />
+            </div>
+          )}
+        </div>
+      </header>
+      <section
+        id="store-catalog"
+        className="px-4 py-12 sm:px-8 lg:px-12 lg:py-20"
+      >
+        <div className="mx-auto max-w-7xl">
+          <CategoryNav store={store} />
+          {store.categories.length ? (
+            <div className="mt-12 space-y-16 lg:space-y-24">
+              {store.categories.map((category, index) => (
+                <ConfettiCategory
+                  key={category.id}
+                  store={store}
+                  category={category}
+                  index={index}
+                  onAddToCart={onAddToCart}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyMenu />
+          )}
+        </div>
+      </section>
+      <ConfettiFooter store={store} schedule={schedule} />
+    </main>
+  );
+}
+
+function ConfettiCategory({
+  store,
+  category,
+  index,
+  onAddToCart,
+}: {
+  store: StoreData;
+  category: PublicCategory;
+  index: number;
+  onAddToCart: (item: PublicItem) => void;
+}) {
+  const featured = category.items.find((item) => item.imageUrl);
+  const reversed = index % 2 === 1;
+  const panelClass =
+    index % 3 === 0
+      ? "bg-[var(--store-accent-secondary)]"
+      : index % 3 === 1
+        ? "bg-[var(--store-accent)]"
+        : "bg-[var(--store-accent-tertiary)]";
+
+  return (
+    <section
+      id={`category-${category.id}`}
+      className={`grid items-center gap-7 lg:gap-12 ${featured ? "lg:grid-cols-[1.08fr_0.92fr]" : "max-w-4xl"} ${reversed && featured ? "lg:[&>*:first-child]:order-2" : ""}`}
+    >
+      <div className="relative overflow-hidden rounded-[2.5rem] bg-[var(--store-surface)] p-5 shadow-[0_24px_55px_color-mix(in_srgb,var(--store-text)_13%,transparent)] sm:p-8">
+        <div className={`absolute inset-x-0 top-0 h-5 ${panelClass}`} />
+        <div className="relative mt-3 flex flex-wrap items-end justify-between gap-4">
+          <h2 className="max-w-3xl break-words text-4xl font-black leading-[0.9] tracking-[-0.04em] sm:text-6xl">
+            {category.name}
+          </h2>
+          <span className="text-sm font-black text-[var(--store-muted)]">
+            {category.items.length}{" "}
+            {category.items.length === 1 ? "producto" : "productos"}
+          </span>
+        </div>
+        {category.items.length ? (
+          <div className="relative mt-7 divide-y [divide-color:color-mix(in_srgb,var(--store-text)_12%,transparent)]">
+            {category.items.map((item) => (
+              <ConfettiProduct
+                key={item.id}
+                item={item}
+                store={store}
+                onAddToCart={onAddToCart}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="mt-7 text-sm text-[var(--store-muted)]">
+            No hay productos en esta categoría.
+          </p>
+        )}
+      </div>
+      {featured?.imageUrl && (
+        <div className="relative mx-auto w-full max-w-lg">
+          <div
+            aria-hidden="true"
+            className={`absolute -inset-4 rotate-3 rounded-[42%_58%_51%_49%] ${panelClass} opacity-80`}
+          />
+          <img
+            src={featured.imageUrl}
+            alt={featured.name}
+            loading="lazy"
+            className="relative aspect-square w-full -rotate-2 rounded-[58%_42%_47%_53%] border-[0.55rem] border-white object-cover shadow-[0_24px_50px_rgba(58,35,54,0.2)]"
+          />
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ConfettiProduct({
+  item,
+  store,
+  onAddToCart,
+}: {
+  item: PublicItem;
+  store: StoreData;
+  onAddToCart: (item: PublicItem) => void;
+}) {
+  const { orderingOpen } = usePublicOrderCart();
+  const soldOut = isSoldOut(item);
+  const orderingEnabled =
+    orderingOpen &&
+    (store.capabilities?.inStoreOrdering ||
+      store.capabilities?.deliveryOrdering);
+
+  return (
+    <article
+      className={`grid grid-cols-[minmax(0,1fr)_auto] gap-4 py-4 ${soldOut ? "opacity-55" : ""}`}
+    >
+      <div className="min-w-0">
+        <h3 className="break-words text-lg font-black leading-tight">
+          {item.name}
+        </h3>
+        {item.description && (
+          <p className="mt-1 line-clamp-2 text-sm leading-5 text-[var(--store-muted)]">
+            {item.description}
+          </p>
+        )}
+      </div>
+      <div className="text-right">
+        <p className="font-black tabular-nums">
+          {formatPrice(item.price, store.currency)}
+        </p>
+        {soldOut ? (
+          <span className="mt-2 block text-xs font-black text-rose-700">
+            Agotado
+          </span>
+        ) : (
+          orderingEnabled && (
+            <button
+              type="button"
+              onClick={() => onAddToCart(item)}
+              className="mt-2 text-xs font-black underline decoration-[var(--store-accent)] decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--store-accent-secondary)]"
+            >
+              Agregar
+            </button>
+          )
+        )}
+      </div>
+    </article>
+  );
+}
+
+function ConfettiFooter({
+  store,
+  schedule,
+}: Pick<StoreViewProps, "store" | "schedule">) {
+  return (
+    <footer className="relative overflow-hidden border-t-2 [border-color:color-mix(in_srgb,var(--store-text)_10%,transparent)] [background-color:color-mix(in_srgb,var(--store-accent-secondary)_20%,transparent)] px-5 py-10 sm:px-10 sm:py-14">
+      <div
+        aria-hidden="true"
+        className="absolute -right-16 top-6 h-40 w-40 rounded-full border-[1.6rem] [border-color:color-mix(in_srgb,var(--store-accent)_28%,transparent)]"
+      />
+      <div className="relative mx-auto max-w-5xl">
+        <h2 className="max-w-xl text-3xl font-black leading-[0.95] tracking-[-0.04em] sm:text-5xl">
+          Encuéntranos cuando quieras.
+        </h2>
+        <p className="mt-4 max-w-2xl text-base leading-7 text-[var(--store-muted)]">
+          Consulta horarios, escríbenos o abre la ubicación para planear tu
+          visita.
+        </p>
+        <div className="mt-9 grid gap-8 lg:grid-cols-[0.72fr_1.28fr]">
+          <ConfettiSchedule schedule={schedule} />
+          <ConfettiContact store={store} />
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+function ConfettiSchedule({ schedule }: { schedule: ScheduleEntry[] }) {
+  return (
+    <section
+      aria-labelledby="confetti-schedule-title"
+      className="border-y-2 [border-color:color-mix(in_srgb,var(--store-text)_15%,transparent)] py-5"
+    >
+      <h3 id="confetti-schedule-title" className="text-xl font-black">
+        Horarios
+      </h3>
+      {schedule.length ? (
+        <dl className="mt-5 divide-y [divide-color:color-mix(in_srgb,var(--store-text)_12%,transparent)]">
+          {schedule.map(([day, value]) => (
+            <div
+              key={day}
+              className="flex items-baseline justify-between gap-4 py-3 text-sm"
+            >
+              <dt className="font-bold">{formatDayName(day)}</dt>
+              <dd
+                className={
+                  value === "closed"
+                    ? "font-black text-rose-700"
+                    : "font-black text-[var(--store-text)]"
+                }
               >
-                Pedir {heroItem.name}
-                <span aria-hidden="true">→</span>
-              </button>
+                {value === "closed" ? "Cerrado" : formatScheduleTime(value)}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p className="mt-4 text-sm leading-6 text-[var(--store-muted)]">
+          Consulta la disponibilidad directamente con el negocio.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function ConfettiContact({ store }: { store: StoreData }) {
+  const contact = store.contact;
+  const location = getValidLocation(store.location);
+  const hasContact =
+    contact?.whatsapp || contact?.instagram || contact?.address || location;
+
+  if (!hasContact) return null;
+
+  return (
+    <section aria-labelledby="confetti-contact-title">
+      <h3 id="confetti-contact-title" className="text-xl font-black">
+        Contacto y ubicación
+      </h3>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        {contact?.whatsapp && (
+          <a
+            href={`https://wa.me/${contact.whatsapp.replace(/[^0-9]/g, "")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-[1.35rem] bg-[var(--store-accent)] px-5 py-4 text-center text-sm font-black text-[var(--store-on-accent)] transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--store-accent-secondary)] motion-reduce:transform-none motion-reduce:transition-none"
+          >
+            Escribir por WhatsApp
+          </a>
+        )}
+        {contact?.instagram && (
+          <a
+            href={`https://instagram.com/${contact.instagram.replace("@", "")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-[1.35rem] border-2 [border-color:color-mix(in_srgb,var(--store-text)_18%,transparent)] bg-[var(--store-surface)] px-5 py-4 text-center text-sm font-black transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--store-accent-secondary)] motion-reduce:transform-none motion-reduce:transition-none"
+          >
+            Ver Instagram
+          </a>
+        )}
+      </div>
+      {!location && contact?.address && (
+        <p className="mt-5 text-sm font-semibold text-[var(--store-muted)]">
+          {contact.address}
+        </p>
+      )}
+      {location && (
+        <div className="mt-5 overflow-hidden rounded-[1.75rem] border-2 [border-color:color-mix(in_srgb,var(--store-text)_15%,transparent)] bg-[var(--store-surface)] p-2 shadow-[0_18px_38px_color-mix(in_srgb,var(--store-text)_14%,transparent)]">
+          <LocationMap
+            location={location}
+            className="h-64 w-full rounded-[1.25rem]"
+            title={`Ubicación de ${store.name}`}
+          />
+          <div className="flex flex-col gap-3 px-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-semibold text-[var(--store-muted)]">
+              {contact?.address || "Ubicación del negocio"}
+            </p>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 text-sm font-black underline decoration-[var(--store-accent)] decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--store-accent-secondary)]"
+            >
+              Abrir en Google Maps
+            </a>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function MinimalLayout(props: StoreViewProps) {
+  const { store, schedule, isOpen, onAddToCart } = props;
+  const itemCount = store.categories.reduce(
+    (count, category) => count + category.items.length,
+    0,
+  );
+  const heroItem = store.items.find((item) => item.imageUrl);
+
+  return (
+    <main className="min-h-screen bg-[var(--store-bg)] text-[var(--store-text)] selection:bg-[var(--store-accent)] selection:text-[var(--store-on-accent)]">
+      <MinimalHero
+        store={store}
+        isOpen={isOpen}
+        itemCount={itemCount}
+        heroItem={heroItem}
+      />
+      <section
+        id="minimal-catalog"
+        className="px-5 py-12 sm:px-10 lg:px-16 lg:py-20"
+      >
+        <div className="mx-auto max-w-7xl">
+          <MinimalCategoryNav store={store} />
+          {store.categories.length ? (
+            <div className="mt-14 space-y-20 lg:mt-20 lg:space-y-28">
+              {store.categories.map((category) => (
+                <MinimalCategorySection
+                  key={category.id}
+                  store={store}
+                  category={category}
+                  onAddToCart={onAddToCart}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyMenu />
+          )}
+        </div>
+      </section>
+      <MinimalServicePanel store={store} schedule={schedule} />
+    </main>
+  );
+}
+
+function MinimalHero({
+  store,
+  isOpen,
+  itemCount,
+  heroItem,
+}: {
+  store: StoreData;
+  isOpen: boolean | null;
+  itemCount: number;
+  heroItem?: PublicItem;
+}) {
+  return (
+    <header className="border-b border-[var(--store-text)]/20 px-5 py-8 sm:px-10 sm:py-12 lg:px-16">
+      <div className="mx-auto max-w-7xl">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--store-text)]/20 pb-4 text-sm">
+          <span>{itemCount} productos</span>
+          {isOpen !== null && (
+            <span className="inline-flex items-center gap-2 font-bold">
+              <span
+                aria-hidden="true"
+                className={`h-2 w-2 rounded-full ${isOpen ? "bg-emerald-600" : "bg-rose-700"}`}
+              />
+              {isOpen ? "Abierto ahora" : "Cerrado ahora"}
+            </span>
+          )}
+        </div>
+        <div
+          className={`grid items-end gap-10 pb-4 pt-12 sm:pt-16 ${heroItem ? "lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)]" : "max-w-5xl"}`}
+        >
+          <div className="min-w-0">
+            {store.logoUrl && (
+              <div className="mb-10 flex min-h-28 w-full max-w-sm items-center justify-start border-y border-[var(--store-text)]/25 py-5">
+                <img
+                  src={store.logoUrl}
+                  alt={`Logo de ${store.name}`}
+                  className="max-h-28 w-full object-contain object-left [filter:drop-shadow(0_1px_1px_rgba(0,0,0,0.48))_drop-shadow(0_-1px_1px_rgba(255,255,255,0.5))]"
+                />
+              </div>
+            )}
+            <h1 className="max-w-4xl break-words text-6xl font-semibold leading-[0.88] tracking-[-0.04em] [text-wrap:balance] sm:text-8xl">
+              {store.name}
+            </h1>
+            <button
+              type="button"
+              onClick={() =>
+                document
+                  .getElementById("minimal-catalog")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
+              className="mt-8 min-h-11 bg-[var(--store-text)] px-5 py-3 text-sm font-bold text-[var(--store-bg)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--store-accent)]/35"
+            >
+              Ver catálogo
+            </button>
+          </div>
+          {heroItem?.imageUrl && (
+            <figure className="border-t border-[var(--store-text)]/20 pt-4 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+              <img
+                src={heroItem.imageUrl}
+                alt={heroItem.name}
+                fetchPriority="high"
+                className="aspect-[4/3] w-full bg-[var(--store-surface)] object-contain"
+              />
+              <figcaption className="mt-3 grid gap-2 text-sm sm:flex sm:items-start sm:justify-between sm:gap-5">
+                <span className="break-words font-semibold">
+                  {heroItem.name}
+                </span>
+                <span className="tabular-nums sm:shrink-0">
+                  {formatPrice(heroItem.price, store.currency)}
+                </span>
+              </figcaption>
+            </figure>
+          )}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function MinimalCategoryNav({ store }: { store: StoreContentModel }) {
+  if (!store.categories.length) return null;
+  return (
+    <nav
+      aria-label="Categorías"
+      className="flex gap-6 overflow-x-auto border-b border-[var(--store-text)]/20 pb-4 text-sm"
+    >
+      {store.categories.map((category) => (
+        <a
+          key={category.id}
+          href={`#category-${category.id}`}
+          className="shrink-0 font-semibold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]"
+        >
+          {category.name}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+function MinimalCategorySection({
+  store,
+  category,
+  onAddToCart,
+}: {
+  store: StoreData;
+  category: PublicCategory;
+  onAddToCart: (item: PublicItem) => void;
+}) {
+  return (
+    <section
+      id={`category-${category.id}`}
+      className="scroll-mt-8 border-t border-[var(--store-text)]/30 pt-6 lg:grid lg:grid-cols-[minmax(12rem,0.48fr)_minmax(0,1.52fr)] lg:gap-16 lg:pt-8"
+    >
+      <div className="mb-8 lg:mb-0">
+        <h2 className="max-w-md break-words text-4xl font-semibold leading-[0.95] tracking-[-0.04em] sm:text-5xl">
+          {category.name}
+        </h2>
+        <p className="mt-3 text-sm text-[var(--store-muted)]">
+          {category.items.length}{" "}
+          {category.items.length === 1 ? "producto" : "productos"}
+        </p>
+      </div>
+      {category.items.length ? (
+        <div className="divide-y divide-[var(--store-text)]/15 border-b border-[var(--store-text)]/20">
+          {category.items.map((item) => (
+            <MinimalProduct
+              key={item.id}
+              item={item}
+              store={store}
+              onAddToCart={onAddToCart}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className="border-y border-[var(--store-text)]/20 py-6 text-sm text-[var(--store-muted)]">
+          No hay productos en esta categoría.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function MinimalProduct({
+  item,
+  store,
+  onAddToCart,
+}: {
+  item: PublicItem;
+  store: StoreData;
+  onAddToCart: (item: PublicItem) => void;
+}) {
+  const { orderingOpen } = usePublicOrderCart();
+  const soldOut = isSoldOut(item);
+  const orderingEnabled =
+    orderingOpen &&
+    (store.capabilities?.inStoreOrdering ||
+      store.capabilities?.deliveryOrdering);
+
+  return (
+    <article
+      className={`grid gap-4 py-6 sm:gap-6 ${item.imageUrl ? "sm:grid-cols-[6rem_minmax(0,1fr)_auto]" : "sm:grid-cols-[minmax(0,1fr)_auto]"}`}
+    >
+      {item.imageUrl && (
+        <img
+          src={item.imageUrl}
+          alt={item.name}
+          loading="lazy"
+          className={`aspect-square w-24 bg-[var(--store-surface)] object-contain ${soldOut ? "opacity-45" : ""}`}
+        />
+      )}
+      <div className="min-w-0">
+        <h3 className="break-words text-xl font-semibold leading-tight">
+          {item.name}
+        </h3>
+        {item.description && (
+          <p className="mt-2 max-w-2xl break-words text-sm leading-6 text-[var(--store-muted)]">
+            {item.description}
+          </p>
+        )}
+      </div>
+      <div className="flex flex-col items-start gap-2 sm:block sm:min-w-28 sm:text-right">
+        <p className="font-semibold tabular-nums">
+          {formatPrice(item.price, store.currency)}
+        </p>
+        {soldOut ? (
+          <p className="text-sm font-bold text-[var(--store-text)] sm:mt-3">
+            Agotado
+          </p>
+        ) : (
+          orderingEnabled && (
+            <button
+              type="button"
+              onClick={() => onAddToCart(item)}
+              className="min-h-11 border-b-2 border-[var(--store-accent)] px-1 text-sm font-bold focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--store-accent)]/35 sm:mt-3"
+            >
+              Agregar
+            </button>
+          )
+        )}
+      </div>
+    </article>
+  );
+}
+
+function MinimalServicePanel({
+  store,
+  schedule,
+}: {
+  store: StoreData;
+  schedule: ScheduleEntry[];
+}) {
+  const contact = store.contact;
+  const location = getValidLocation(store.location);
+  const hasContact = Boolean(
+    contact?.whatsapp || contact?.instagram || contact?.address,
+  );
+
+  return (
+    <footer className="border-t border-[var(--store-text)]/20 bg-[var(--store-text)] px-5 py-14 text-[var(--store-bg)] sm:px-10 lg:px-16 lg:py-20">
+      <div className="mx-auto max-w-7xl">
+        {(schedule.length > 0 || hasContact) && (
+          <div className="grid gap-12 lg:grid-cols-2 lg:gap-20">
+            {schedule.length > 0 && (
+              <section>
+                <h2 className="text-2xl font-semibold">Horarios</h2>
+                <dl className="mt-6 divide-y divide-[var(--store-bg)]/15 border-y border-[var(--store-bg)]/20">
+                  {schedule.map(([day, value]) => (
+                    <div
+                      key={day}
+                      className="flex justify-between gap-5 py-3 text-sm"
+                    >
+                      <dt>{formatDayName(day)}</dt>
+                      <dd className="text-right font-semibold">
+                        {value === "closed"
+                          ? "Cerrado"
+                          : formatScheduleTime(value)}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            )}
+            {hasContact && (
+              <section>
+                <h2 className="text-2xl font-semibold">Contacto</h2>
+                <div className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-sm">
+                  {contact?.whatsapp && (
+                    <a
+                      href={`https://wa.me/${contact.whatsapp.replace(/[^0-9]/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline decoration-[var(--store-accent)] decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]"
+                    >
+                      WhatsApp
+                    </a>
+                  )}
+                  {contact?.instagram && (
+                    <a
+                      href={`https://instagram.com/${contact.instagram.replace("@", "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline decoration-[var(--store-accent)] decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]"
+                    >
+                      Instagram
+                    </a>
+                  )}
+                </div>
+                {contact?.address && (
+                  <p className="mt-5 max-w-xl break-words text-sm leading-6 text-[var(--store-bg)]/75">
+                    {contact.address}
+                  </p>
+                )}
+              </section>
             )}
           </div>
-          <div className="relative mx-auto w-full max-w-2xl pb-4 pt-2 lg:pb-0">
-            <div
-              aria-hidden="true"
-              className="absolute -right-8 top-4 h-[82%] w-[72%] border border-[#f5dba3]/25 bg-[#261b13] sm:-right-12"
-            />
-            <article className="relative w-[83%] overflow-hidden border border-[#f5dba3]/40 bg-[#2a1b12] p-2 shadow-[0_30px_70px_rgba(0,0,0,0.5)] sm:p-3">
-              {heroItem?.imageUrl ? (
-                <img
-                  src={heroItem.imageUrl}
-                  alt={heroItem.name}
-                  className="aspect-[4/5] w-full object-cover"
-                  fetchPriority="high"
-                />
-              ) : (
-                <img
-                  src={withBasePath("/menu-art-placeholder.svg")}
-                  alt="Especialidades de la casa"
-                  className="aspect-[4/5] w-full object-cover"
-                />
-              )}
-              <div className="absolute inset-x-2 bottom-2 bg-gradient-to-t from-[#170f0a]/90 via-[#170f0a]/35 to-transparent p-5 sm:inset-x-3 sm:bottom-3 sm:p-7">
-                <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-[#f3d48f]">
-                  Selección del chef
-                </p>
-                <p className="mt-2 text-2xl font-semibold text-white sm:text-3xl">
-                  {heroItem?.name || "Especial de la casa"}
-                </p>
-                {heroItem && (
-                  <p className="mt-1 text-sm font-bold text-[#f3d48f]">
-                    {formatPrice(heroItem.price, store.currency)}
-                  </p>
-                )}
-              </div>
-            </article>
-            {supportingItems.map((item, index) => (
-              <article
-                key={item.id}
-                className={`absolute z-10 hidden w-[40%] overflow-hidden border border-[#f5dba3]/40 bg-[#f7efe0] p-1.5 text-[#271b13] shadow-[0_22px_45px_rgba(0,0,0,0.45)] sm:block ${index === 0 ? "right-0 top-[13%] rotate-[7deg]" : "bottom-0 right-[7%] -rotate-[5deg]"}`}
+        )}
+        {location && (
+          <section className="mt-12 border-t border-[var(--store-bg)]/20 pt-7">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <h2 className="text-2xl font-semibold">Ubicación</h2>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-bold underline decoration-[var(--store-accent)] decoration-2 underline-offset-4"
               >
-                {item.imageUrl ? (
-                  <img
-                    src={item.imageUrl}
-                    alt={item.name}
-                    className="aspect-[4/3] w-full object-cover"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="aspect-[4/3] bg-[var(--store-accent)]/20" />
+                Abrir en Google Maps
+              </a>
+            </div>
+            <LocationMap
+              location={location}
+              className="h-64 w-full sm:h-80"
+              title={`Ubicación de ${store.name}`}
+            />
+          </section>
+        )}
+        <div className="mt-12 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--store-bg)]/20 pt-5 text-sm">
+          <span>{store.name}</span>
+          <span>© {new Date().getFullYear()}</span>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+function NaturalLayout(props: StoreViewProps) {
+  const { store, schedule, isOpen, onAddToCart } = props;
+  const heroItem =
+    store.items.find((item) => item.imageUrl && !isSoldOut(item)) ||
+    store.items.find((item) => item.imageUrl);
+
+  return (
+    <main className="min-h-screen bg-[var(--store-bg)] text-[var(--store-text)] selection:bg-[var(--store-accent)] selection:text-[var(--store-on-accent)]">
+      <NaturalHero store={store} isOpen={isOpen} heroItem={heroItem} />
+      <NaturalCategoryNav store={store} />
+      <section
+        id="natural-catalog"
+        className="px-5 py-16 sm:px-10 lg:px-16 lg:py-24"
+      >
+        <div className="mx-auto max-w-7xl">
+          {store.categories.length ? (
+            <div className="space-y-24 lg:space-y-32">
+              {store.categories.map((category, index) => (
+                <NaturalCategory
+                  key={category.id}
+                  store={store}
+                  category={category}
+                  index={index}
+                  onAddToCart={onAddToCart}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyMenu />
+          )}
+        </div>
+      </section>
+      <NaturalServicePanel store={store} schedule={schedule} />
+    </main>
+  );
+}
+
+function NaturalHero({
+  store,
+  isOpen,
+  heroItem,
+}: {
+  store: StoreData;
+  isOpen: boolean | null;
+  heroItem?: PublicItem;
+}) {
+  return (
+    <header className="relative isolate overflow-hidden border-b border-[var(--store-text)]/15 px-5 py-10 sm:px-10 sm:py-14 lg:px-16 lg:py-20">
+      <NaturalBotanicalLines className="pointer-events-none absolute -left-20 -top-16 h-80 w-80 -rotate-12 text-[var(--store-accent)] opacity-20" />
+      <NaturalBotanicalLines className="pointer-events-none absolute -bottom-32 -right-24 h-96 w-96 rotate-[145deg] text-[var(--store-accent-secondary)] opacity-15" />
+      <div
+        className={`relative mx-auto grid max-w-7xl items-center gap-12 ${heroItem ? "lg:grid-cols-[minmax(0,0.92fr)_minmax(22rem,1.08fr)]" : "max-w-5xl"}`}
+      >
+        <div className="min-w-0">
+          {store.logoUrl && (
+            <div className="mb-10 flex min-h-32 w-full max-w-md items-center justify-start border-y [border-color:color-mix(in_srgb,var(--store-accent)_45%,transparent)] bg-[var(--store-surface)]/80 px-6 py-5 shadow-[0_20px_55px_color-mix(in_srgb,var(--store-text)_10%,transparent)]">
+              <img
+                src={store.logoUrl}
+                alt={`Logo de ${store.name}`}
+                className="max-h-32 w-full object-contain object-left [filter:drop-shadow(0_1px_1px_rgba(0,0,0,0.48))_drop-shadow(0_-1px_1px_rgba(255,255,255,0.5))]"
+              />
+            </div>
+          )}
+          <h1 className="max-w-4xl break-words text-6xl font-semibold leading-[0.88] tracking-[-0.04em] [text-wrap:balance] sm:text-8xl">
+            {store.name}
+          </h1>
+          <div className="mt-8 flex flex-wrap items-center gap-4">
+            {isOpen !== null && (
+              <span className="inline-flex min-h-11 items-center gap-2 border border-[var(--store-text)]/30 bg-[var(--store-surface)] px-4 py-2 text-sm font-bold">
+                <span
+                  aria-hidden="true"
+                  className={`h-2.5 w-2.5 rounded-full ${isOpen ? "bg-emerald-600" : "bg-rose-700"}`}
+                />
+                {isOpen ? "Abierto ahora" : "Cerrado ahora"}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={() =>
+                document
+                  .getElementById("natural-catalog")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
+              className="min-h-11 bg-[var(--store-text)] px-5 py-3 text-sm font-bold text-[var(--store-bg)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--store-accent)]/35"
+            >
+              Explorar catálogo
+            </button>
+          </div>
+        </div>
+        {heroItem?.imageUrl && (
+          <figure className="relative border border-[var(--store-text)]/15 bg-[var(--store-surface)] p-3 shadow-[0_30px_80px_color-mix(in_srgb,var(--store-text)_16%,transparent)] sm:p-5">
+            <NaturalBotanicalLines className="pointer-events-none absolute -bottom-10 -left-12 h-36 w-36 rotate-12 text-[var(--store-accent)] opacity-35" />
+            <img
+              src={heroItem.imageUrl}
+              alt={heroItem.name}
+              fetchPriority="high"
+              className="relative aspect-[4/3] w-full object-contain"
+            />
+            <figcaption className="relative mt-4 grid gap-2 border-t border-[var(--store-text)]/15 pt-4 text-sm sm:flex sm:items-start sm:justify-between sm:gap-5">
+              <span className="break-words font-semibold">{heroItem.name}</span>
+              <span className="grid gap-1 tabular-nums sm:shrink-0 sm:text-right">
+                {formatPrice(heroItem.price, store.currency)}
+                {isSoldOut(heroItem) && (
+                  <strong className="text-xs">Agotado</strong>
                 )}
-                <div className="p-3">
-                  <p className="truncate font-serif text-lg font-semibold">
-                    {item.name}
-                  </p>
-                  <p className="mt-1 text-xs font-bold text-[#80551e]">
-                    {formatPrice(item.price, store.currency)}
-                  </p>
+              </span>
+            </figcaption>
+          </figure>
+        )}
+      </div>
+    </header>
+  );
+}
+
+function NaturalBotanicalLines({ className }: { className: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 260 320" className={className}>
+      <path
+        d="M126 305C119 217 128 126 183 18M132 244c-50-10-84-43-96-92 48 2 85 24 105 66M151 174c7-51 34-89 79-113 7 48-9 91-57 124M121 278c-39 3-71-12-96-45 35-15 72-6 99 21"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function NaturalCategoryNav({ store }: { store: StoreContentModel }) {
+  if (!store.categories.length) return null;
+  return (
+    <nav
+      aria-label="Categorías"
+      className="sticky top-0 z-30 border-b border-[var(--store-text)]/15 bg-[var(--store-bg)]/95 px-5 py-4 backdrop-blur-sm sm:px-10 lg:px-16"
+    >
+      <div className="mx-auto flex max-w-7xl gap-6 overflow-x-auto pb-1 text-sm">
+        {store.categories.map((category) => (
+          <a
+            key={category.id}
+            href={`#category-${category.id}`}
+            className="shrink-0 font-semibold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]"
+          >
+            {category.name}
+          </a>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+function NaturalCategory({
+  store,
+  category,
+  index,
+  onAddToCart,
+}: {
+  store: StoreData;
+  category: PublicCategory;
+  index: number;
+  onAddToCart: (item: PublicItem) => void;
+}) {
+  return (
+    <section
+      id={`category-${category.id}`}
+      className="relative scroll-mt-24 border-t border-[var(--store-text)]/20 pt-8 lg:grid lg:grid-cols-[minmax(13rem,0.45fr)_minmax(0,1.55fr)] lg:gap-16"
+    >
+      <div className="relative mb-10 lg:mb-0">
+        <NaturalBotanicalLines
+          className={`pointer-events-none absolute -left-12 top-12 h-40 w-40 text-[var(--store-accent)] opacity-15 ${index % 2 ? "-scale-x-100" : ""}`}
+        />
+        <div className="relative">
+          <h2 className="max-w-md break-words text-4xl font-semibold leading-[0.95] tracking-[-0.04em] sm:text-5xl">
+            {category.name}
+          </h2>
+          <p className="mt-4 text-sm text-[var(--store-text)]">
+            {category.items.length}{" "}
+            {category.items.length === 1 ? "producto" : "productos"}
+          </p>
+        </div>
+      </div>
+      {category.items.length ? (
+        <div className="grid gap-x-8 gap-y-10 md:grid-cols-2">
+          {category.items.map((item) => (
+            <NaturalProduct
+              key={item.id}
+              item={item}
+              store={store}
+              onAddToCart={onAddToCart}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className="border-y border-[var(--store-text)]/20 py-6 text-sm text-[var(--store-text)]">
+          No hay productos en esta categoría.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function NaturalProduct({
+  item,
+  store,
+  onAddToCart,
+}: {
+  item: PublicItem;
+  store: StoreData;
+  onAddToCart: (item: PublicItem) => void;
+}) {
+  const { orderingOpen } = usePublicOrderCart();
+  const soldOut = isSoldOut(item);
+  const orderingEnabled =
+    orderingOpen &&
+    (store.capabilities?.inStoreOrdering ||
+      store.capabilities?.deliveryOrdering);
+  return (
+    <article className="border-t border-[var(--store-text)]/25 pt-5">
+      {item.imageUrl && (
+        <img
+          src={item.imageUrl}
+          alt={item.name}
+          loading="lazy"
+          className={`mb-5 aspect-[4/3] w-full bg-[var(--store-surface)] object-contain ${soldOut ? "opacity-45" : ""}`}
+        />
+      )}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h3 className="break-words text-xl font-semibold leading-tight">
+            {item.name}
+          </h3>
+          {item.description && (
+            <p className="mt-2 break-words text-sm leading-6 text-[var(--store-text)]">
+              {item.description}
+            </p>
+          )}
+        </div>
+        <p className="shrink-0 font-semibold tabular-nums">
+          {formatPrice(item.price, store.currency)}
+        </p>
+      </div>
+      {soldOut ? (
+        <p className="mt-4 text-sm font-bold">Agotado</p>
+      ) : (
+        orderingEnabled && (
+          <button
+            type="button"
+            onClick={() => onAddToCart(item)}
+            className="mt-4 min-h-11 border-b-2 border-[var(--store-accent)] px-1 text-sm font-bold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--store-accent)]/35"
+          >
+            Agregar
+          </button>
+        )
+      )}
+    </article>
+  );
+}
+
+function NaturalServicePanel({
+  store,
+  schedule,
+}: Pick<StoreViewProps, "store" | "schedule">) {
+  const contact = store.contact;
+  const location = getValidLocation(store.location);
+  const hasContact = Boolean(
+    contact?.whatsapp || contact?.instagram || contact?.address,
+  );
+  return (
+    <footer className="relative isolate overflow-hidden border-t border-[var(--store-text)]/15 bg-[var(--store-surface)] px-5 py-16 sm:px-10 lg:px-16 lg:py-24">
+      <NaturalBotanicalLines className="pointer-events-none absolute -bottom-28 -right-16 h-96 w-96 rotate-[160deg] text-[var(--store-accent)] opacity-10" />
+      <div className="relative mx-auto max-w-7xl">
+        {(schedule.length > 0 || hasContact) && (
+          <div className="grid gap-14 lg:grid-cols-2 lg:gap-20">
+            {schedule.length > 0 && (
+              <section>
+                <h2 className="text-3xl font-semibold">Horarios</h2>
+                <dl className="mt-6 divide-y divide-[var(--store-text)]/15 border-y border-[var(--store-text)]/20">
+                  {schedule.map(([day, value]) => (
+                    <div
+                      key={day}
+                      className="flex justify-between gap-5 py-3 text-sm"
+                    >
+                      <dt>{formatDayName(day)}</dt>
+                      <dd className="text-right font-semibold">
+                        {value === "closed"
+                          ? "Cerrado"
+                          : formatScheduleTime(value)}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            )}
+            {hasContact && (
+              <section>
+                <h2 className="text-3xl font-semibold">Contacto</h2>
+                <div className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-sm">
+                  {contact?.whatsapp && (
+                    <a
+                      href={`https://wa.me/${contact.whatsapp.replace(/[^0-9]/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline decoration-[var(--store-accent)] decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]"
+                    >
+                      WhatsApp
+                    </a>
+                  )}
+                  {contact?.instagram && (
+                    <a
+                      href={`https://instagram.com/${contact.instagram.replace("@", "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline decoration-[var(--store-accent)] decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]"
+                    >
+                      Instagram
+                    </a>
+                  )}
                 </div>
-              </article>
-            ))}
+                {contact?.address && (
+                  <p className="mt-5 max-w-xl break-words text-sm leading-6 text-[var(--store-text)]">
+                    {contact.address}
+                  </p>
+                )}
+              </section>
+            )}
+          </div>
+        )}
+        {location && (
+          <section className="mt-14 border-t border-[var(--store-text)]/20 pt-8">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <h2 className="text-3xl font-semibold">Ubicación</h2>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-bold underline decoration-[var(--store-accent)] decoration-2 underline-offset-4"
+              >
+                Abrir en Google Maps
+              </a>
+            </div>
+            <LocationMap
+              location={location}
+              className="h-72 w-full sm:h-96"
+              title={`Ubicación de ${store.name}`}
+            />
+          </section>
+        )}
+        <div className="mt-14 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--store-text)]/20 pt-5 text-sm">
+          <span>{store.name}</span>
+          <span>© {new Date().getFullYear()}</span>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+function WarmLayout(props: StoreViewProps) {
+  const { store, schedule, isOpen, onAddToCart } = props;
+  const featured = getFeaturedItems(store);
+
+  return (
+    <main className="min-h-screen bg-[var(--store-bg)] text-[var(--store-text)] selection:bg-[var(--store-accent)] selection:text-[var(--store-on-accent)]">
+      <WarmHero store={store} isOpen={isOpen} featured={featured} />
+      <section
+        id="warm-catalog"
+        className="px-4 py-12 sm:px-8 lg:px-12 lg:py-20"
+      >
+        <div className="mx-auto max-w-7xl">
+          <WarmCategoryNav store={store} />
+          {store.categories.length ? (
+            <div className="mt-12 space-y-12 lg:mt-16 lg:space-y-16">
+              {store.categories.map((category, index) => (
+                <WarmCategoryChapter
+                  key={category.id}
+                  store={store}
+                  category={category}
+                  index={index}
+                  onAddToCart={onAddToCart}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyMenu />
+          )}
+        </div>
+      </section>
+      <WarmServiceDeck store={store} schedule={schedule} />
+    </main>
+  );
+}
+
+function WarmHero({
+  store,
+  isOpen,
+  featured,
+}: {
+  store: StoreData;
+  isOpen: boolean | null;
+  featured: PublicItem[];
+}) {
+  const photographs = featured
+    .filter((item) => item.imageUrl)
+    .sort((left, right) => Number(isSoldOut(left)) - Number(isSoldOut(right)))
+    .slice(0, 3);
+  const heroItem = photographs[0];
+  const supportingItems = photographs
+    .filter((item) => item.id !== heroItem?.id)
+    .slice(0, 2);
+
+  return (
+    <header className="relative isolate overflow-hidden bg-[var(--store-text)] px-5 py-10 text-[var(--store-bg)] sm:px-10 sm:py-14 lg:px-16 lg:py-20">
+      <WarmWeave className="pointer-events-none absolute -right-24 -top-20 h-[34rem] w-[34rem] text-[var(--store-accent)] opacity-15" />
+      <div className="relative mx-auto max-w-7xl">
+        <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,0.88fr)_minmax(24rem,1.12fr)]">
+          <div className="min-w-0">
+            {store.logoUrl && (
+              <div className="mb-10 flex min-h-32 w-full max-w-md items-center justify-start border-y border-[var(--store-bg)]/30 bg-[var(--store-surface)] px-6 py-5 shadow-[0_22px_55px_rgba(0,0,0,0.24)]">
+                <img
+                  src={store.logoUrl}
+                  alt={`Logo de ${store.name}`}
+                  className="max-h-32 w-full object-contain object-left [filter:drop-shadow(0_1px_1px_rgba(0,0,0,0.48))_drop-shadow(0_-1px_1px_rgba(255,255,255,0.5))]"
+                />
+              </div>
+            )}
+            <h1 className="max-w-4xl break-words text-6xl font-semibold leading-[0.88] tracking-[-0.04em] [text-wrap:balance] sm:text-8xl">
+              {store.name}
+            </h1>
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              {isOpen !== null && (
+                <span className="inline-flex min-h-11 items-center gap-2 border border-[var(--store-bg)]/35 px-4 py-2 text-sm font-bold">
+                  <span
+                    aria-hidden="true"
+                    className={`h-2.5 w-2.5 rounded-full ${isOpen ? "bg-emerald-400" : "bg-rose-400"}`}
+                  />
+                  {isOpen ? "Abierto ahora" : "Cerrado ahora"}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={() =>
+                  document
+                    .getElementById("warm-catalog")
+                    ?.scrollIntoView({ behavior: "smooth" })
+                }
+                className="min-h-11 bg-[var(--store-bg)] px-5 py-3 text-sm font-bold text-[var(--store-text)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--store-accent)]/45"
+              >
+                Explorar catálogo
+              </button>
+            </div>
+          </div>
+          <div className="relative">
+            {heroItem?.imageUrl ? (
+              <div className="grid grid-cols-2 gap-3 sm:gap-5">
+                <figure className="col-span-2 border border-[var(--store-bg)]/20 bg-[var(--store-surface)] p-3 text-[var(--store-text)] shadow-[0_30px_70px_rgba(0,0,0,0.28)] sm:p-4 lg:col-span-1 lg:row-span-2">
+                  <img
+                    src={heroItem.imageUrl}
+                    alt={heroItem.name}
+                    fetchPriority="high"
+                    className="aspect-[4/3] w-full object-contain lg:aspect-[4/5]"
+                  />
+                  <figcaption className="mt-3 grid gap-1 border-t border-[var(--store-text)]/15 pt-3 text-sm">
+                    <span className="break-words font-semibold">
+                      {heroItem.name}
+                    </span>
+                    <span className="tabular-nums">
+                      {formatPrice(heroItem.price, store.currency)}
+                    </span>
+                    {isSoldOut(heroItem) && (
+                      <strong className="text-xs">Agotado</strong>
+                    )}
+                  </figcaption>
+                </figure>
+                {supportingItems.map((item) => (
+                  <figure
+                    key={item.id}
+                    className="border border-[var(--store-bg)]/20 bg-[var(--store-surface)] p-2 text-[var(--store-text)] shadow-[0_18px_45px_rgba(0,0,0,0.2)]"
+                  >
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      loading="lazy"
+                      className={`aspect-square w-full object-contain ${isSoldOut(item) ? "opacity-45" : ""}`}
+                    />
+                    <figcaption className="mt-2 break-words text-xs font-semibold">
+                      <span>{item.name}</span>
+                      {isSoldOut(item) && (
+                        <strong className="mt-1 block">Agotado</strong>
+                      )}
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+            ) : (
+              <div className="flex min-h-80 items-center justify-center border border-[var(--store-bg)]/20 bg-[var(--store-bg)]/5">
+                <WarmWeave className="h-72 w-72 text-[var(--store-accent)] opacity-55" />
+              </div>
+            )}
           </div>
         </div>
       </div>
     </header>
+  );
+}
+
+function WarmWeave({ className }: { className: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 320 320" className={className}>
+      <path
+        d="M18 52C87 4 143 102 214 54c39-27 63-27 90-9M13 111c65-46 126 47 198 5 44-26 70-26 99-7M9 171c74-48 125 42 200 4 41-21 70-20 103-3M17 230c65-37 126 35 190 2 43-22 74-20 102-7M25 285c56-27 112 25 176 3 39-14 70-12 98-1"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="7"
+        strokeLinecap="round"
+      />
+      <path
+        d="M54 18c-42 73 47 126 3 203-20 35-18 64-9 87M118 12c-36 70 38 126 4 201-17 38-13 71-4 96M181 9c-30 70 32 128 3 201-14 36-10 70-2 100M245 15c-25 66 24 121 2 191-13 40-7 74 1 102"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        opacity=".72"
+      />
+    </svg>
+  );
+}
+
+function WarmCategoryNav({ store }: { store: StoreContentModel }) {
+  if (!store.categories.length) return null;
+  return (
+    <nav
+      aria-label="Categorías"
+      className="flex gap-6 overflow-x-auto border-y border-[var(--store-text)]/20 py-4 text-sm"
+    >
+      {store.categories.map((category) => (
+        <a
+          key={category.id}
+          href={`#category-${category.id}`}
+          className="shrink-0 font-semibold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]"
+        >
+          {category.name}
+        </a>
+      ))}
+    </nav>
   );
 }
 
@@ -850,42 +3087,28 @@ function WarmCategoryChapter({
   onAddToCart: (item: PublicItem) => void;
 }) {
   const inverted = index % 2 === 1;
-
   return (
     <section
       id={`category-${category.id}`}
-      className={`grid overflow-hidden border border-[#d5bd91] shadow-[0_20px_50px_rgba(0,0,0,0.18)] lg:grid-cols-[0.35fr_0.65fr] ${inverted ? "bg-[#d9c097]" : "bg-[#f9f3e7]"}`}
+      className={`scroll-mt-8 overflow-hidden rounded-[2.5rem] border border-[var(--store-text)]/15 shadow-[0_24px_65px_color-mix(in_srgb,var(--store-text)_13%,transparent)] ${inverted ? "bg-[var(--store-accent-soft)]" : "bg-[var(--store-surface)]"}`}
     >
       <header
-        className={`relative flex min-h-52 flex-col justify-between overflow-hidden p-6 sm:p-9 ${inverted ? "bg-[#302016] text-[#fff8eb] lg:order-2" : "bg-[#e8d7b5] text-[#291b13]"}`}
+        className={`relative overflow-hidden px-6 py-8 sm:px-10 sm:py-10 ${inverted ? "bg-[var(--store-text)] text-[var(--store-bg)]" : "bg-[var(--store-accent)] text-[var(--store-on-accent)]"}`}
       >
-        <div
-          aria-hidden="true"
-          className="absolute -bottom-16 -right-12 h-48 w-48 rounded-full border-[18px] border-[var(--store-accent)]/25"
-        />
-        <p
-          className={`relative text-[10px] font-bold uppercase tracking-[0.28em] ${inverted ? "text-[#f1c978]" : "text-[#80551e]"}`}
-        >
-          Carta de la casa
-        </p>
-        <div className="relative mt-8">
-          <span className="font-mono text-sm opacity-60">
-            {String(index + 1).padStart(2, "0")}
-          </span>
-          <h2 className="mt-3 break-words font-serif text-4xl font-semibold leading-none tracking-[-0.04em] sm:text-5xl">
+        <WarmWeave className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 opacity-15" />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <h2 className="max-w-3xl break-words text-4xl font-semibold leading-[0.95] tracking-[-0.04em] sm:text-5xl">
             {category.name}
           </h2>
+          <p className="w-fit shrink-0 bg-[var(--store-bg)] px-3 py-2 text-sm font-semibold text-[var(--store-text)]">
+            {category.items.length}{" "}
+            {category.items.length === 1 ? "producto" : "productos"}
+          </p>
         </div>
-        <p className="relative mt-7 text-sm font-semibold opacity-70">
-          {category.items.length}{" "}
-          {category.items.length === 1 ? "elección" : "elecciones"}
-        </p>
       </header>
-      <div
-        className={`p-4 sm:p-7 ${inverted ? "bg-[#f2e7d2]" : "bg-[#fffaf1]"}`}
-      >
+      <div className="p-5 sm:p-8 lg:p-10">
         {category.items.length ? (
-          <div className="grid gap-4 xl:grid-cols-2">
+          <div className="divide-y divide-[var(--store-text)]/15 border-b border-[var(--store-text)]/15">
             {category.items.map((item) => (
               <WarmMenuItem
                 key={item.id}
@@ -896,8 +3119,8 @@ function WarmCategoryChapter({
             ))}
           </div>
         ) : (
-          <p className="border border-dashed border-[#8b6a3e]/40 p-6 text-center text-[#765831]">
-            No hay productos en esta categoría
+          <p className="border-y border-[var(--store-text)]/20 py-6 text-sm">
+            No hay productos en esta categoría.
           </p>
         )}
       </div>
@@ -920,54 +3143,46 @@ function WarmMenuItem({
     orderingOpen &&
     (store.capabilities?.inStoreOrdering ||
       store.capabilities?.deliveryOrdering);
-
   return (
     <article
-      className={`group grid min-w-0 grid-cols-[1fr_5.75rem] gap-4 border border-[#d7c19b] bg-[#fffdf8] p-3 shadow-[0_8px_20px_rgba(73,47,20,0.08)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_30px_rgba(73,47,20,0.14)] motion-reduce:transform-none motion-reduce:transition-none sm:grid-cols-[1fr_7rem] ${soldOut ? "opacity-55" : ""}`}
+      className={`grid gap-5 py-6 sm:py-7 ${item.imageUrl ? "sm:grid-cols-[8rem_minmax(0,1fr)_auto]" : "sm:grid-cols-[minmax(0,1fr)_auto]"}`}
     >
-      <div className="min-w-0 py-1">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="break-words font-serif text-xl font-semibold leading-tight">
-            {item.name}
-          </h3>
-          <span className="shrink-0 font-mono text-xs font-bold text-[#80551e]">
-            {formatPrice(item.price, store.currency)}
-          </span>
-        </div>
+      {item.imageUrl && (
+        <img
+          src={item.imageUrl}
+          alt={item.name}
+          loading="lazy"
+          className={`aspect-square w-32 bg-[var(--store-bg)] object-contain ${soldOut ? "opacity-45" : ""}`}
+        />
+      )}
+      <div className="min-w-0">
+        <h3 className="break-words text-xl font-semibold leading-tight sm:text-2xl">
+          {item.name}
+        </h3>
         {item.description && (
-          <p className="mt-2 line-clamp-3 break-words text-sm leading-5 text-[#6f5941]">
+          <p className="mt-2 max-w-2xl break-words text-sm leading-6">
             {item.description}
           </p>
         )}
+      </div>
+      <div className="flex flex-col items-start gap-2 sm:block sm:min-w-32 sm:text-right">
+        <p className="font-semibold tabular-nums">
+          {formatPrice(item.price, store.currency)}
+        </p>
         {soldOut ? (
-          <p className="mt-3 text-xs font-black uppercase tracking-wider text-red-700">
-            Agotado
-          </p>
+          <p className="text-sm font-bold sm:mt-3">Agotado</p>
         ) : (
           orderingEnabled && (
             <button
               type="button"
               onClick={() => onAddToCart(item)}
-              className="mt-3 text-xs font-black uppercase tracking-[0.13em] text-[#523617] underline decoration-[var(--store-accent)] decoration-2 underline-offset-4 transition hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#523617] focus-visible:ring-offset-2"
+              className="min-h-11 border-b-2 border-[var(--store-accent)] px-1 text-sm font-bold underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--store-accent)]/35 sm:mt-3"
             >
-              Agregar al pedido
+              Agregar
             </button>
           )
         )}
       </div>
-      {item.imageUrl ? (
-        <img
-          src={item.imageUrl}
-          alt={item.name}
-          className="aspect-square h-full min-h-[5.75rem] w-full object-cover sm:min-h-[7rem]"
-          loading="lazy"
-        />
-      ) : (
-        <div
-          aria-hidden="true"
-          className="aspect-square min-h-[5.75rem] bg-[linear-gradient(135deg,rgba(183,130,55,0.3),rgba(255,250,241,0.9))] sm:min-h-[7rem]"
-        />
-      )}
     </article>
   );
 }
@@ -979,243 +3194,454 @@ function WarmServiceDeck({
   store: StoreData;
   schedule: ScheduleEntry[];
 }) {
+  const contact = store.contact;
+  const location = getValidLocation(store.location);
   const hasContact = Boolean(
-    store.contact?.whatsapp || store.contact?.instagram,
+    contact?.whatsapp || contact?.instagram || contact?.address,
   );
-  const hasSchedule = schedule.length > 0;
-
-  if (!hasContact && !hasSchedule) return null;
-
   return (
-    <section className="relative mt-8 grid gap-px overflow-hidden border border-[#f5dba3]/25 bg-[#f5dba3]/25 shadow-[0_20px_50px_rgba(0,0,0,0.2)] md:grid-cols-2 lg:mt-12">
-      {hasContact && (
-        <div className="bg-[#251a12] p-6 text-[#fff8eb] sm:p-8">
-          <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-[#f1c978]">
-            A un mensaje de distancia
-          </p>
-          <div className="mt-5">
-            <ContactActions store={store} variant="warm" />
+    <footer className="relative isolate overflow-hidden border-t border-[var(--store-text)]/15 bg-[var(--store-accent-soft)] px-5 py-16 sm:px-10 lg:px-16 lg:py-24">
+      <WarmWeave className="pointer-events-none absolute -bottom-28 -left-24 h-96 w-96 text-[var(--store-accent)] opacity-10" />
+      <div className="relative mx-auto max-w-7xl">
+        {(schedule.length > 0 || hasContact) && (
+          <div className="grid gap-14 lg:grid-cols-2 lg:gap-20">
+            {schedule.length > 0 && (
+              <section>
+                <h2 className="text-3xl font-semibold">Horarios</h2>
+                <dl className="mt-6 divide-y divide-[var(--store-text)]/15 border-y border-[var(--store-text)]/20">
+                  {schedule.map(([day, value]) => (
+                    <div
+                      key={day}
+                      className="flex justify-between gap-5 py-3 text-sm"
+                    >
+                      <dt>{formatDayName(day)}</dt>
+                      <dd className="text-right font-semibold">
+                        {value === "closed"
+                          ? "Cerrado"
+                          : formatScheduleTime(value)}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            )}
+            {hasContact && (
+              <section>
+                <h2 className="text-3xl font-semibold">Contacto</h2>
+                <div className="mt-6 flex flex-wrap gap-x-6 gap-y-3 text-sm">
+                  {contact?.whatsapp && (
+                    <a
+                      href={`https://wa.me/${contact.whatsapp.replace(/[^0-9]/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline decoration-[var(--store-accent)] decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]"
+                    >
+                      WhatsApp
+                    </a>
+                  )}
+                  {contact?.instagram && (
+                    <a
+                      href={`https://instagram.com/${contact.instagram.replace("@", "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline decoration-[var(--store-accent)] decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]"
+                    >
+                      Instagram
+                    </a>
+                  )}
+                </div>
+                {contact?.address && (
+                  <p className="mt-5 max-w-xl break-words text-sm leading-6">
+                    {contact.address}
+                  </p>
+                )}
+              </section>
+            )}
           </div>
+        )}
+        {location && (
+          <section className="mt-14 border-t border-[var(--store-text)]/20 pt-8">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <h2 className="text-3xl font-semibold">Ubicación</h2>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-bold underline decoration-[var(--store-accent)] decoration-2 underline-offset-4"
+              >
+                Abrir en Google Maps
+              </a>
+            </div>
+            <LocationMap
+              location={location}
+              className="h-72 w-full sm:h-96"
+              title={`Ubicación de ${store.name}`}
+            />
+          </section>
+        )}
+        <div className="mt-14 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--store-text)]/20 pt-5 text-sm">
+          <span>{store.name}</span>
+          <span>© {new Date().getFullYear()}</span>
         </div>
-      )}
-      {hasSchedule && (
-        <div className="bg-[#f5ead7] p-6 text-[#281b13] sm:p-8">
-          <p className="text-[10px] font-bold uppercase tracking-[0.26em] text-[#80551e]">
-            Encuentra tu momento
-          </p>
-          <div className="mt-5">
-            <ScheduleCard schedule={schedule} variant="warm-light" />
-          </div>
-        </div>
-      )}
-    </section>
+      </div>
+    </footer>
   );
 }
 
 function ElegantLayout(props: StoreViewProps) {
-  const { store, schedule, isOpen } = props;
+  const { store, schedule, isOpen, onAddToCart } = props;
+  const featured = store.categories.flatMap((category) => category.items);
 
   return (
-    <main className="min-h-screen bg-[var(--store-text)] text-[var(--store-surface)]">
-      <StoreHero
-        store={store}
-        isOpen={isOpen}
-        align="center"
-        badge="Selección especial"
-        variant="elegant"
-      />
-      <div className="mx-auto max-w-6xl px-4 py-10">
-        <div className="mb-8 grid gap-4 md:grid-cols-2">
-          <ContactActions store={store} variant="elegant" />
-          <ScheduleCard schedule={schedule} variant="elegant" />
-        </div>
-        <CategoryNav store={store} />
-        <CategoryList store={store} variant="elegant" />
+    <main className="min-h-screen bg-[var(--store-bg)] text-[var(--store-text)] selection:bg-[var(--store-accent)] selection:text-[var(--store-on-accent)]">
+      <ElegantHero store={store} isOpen={isOpen} featured={featured} />
+      <ElegantCategoryNav store={store} />
+      <div
+        id="elegant-catalog"
+        className="mx-auto max-w-[90rem] px-5 py-14 sm:px-8 lg:px-12 lg:py-24"
+      >
+        {store.categories.length ? (
+          <div className="border-t border-[var(--store-text)]/25">
+            {store.categories.map((category) => (
+              <ElegantCategorySection
+                key={category.id}
+                store={store}
+                category={category}
+                onAddToCart={onAddToCart}
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptyMenu />
+        )}
       </div>
-      <StoreFooter store={store} />
+      <ElegantServiceFolio store={store} schedule={schedule} />
     </main>
   );
 }
 
-function StoreHero({
+function ElegantHero({
   store,
   isOpen,
-  align,
-  badge,
-  variant = "minimal",
+  featured,
 }: {
   store: StoreData;
   isOpen: boolean | null;
-  align: "left" | "center";
-  badge?: string;
-  variant?: "minimal" | "natural" | "warm" | "elegant";
+  featured: PublicItem[];
 }) {
-  const isWarm = variant === "warm";
-  const isElegant = variant === "elegant";
-  const isNatural = variant === "natural";
-
-  if (isNatural) {
-    return (
-      <header className="relative overflow-hidden px-4 py-6 md:py-8">
-        <div
-          aria-hidden="true"
-          className="absolute -left-24 top-0 h-72 w-72 rounded-full bg-emerald-300/30 blur-3xl"
-        />
-        <div
-          aria-hidden="true"
-          className="absolute right-0 top-10 h-64 w-64 rounded-full bg-orange-200/45 blur-3xl"
-        />
-        <div className="relative z-10 mx-auto grid max-w-6xl items-center gap-8 rounded-[2.5rem] border border-white/80 bg-white/78 p-5 shadow-[0_28px_90px_rgba(6,78,59,0.14)] ring-1 ring-emerald-100/80 backdrop-blur md:p-8 lg:grid-cols-[1.02fr_0.98fr]">
-          <div>
-            <div className="mb-5 flex flex-wrap gap-2">
-              <span className="rounded-full bg-[var(--store-accent)] px-3 py-1 text-xs font-black uppercase tracking-[0.2em] text-[var(--store-on-accent)]">
-                Plantilla Natural
-              </span>
-            </div>
-            {badge && (
-              <p className="mb-3 text-sm font-black uppercase tracking-[0.28em] text-[var(--store-accent)]">
-                {badge}
-              </p>
-            )}
-            <h1 className="break-words text-5xl font-black leading-none tracking-tight text-emerald-950 [text-wrap:balance] md:text-7xl">
-              {store.name}
-            </h1>
-            {store.contact?.address && (
-              <p className="mt-4 text-lg leading-7 text-emerald-900/70">
-                📍 {store.contact.address}
-              </p>
-            )}
-
-            {isOpen !== null && (
-              <p
-                className={`mt-6 inline-flex rounded-full px-4 py-2 text-sm font-black shadow-sm ${isOpen ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-700"}`}
-              >
-                {isOpen ? "Abierto ahora" : "Cerrado ahora"}
-              </p>
-            )}
-          </div>
-          <MenuPoster variant={variant} store={store} />
-        </div>
-      </header>
-    );
-  }
+  const featuredItem = featured
+    .filter((item) => item.imageUrl)
+    .sort(
+      (left, right) => Number(isSoldOut(left)) - Number(isSoldOut(right)),
+    )[0];
 
   return (
-    <header
-      className={`relative overflow-hidden px-4 py-12 md:py-16 ${isWarm ? "bg-[#111111]" : isElegant ? "bg-[#32180b]" : isNatural ? "bg-transparent" : "bg-[#fffaf0]"} shadow-sm`}
-    >
+    <header className="relative isolate overflow-hidden bg-[var(--store-text)] text-[var(--store-bg)]">
       <div
         aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-3 bg-[var(--store-accent)]"
+        className="absolute inset-0 opacity-10 [background-image:linear-gradient(to_right,currentColor_1px,transparent_1px),linear-gradient(to_bottom,currentColor_1px,transparent_1px)] [background-size:4rem_4rem]"
       />
-      {isWarm && (
-        <div
-          aria-hidden="true"
-          className="absolute -right-32 top-10 h-80 w-80 rounded-full bg-orange-500/30 blur-3xl"
-        />
-      )}
-      {isNatural && (
-        <div
-          aria-hidden="true"
-          className="absolute -left-20 top-10 h-72 w-72 rounded-full bg-emerald-300/30 blur-3xl"
-        />
-      )}
-      {isElegant && (
-        <div
-          aria-hidden="true"
-          className="absolute inset-x-10 bottom-0 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent"
-        />
-      )}
-      <div
-        className={`relative z-10 mx-auto grid max-w-6xl items-center gap-10 ${variant === "minimal" ? "lg:grid-cols-[1.05fr_0.95fr]" : "lg:grid-cols-[0.95fr_1.05fr]"} ${align === "center" ? "text-center lg:text-left" : "text-left"}`}
-      >
-        <div>
-          {badge && (
-            <p
-              className={`mb-4 text-sm font-black uppercase tracking-[0.28em] ${isWarm || isElegant ? "text-orange-300" : "text-[var(--store-accent)]"}`}
-            >
-              {badge}
-            </p>
-          )}
-          <h1
-            className={`break-words font-black tracking-tight [text-wrap:balance] ${isWarm ? "text-6xl uppercase leading-none text-white md:text-8xl" : isElegant ? "text-5xl leading-tight text-amber-50 md:text-7xl" : "text-5xl text-stone-950 md:text-7xl"}`}
-          >
-            {store.name}
-          </h1>
-          {store.contact?.address && (
-            <p
-              className={`mt-4 text-lg ${isWarm || isElegant ? "text-white/70" : "text-gray-600"}`}
-            >
-              📍 {store.contact.address}
-            </p>
-          )}
-
+      <div className="relative mx-auto max-w-[90rem] px-5 py-8 sm:px-8 lg:px-12 lg:py-12">
+        <div className="flex items-center justify-between gap-6 border-b border-[var(--store-bg)]/25 pb-5 text-sm">
+          <span className="break-words font-semibold">{store.name}</span>
           {isOpen !== null && (
-            <p
-              className={`mt-6 inline-flex rounded-full px-4 py-2 text-sm font-black ${isOpen ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
-            >
+            <span className="flex shrink-0 items-center gap-2 font-semibold">
+              <span
+                aria-hidden="true"
+                className={`h-2 w-2 rounded-full ${isOpen ? "bg-[var(--store-accent)]" : "bg-[var(--store-bg)]/35"}`}
+              />
               {isOpen ? "Abierto ahora" : "Cerrado ahora"}
-            </p>
+            </span>
           )}
         </div>
-        <MenuPoster variant={variant} store={store} />
+        <div
+          className={`grid gap-12 py-12 lg:items-center lg:py-20 ${featuredItem?.imageUrl ? "lg:grid-cols-[minmax(0,1.05fr)_minmax(24rem,0.95fr)]" : ""}`}
+        >
+          <div className="min-w-0">
+            {store.logoUrl && (
+              <div className="mb-10 flex min-h-32 w-full max-w-[24rem] items-center justify-start bg-[var(--store-surface)] px-6 py-5 shadow-[0_24px_60px_rgba(0,0,0,0.24)]">
+                <img
+                  src={store.logoUrl}
+                  alt={`Logo de ${store.name}`}
+                  className="max-h-32 w-full object-contain object-left [filter:drop-shadow(0_1px_1px_rgba(0,0,0,0.48))_drop-shadow(0_-1px_1px_rgba(255,255,255,0.5))]"
+                />
+              </div>
+            )}
+            <h1 className="max-w-5xl break-words text-6xl font-semibold leading-[0.88] tracking-[-0.04em] [text-wrap:balance] sm:text-8xl">
+              {store.name}
+            </h1>
+            <div className="mt-9 flex flex-col items-start gap-6 sm:flex-row sm:items-end sm:justify-between">
+              {store.contact?.address && (
+                <p className="max-w-xl break-words text-sm leading-6">
+                  {store.contact.address}
+                </p>
+              )}
+              <a
+                href="#elegant-catalog"
+                className="inline-flex min-h-11 shrink-0 items-center border-b-2 border-[var(--store-accent)] px-1 py-2 text-sm font-bold underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--store-bg)]"
+              >
+                Ver catálogo
+              </a>
+            </div>
+          </div>
+          {featuredItem?.imageUrl && (
+            <figure className="bg-[var(--store-surface)] p-3 text-[var(--store-text)] shadow-[0_30px_80px_rgba(0,0,0,0.28)] sm:p-5">
+              <div className="overflow-hidden bg-[var(--store-bg)]">
+                <img
+                  src={featuredItem.imageUrl}
+                  alt={featuredItem.name}
+                  fetchPriority="high"
+                  className={`aspect-[4/3] w-full object-contain transition duration-700 ease-out hover:scale-[1.025] motion-reduce:transition-none ${isSoldOut(featuredItem) ? "opacity-45" : ""}`}
+                />
+              </div>
+              <figcaption className="mt-4 flex flex-col gap-2 border-t border-[var(--store-text)]/20 pt-4 text-sm sm:flex-row sm:items-start sm:justify-between">
+                <span className="break-words font-semibold">
+                  {featuredItem.name}
+                </span>
+                <span className="flex shrink-0 items-center gap-3 tabular-nums">
+                  <span>{formatPrice(featuredItem.price, store.currency)}</span>
+                  {isSoldOut(featuredItem) && <strong>Agotado</strong>}
+                </span>
+              </figcaption>
+            </figure>
+          )}
+        </div>
       </div>
     </header>
   );
 }
 
-function MenuPoster({
-  variant,
+function ElegantCategoryNav({ store }: { store: StoreContentModel }) {
+  if (!store.categories.length) return null;
+  return (
+    <nav
+      aria-label="Categorías"
+      className="sticky top-0 z-30 border-b border-[var(--store-text)]/20 bg-[var(--store-bg)]"
+    >
+      <div className="mx-auto flex max-w-[90rem] gap-7 overflow-x-auto px-5 py-4 text-sm sm:px-8 lg:px-12">
+        {store.categories.map((category) => (
+          <a
+            key={category.id}
+            href={`#category-${category.id}`}
+            className="shrink-0 font-semibold underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--store-text)]"
+          >
+            {category.name}
+          </a>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+function ElegantCategorySection({
   store,
+  category,
+  onAddToCart,
 }: {
-  variant: "minimal" | "natural" | "warm" | "elegant";
   store: StoreData;
+  category: PublicCategory;
+  onAddToCart: (item: PublicItem) => void;
 }) {
-  const isWarm = variant === "warm";
-  const isElegant = variant === "elegant";
-  const isNatural = variant === "natural";
+  return (
+    <section
+      id={`category-${category.id}`}
+      className="scroll-mt-20 border-b border-[var(--store-text)]/25 py-10 lg:grid lg:grid-cols-[minmax(13rem,0.32fr)_minmax(0,1fr)] lg:gap-12 lg:py-16"
+    >
+      <header className="mb-8 lg:mb-0">
+        <h2 className="max-w-md break-words text-4xl font-semibold leading-[0.95] tracking-[-0.04em] sm:text-5xl">
+          {category.name}
+        </h2>
+        <p className="mt-4 text-sm font-semibold">
+          {category.items.length}{" "}
+          {category.items.length === 1 ? "producto" : "productos"}
+        </p>
+      </header>
+      {category.items.length ? (
+        <div className="divide-y divide-[var(--store-text)]/20 border-t border-[var(--store-text)]/20">
+          {category.items.map((item) => (
+            <ElegantMenuItem
+              key={item.id}
+              store={store}
+              item={item}
+              onAddToCart={onAddToCart}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className="border-y border-[var(--store-text)]/20 py-6 text-sm">
+          No hay productos en esta categoría.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function ElegantMenuItem({
+  store,
+  item,
+  onAddToCart,
+}: {
+  store: StoreData;
+  item: PublicItem;
+  onAddToCart: (item: PublicItem) => void;
+}) {
+  const { orderingOpen } = usePublicOrderCart();
+  const soldOut = isSoldOut(item);
+  const orderingEnabled =
+    orderingOpen &&
+    (store.capabilities?.inStoreOrdering ||
+      store.capabilities?.deliveryOrdering);
 
   return (
-    <div
-      className={`relative mx-auto w-full max-w-sm ${isElegant ? "rotate-3" : isWarm ? "-rotate-2" : ""}`}
+    <article
+      className={`grid gap-5 py-7 sm:py-8 ${item.imageUrl ? "sm:grid-cols-[9rem_minmax(0,1fr)_auto]" : "sm:grid-cols-[minmax(0,1fr)_auto]"}`}
     >
-      <div
-        className={`relative overflow-hidden ${isNatural ? "rounded-[2.25rem]" : isElegant ? "rounded-[2rem]" : "rounded-[2.5rem]"} border ${isWarm ? "border-orange-400 bg-black" : isElegant ? "border-amber-300/50 bg-[#120907]" : isNatural ? "border-emerald-100 bg-gradient-to-br from-white to-emerald-50" : "border-white bg-white"} p-5 shadow-2xl`}
-      >
-        <div
-          aria-hidden="true"
-          className={`absolute inset-x-0 top-0 h-20 ${isWarm ? "bg-orange-500" : isElegant ? "bg-amber-900/60" : isNatural ? "bg-[var(--store-accent)]/10" : "bg-[var(--store-accent)]/15"}`}
-        />
-        {isNatural && (
-          <div
-            aria-hidden="true"
-            className="absolute -right-10 bottom-6 h-32 w-32 rounded-full bg-lime-200/50 blur-2xl"
+      {item.imageUrl && (
+        <div className="overflow-hidden bg-[var(--store-surface)]">
+          <img
+            src={item.imageUrl}
+            alt={item.name}
+            loading="lazy"
+            className={`aspect-square w-full object-contain transition duration-500 ease-out hover:scale-[1.03] motion-reduce:transition-none ${soldOut ? "opacity-45" : ""}`}
           />
+        </div>
+      )}
+      <div className="min-w-0">
+        <h3 className="break-words text-xl font-semibold leading-tight sm:text-2xl">
+          {item.name}
+        </h3>
+        {item.description && (
+          <p className="mt-3 max-w-2xl break-words text-sm leading-6">
+            {item.description}
+          </p>
         )}
-        <img
-          src={withBasePath("/menu-art-placeholder.svg")}
-          alt=""
-          width="900"
-          height="900"
-          loading="lazy"
-          className={`relative mx-auto aspect-square w-52 object-cover ${isNatural ? "rounded-[2rem]" : isElegant ? "rounded-[1.5rem]" : "rounded-[2rem]"} shadow-xl`}
-        />
+      </div>
+      <div className="flex flex-col items-start gap-2 sm:min-w-36 sm:items-end sm:text-right">
+        <p className="font-semibold tabular-nums">
+          {formatPrice(item.price, store.currency)}
+        </p>
+        {soldOut ? (
+          <strong className="text-sm">Agotado</strong>
+        ) : (
+          orderingEnabled && (
+            <button
+              type="button"
+              onClick={() => onAddToCart(item)}
+              aria-label={`Agregar ${item.name} al pedido`}
+              className="min-h-11 border-b-2 border-[var(--store-accent)] px-1 py-2 text-sm font-bold underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--store-text)]"
+            >
+              Agregar
+            </button>
+          )
+        )}
+      </div>
+    </article>
+  );
+}
+
+function ElegantServiceFolio({
+  store,
+  schedule,
+}: {
+  store: StoreData;
+  schedule: ScheduleEntry[];
+}) {
+  const contact = store.contact;
+  const location = getValidLocation(store.location);
+  const hasContact = Boolean(
+    contact?.whatsapp || contact?.instagram || contact?.address,
+  );
+  const hasDetails = schedule.length > 0 || hasContact;
+
+  return (
+    <footer className="bg-[var(--store-text)] px-5 py-16 text-[var(--store-bg)] sm:px-8 lg:px-12 lg:py-24">
+      <div className="mx-auto max-w-[90rem]">
+        {hasDetails && (
+          <div className="grid gap-14 border-t border-[var(--store-bg)]/25 pt-10 lg:grid-cols-2 lg:gap-20">
+            {schedule.length > 0 && (
+              <section>
+                <h2 className="text-3xl font-semibold">Horarios</h2>
+                <dl className="mt-7 divide-y divide-[var(--store-bg)]/20 border-y border-[var(--store-bg)]/25">
+                  {schedule.map(([day, value]) => (
+                    <div
+                      key={day}
+                      className="flex justify-between gap-5 py-3 text-sm"
+                    >
+                      <dt>{formatDayName(day)}</dt>
+                      <dd className="text-right font-semibold">
+                        {value === "closed"
+                          ? "Cerrado"
+                          : formatScheduleTime(value)}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            )}
+            {hasContact && (
+              <section>
+                <h2 className="text-3xl font-semibold">Contacto</h2>
+                <div className="mt-7 flex flex-wrap gap-x-7 gap-y-4 text-sm">
+                  {contact?.whatsapp && (
+                    <a
+                      href={`https://wa.me/${contact.whatsapp.replace(/[^0-9]/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline decoration-[var(--store-accent)] decoration-2 underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--store-bg)]"
+                    >
+                      WhatsApp
+                    </a>
+                  )}
+                  {contact?.instagram && (
+                    <a
+                      href={`https://instagram.com/${contact.instagram.replace("@", "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline decoration-[var(--store-accent)] decoration-2 underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--store-bg)]"
+                    >
+                      Instagram
+                    </a>
+                  )}
+                </div>
+                {contact?.address && (
+                  <p className="mt-6 max-w-xl break-words text-sm leading-6">
+                    {contact.address}
+                  </p>
+                )}
+              </section>
+            )}
+          </div>
+        )}
+        {location && (
+          <section
+            className={`${hasDetails ? "mt-16" : ""} border-t border-[var(--store-bg)]/25 pt-10`}
+          >
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <h2 className="text-3xl font-semibold">Ubicación</h2>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-bold underline decoration-[var(--store-accent)] decoration-2 underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--store-bg)]"
+              >
+                Abrir en Google Maps
+              </a>
+            </div>
+            <LocationMap
+              location={location}
+              className="h-72 w-full sm:h-96"
+              title={`Ubicación de ${store.name}`}
+            />
+          </section>
+        )}
         <div
-          className={`relative mt-5 ${isWarm || isElegant ? "text-white" : "text-stone-950"}`}
+          className={`${hasDetails || location ? "mt-16" : ""} flex flex-wrap items-center justify-between gap-4 border-t border-[var(--store-bg)]/25 pt-6 text-sm`}
         >
-          <p
-            className={`text-xs font-black uppercase tracking-[0.32em] ${isNatural ? "text-[var(--store-accent)]" : "opacity-70"}`}
-          >
-            Menú destacado
-          </p>
-          <p
-            className={`mt-2 text-3xl font-black leading-none ${isNatural ? "text-emerald-950" : ""}`}
-          >
-            {store.categories[0]?.name || "Especial de la casa"}
-          </p>
+          <span className="break-words font-semibold">{store.name}</span>
+          <span>© {new Date().getFullYear()}</span>
         </div>
       </div>
-    </div>
+    </footer>
   );
 }
 
@@ -1242,238 +3668,6 @@ function CategoryNav({ store }: { store: StoreContentModel }) {
   );
 }
 
-function CategoryList({
-  store,
-  variant,
-}: {
-  store: StoreData;
-  variant: "minimal" | "natural" | "warm" | "elegant";
-}) {
-  if (!store.categories.length) {
-    return <EmptyMenu />;
-  }
-
-  return (
-    <div className="space-y-10">
-      {store.categories.map((category) => (
-        <CategorySection
-          key={category.id}
-          store={store}
-          category={category}
-          variant={variant}
-        />
-      ))}
-    </div>
-  );
-}
-
-function CategorySection({
-  store,
-  category,
-  variant,
-}: {
-  store: StoreData;
-  category: PublicCategory;
-  variant: "minimal" | "natural" | "warm" | "elegant";
-}) {
-  const headingClass = {
-    minimal: "border-b border-slate-950/10 pb-4 text-slate-950",
-    natural:
-      "rounded-[1.5rem] border border-white/80 bg-white/80 px-4 py-3 text-emerald-950 shadow-sm ring-1 ring-emerald-100 backdrop-blur",
-    warm: "rounded-2xl bg-orange-500 px-5 py-4 text-white shadow-[0_14px_40px_rgba(249,115,22,0.28)]",
-    elegant: "border-b border-amber-200/30 pb-4 text-amber-50",
-  }[variant];
-
-  return (
-    <section id={`category-${category.id}`} className="scroll-mt-6">
-      <div className={`mb-5 flex items-center gap-3 ${headingClass}`}>
-        <span
-          aria-hidden="true"
-          className={`h-2 w-2 ${variant === "minimal" ? "rounded-full bg-[var(--store-accent)] shadow-[0_0_0_5px_rgba(15,23,42,0.04)]" : variant === "warm" ? "rounded-full bg-white" : "rounded-full bg-[var(--store-accent)]"}`}
-        />
-        <h2
-          className={`font-black ${variant === "minimal" ? "text-xl tracking-tight md:text-2xl" : variant === "warm" ? "text-3xl uppercase tracking-tight" : variant === "elegant" ? "font-serif text-3xl italic" : "text-2xl"}`}
-        >
-          {category.name}
-        </h2>
-      </div>
-      {category.items.length ? (
-        <div
-          className={
-            variant === "minimal" || variant === "elegant"
-              ? "grid gap-3"
-              : "grid gap-4 md:grid-cols-2"
-          }
-        >
-          {category.items.map((item) => (
-            <MenuItemCard
-              key={item.id}
-              item={item}
-              store={store}
-              variant={variant}
-            />
-          ))}
-        </div>
-      ) : (
-        <p className="rounded-2xl border border-dashed border-gray-300 p-6 text-center text-gray-500">
-          No hay productos en esta categoría
-        </p>
-      )}
-    </section>
-  );
-}
-
-function MenuItemCard({
-  item,
-  store,
-  variant,
-}: {
-  item: PublicItem;
-  store: StoreData;
-  variant: "minimal" | "natural" | "warm" | "elegant";
-}) {
-  const { addItem, orderingOpen } = usePublicOrderCart();
-  const soldOut =
-    item.trackStock && typeof item.stock === "number" && item.stock <= 0;
-  const orderingEnabled =
-    orderingOpen &&
-    (store.capabilities?.inStoreOrdering ||
-      store.capabilities?.deliveryOrdering);
-  const base =
-    "border p-4 transition-transform transition-shadow hover:-translate-y-0.5 hover:shadow-lg motion-reduce:transform-none motion-reduce:transition-none";
-  const variants = {
-    minimal:
-      "rounded-[1.5rem] border-slate-950/8 bg-white/72 p-4 shadow-[0_14px_45px_rgba(15,23,42,0.06)] ring-1 ring-slate-950/[0.03] backdrop-blur hover:-translate-y-0.5 hover:shadow-[0_20px_55px_rgba(15,23,42,0.10)] motion-reduce:transform-none",
-    natural:
-      "rounded-[1.75rem] border-white/80 bg-white/86 shadow-[0_14px_45px_rgba(6,78,59,0.08)] ring-1 ring-emerald-100/70 backdrop-blur",
-    warm: "rounded-[1.75rem] border-orange-300 bg-[#1b1b1b] text-white shadow-[0_16px_50px_rgba(0,0,0,0.25)]",
-    elegant:
-      "rounded-none border-x-0 border-b-0 border-t-amber-100/20 bg-transparent px-0 py-5 text-amber-50 shadow-none hover:translate-y-0 hover:shadow-none",
-  };
-  const priceClass =
-    variant === "warm"
-      ? "bg-orange-500 text-white"
-      : variant === "elegant"
-        ? "border border-amber-200/30 bg-transparent text-amber-100"
-        : variant === "minimal"
-          ? "bg-slate-950 text-white shadow-sm"
-          : "bg-[var(--store-accent)] text-white";
-
-  return (
-    <article
-      className={`${base} ${variants[variant]} ${soldOut ? "opacity-60" : ""}`}
-    >
-      {item.imageUrl && (
-        <img
-          src={item.imageUrl}
-          alt={item.name}
-          className={`mb-4 h-40 w-full object-cover ${variant === "minimal" ? "rounded-[1.25rem]" : "rounded-2xl"}`}
-          loading="lazy"
-        />
-      )}
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h3
-            className={`break-words ${variant === "minimal" ? "text-lg font-black tracking-tight" : variant === "elegant" ? "font-serif text-xl italic" : "font-black"}`}
-          >
-            {item.name}
-          </h3>
-          {item.description && (
-            <p className="mt-1 break-words text-sm leading-6 opacity-75">
-              {item.description}
-            </p>
-          )}
-          {soldOut && (
-            <p className="mt-2 text-sm font-bold text-red-600">Agotado</p>
-          )}
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-2">
-          <span
-            className={`rounded-full px-3 py-1 text-sm font-black ${priceClass}`}
-          >
-            {formatPrice(item.price, store.currency)}
-          </span>
-          {orderingEnabled && !soldOut && (
-            <button
-              type="button"
-              onClick={() => addItem(item)}
-              className="rounded-full bg-white px-3 py-1 text-xs font-black text-gray-950 shadow-sm ring-1 ring-black/10 transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)] focus-visible:ring-offset-2 motion-reduce:transform-none"
-            >
-              Agregar
-            </button>
-          )}
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function ContactActions({
-  store,
-  variant = "minimal",
-}: {
-  store: StoreData;
-  variant?: "minimal" | "natural" | "warm" | "elegant";
-}) {
-  const contact = store.contact;
-  const location = getValidLocation(store.location);
-  if (!contact?.whatsapp && !contact?.instagram && !location) return null;
-
-  const cardClass = {
-    minimal:
-      "border-white/70 bg-white/78 text-slate-950 shadow-[0_18px_55px_rgba(15,23,42,0.08)] ring-1 ring-slate-950/[0.03] backdrop-blur",
-    natural:
-      "border-white/80 bg-white/75 text-emerald-950 shadow-[0_14px_45px_rgba(6,78,59,0.08)] ring-1 ring-emerald-100/70 backdrop-blur",
-    warm: "border-orange-300/40 bg-white/10 text-white backdrop-blur",
-    elegant: "border-amber-200/25 bg-amber-950/30 text-amber-50",
-  }[variant];
-
-  return (
-    <section className={`rounded-2xl border p-5 ${cardClass}`}>
-      <h2 className="font-black">Contacto</h2>
-      <div className="mt-4 grid gap-3">
-        {contact?.whatsapp && (
-          <a
-            className="rounded-xl bg-[#25D366] px-4 py-3 text-center font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 focus-visible:ring-offset-2"
-            href={`https://wa.me/${contact.whatsapp.replace(/[^0-9]/g, "")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            WhatsApp
-          </a>
-        )}
-        {contact?.instagram && (
-          <a
-            className="rounded-xl bg-[#c13584] px-4 py-3 text-center font-bold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c13584] focus-visible:ring-offset-2"
-            href={`https://instagram.com/${contact.instagram.replace("@", "")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Instagram
-          </a>
-        )}
-        {location && (
-          <>
-            <LocationMap
-              location={location}
-              className="h-56 w-full overflow-hidden rounded-xl"
-              title={`Ubicación de ${store.name}`}
-            />
-            <a
-              className="rounded-xl border border-current px-4 py-3 text-center font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--store-accent)]"
-              href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Abrir ubicación en el mapa
-            </a>
-          </>
-        )}
-      </div>
-    </section>
-  );
-}
-
 function formatScheduleTime(value: string) {
   const match = /^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/.exec(value);
   if (!match) return value;
@@ -1488,66 +3682,11 @@ function formatScheduleTime(value: string) {
   return `${formatTime(match[1], match[2])} – ${formatTime(match[3], match[4])}`;
 }
 
-function ScheduleCard({
-  schedule,
-  variant = "minimal",
-}: {
-  schedule: ScheduleEntry[];
-  variant?: "minimal" | "natural" | "warm" | "warm-light" | "elegant";
-}) {
-  if (!schedule.length) return null;
-  const cardClass = {
-    minimal:
-      "border-white/70 bg-white/78 text-slate-950 shadow-[0_18px_55px_rgba(15,23,42,0.08)] ring-1 ring-slate-950/[0.03] backdrop-blur",
-    natural:
-      "border-white/80 bg-white/75 text-emerald-950 shadow-[0_14px_45px_rgba(6,78,59,0.08)] ring-1 ring-emerald-100/70 backdrop-blur",
-    warm: "border-orange-300/40 bg-white/10 text-white backdrop-blur",
-    "warm-light": "border-[#caaa76] bg-[#fffaf1] text-[#281b13]",
-    elegant: "border-amber-200/25 bg-amber-950/30 text-amber-50",
-  }[variant];
-  const timeClass =
-    variant === "warm" || variant === "elegant"
-      ? "font-bold text-amber-200"
-      : variant === "warm-light"
-        ? "font-bold text-[#80551e]"
-        : variant === "minimal"
-          ? "font-bold text-slate-950"
-          : "font-bold text-[var(--store-accent)]";
-
-  return (
-    <section className={`rounded-2xl border p-5 ${cardClass}`}>
-      <h2 className="font-black">Horarios</h2>
-      <div className="mt-4 space-y-2">
-        {schedule.map(([day, value]) => (
-          <div key={day} className="flex justify-between gap-4 text-sm">
-            <span className="font-semibold">{formatDayName(day)}</span>
-            <span
-              className={
-                value === "closed" ? "font-bold text-red-600" : timeClass
-              }
-            >
-              {value === "closed" ? "Cerrado" : formatScheduleTime(value)}
-            </span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function EmptyMenu() {
   return (
-    <section className="rounded-3xl border border-dashed border-gray-300 bg-[var(--store-surface)] p-12 text-center text-gray-500">
+    <section className="rounded-3xl border border-dashed border-[var(--store-border)] bg-[var(--store-surface)] p-12 text-center text-[var(--store-text)]">
       No hay productos disponibles
     </section>
-  );
-}
-
-function StoreFooter({ store }: { store: StoreData }) {
-  return (
-    <footer className="py-8 text-center text-sm opacity-60">
-      © {new Date().getFullYear()} {store.name}. Todos los derechos reservados.
-    </footer>
   );
 }
 
@@ -1557,19 +3696,4 @@ function getFeaturedItems(store: StoreData): PublicItem[] {
 
 function isSoldOut(item: PublicItem) {
   return item.trackStock && typeof item.stock === "number" && item.stock <= 0;
-}
-
-function getThemeBadge(theme: ThemeConfig) {
-  const badges: Partial<Record<ThemeConfig["component"], string>> = {
-    christmas: "🎄 Navidad",
-    "mothers-day": "🌷 Día de la Madre",
-    halloween: "🎃 Halloween",
-    valentine: "💝 San Valentín",
-    "fathers-day": "⭐ Día del Padre",
-    easter: "🌼 Pascua",
-    independence: "🇨🇴 Temporada especial",
-    velitas: "🕯️ Velitas",
-  };
-
-  return badges[theme.component] || null;
 }

@@ -104,7 +104,6 @@ export function PublicOrderCartProvider({
       return [...current, { item, quantity: 1 }];
     });
     setNotice("Producto agregado al pedido.");
-    setMinimized(false);
   };
 
   const total = useMemo(
@@ -264,7 +263,7 @@ export function PublicOrderCartProvider({
     <CartContext.Provider value={{ addItem, orderingOpen }}>
       <>{children}</>
       <aside
-        className="fixed bottom-4 right-4 z-50 w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-orange-200 bg-white p-4 shadow-[0_16px_42px_rgba(15,23,42,0.22)]"
+        className="fixed bottom-4 right-4 z-[1100] w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-orange-200 bg-white p-4 shadow-[0_16px_42px_rgba(15,23,42,0.22)]"
         aria-label="Carrito de pedido"
       >
         <button
@@ -282,7 +281,7 @@ export function PublicOrderCartProvider({
             Pedido ({itemCount})
           </span>
           <span className="text-sm font-semibold text-orange-700">
-            {minimized ? "Abrir" : "Minimizar"}
+            {minimized ? "Abrir" : "X"}
           </span>
         </button>
 
@@ -319,7 +318,7 @@ export function PublicOrderCartProvider({
                     onClick={() => selectMode("in_store")}
                     className={`rounded-lg px-2 py-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${mode === "in_store" ? "bg-orange-600 text-white shadow-sm" : "text-orange-950 hover:bg-white"}`}
                   >
-                    En mesa
+                    En tienda
                   </button>
                   <button
                     type="button"

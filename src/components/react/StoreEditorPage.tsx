@@ -1428,6 +1428,10 @@ export default function StoreEditorPage() {
                     ))}
                   </select>
                 </Field>
+                <p className="-mt-3 text-sm text-gray-500">
+                  Define la estructura, jerarquía y forma de presentar el mismo
+                  catálogo.
+                </p>
                 <section
                   className="rounded-2xl border border-gray-200 p-4"
                   aria-labelledby="store-logo-title"
@@ -1499,6 +1503,10 @@ export default function StoreEditorPage() {
                     ))}
                   </select>
                 </Field>
+                <p className="-mt-3 text-sm text-gray-500">
+                  Cambia la paleta de la plantilla sin modificar productos,
+                  categorías ni funcionamiento.
+                </p>
               </div>
             </div>
           )}
@@ -1787,29 +1795,6 @@ export default function StoreEditorPage() {
                       />
                     </div>
                   ))}
-                </div>
-
-                <SectionTitle title="Canales y control de inventario" />
-                <div className="mt-4 grid gap-3 md:grid-cols-3">
-                  <CapabilityToggle
-                    label="Pedidos en tienda"
-                    checked={form.inStoreOrdering}
-                    onChange={(checked) =>
-                      updateForm("inStoreOrdering", checked)
-                    }
-                  />
-                  <CapabilityToggle
-                    label="Pedidos a domicilio"
-                    checked={form.deliveryOrdering}
-                    onChange={(checked) =>
-                      updateForm("deliveryOrdering", checked)
-                    }
-                  />
-                  <CapabilityToggle
-                    label="Control de stock"
-                    checked={form.stockControl}
-                    onChange={(checked) => updateForm("stockControl", checked)}
-                  />
                 </div>
               </section>
             </div>
@@ -2292,6 +2277,27 @@ export default function StoreEditorPage() {
                   />
                   Tienda activa
                 </label>
+              </div>
+
+              <SectionTitle title="Canales y control de inventario" />
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                <CapabilityToggle
+                  label="Pedidos en tienda"
+                  checked={form.inStoreOrdering}
+                  onChange={(checked) => updateForm("inStoreOrdering", checked)}
+                />
+                <CapabilityToggle
+                  label="Pedidos a domicilio"
+                  checked={form.deliveryOrdering}
+                  onChange={(checked) =>
+                    updateForm("deliveryOrdering", checked)
+                  }
+                />
+                <CapabilityToggle
+                  label="Control de stock"
+                  checked={form.stockControl}
+                  onChange={(checked) => updateForm("stockControl", checked)}
+                />
               </div>
 
               <SectionTitle title="Límites comerciales" />
