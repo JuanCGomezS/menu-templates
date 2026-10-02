@@ -1,0 +1,53 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function userDoc() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid));
+    }
+
+    function hasProfile() {
+      return signedIn() && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid));
+    }
+
+    function isSuperAdmin() {
+      return hasProfile() && userDoc().data.role == 'superadmin';
+    }
+
+    function isStoreAdminFor(storeId) {
+      return hasProfile()
+        && userDoc().data.role == 'storeadmin'
+        && userDoc().data.storeId == storeId;
+    }
+
+    function activeStore(storeId) {
+      return firestore.exists(/databases/(default)/documents/stores/$(storeId))
+        && firestore.get(/databases/(default)/documents/stores/$(storeId)).data.active == true;
+    }
+
+    function canManage(storeId) {
+      return isSuperAdmin() || isStoreAdminFor(storeId);
+    }
+
+    function isAllowedImage(maxBytes) {
+      return request.resource != null
+        && request.resource.size <= maxBytes
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+
+    match /stores/{storeId}/branding/{fileName} {
+      allow read: if activeStore(storeId) || canManage(storeId);
+      allow create, update: if canManage(storeId) && isAllowedImage(5 * 1024 * 1024);
+      allow delete: if canManage(storeId);
+    }
+
+    match /stores/{storeId}/items/{itemId}/{fileName} {
+      allow read: if activeStore(storeId) || canManage(storeId);
+      allow create, update: if canManage(storeId) && isAllowedImage(2 * 1024 * 1024);
+      allow delete: if canManage(storeId);
+    }
+
+    match /{allPaths=**} { allow read, write: if false; }
+  }
+}

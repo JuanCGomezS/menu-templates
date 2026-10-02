@@ -15,9 +15,21 @@ const faviconUrl = `${import.meta.env.BASE_URL}icon.png`;
 		<meta name="generator" content={Astro.generator} />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+		<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 		<link href="https://fonts.googleapis.com/css2?family=Material+Icons+Outlined&display=swap" rel="stylesheet" />
 		<title>{title}</title>
+		<style is:global>
+			:root { color-scheme: light; --ink: #101828; --paper: #f7f8f5; --signal: #ff5a1f; --signal-dark: #c93d0a; --line: #d7dcd5; --muted: #52606d; }
+			* { box-sizing: border-box; }
+			html { background: var(--paper); }
+			body { font-family: Archivo, sans-serif; color: var(--ink); background: var(--paper); }
+			::selection { background: var(--signal); color: #fff; }
+			:focus-visible { outline: 3px solid var(--signal); outline-offset: 3px; }
+			button, input, select, textarea { font: inherit; }
+			.tabular-nums { font-variant-numeric: tabular-nums; }
+			::-webkit-scrollbar { width: 10px; height: 10px; }
+			::-webkit-scrollbar-thumb { background: #aeb8b0; border: 3px solid var(--paper); border-radius: 999px; }
+		</style>
 	</head>
 	<body class="m-0 w-full h-full font-sans antialiased bg-gray-50">
 		<slot />

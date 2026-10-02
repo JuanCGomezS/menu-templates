@@ -1,0 +1,17 @@
+<svg width="900" height="900" viewBox="0 0 900 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="900" height="900" rx="96" fill="#111827"/>
+  <circle cx="450" cy="450" r="310" fill="#F97316"/>
+  <circle cx="450" cy="450" r="248" fill="#FFF7ED"/>
+  <path d="M240 498C309 375 375 317 468 305C566 292 636 346 692 452C621 523 545 557 459 552C374 547 304 529 240 498Z" fill="#166534"/>
+  <path d="M258 473C328 389 395 349 471 348C545 347 612 381 673 449C609 492 540 512 466 508C392 504 323 493 258 473Z" fill="#22C55E"/>
+  <circle cx="363" cy="415" r="34" fill="#EF4444"/>
+  <circle cx="475" cy="393" r="28" fill="#FACC15"/>
+  <circle cx="564" cy="448" r="36" fill="#EF4444"/>
+  <circle cx="428" cy="483" r="30" fill="#FDBA74"/>
+  <path d="M280 610C397 671 511 674 638 606" stroke="#111827" stroke-width="34" stroke-linecap="round"/>
+  <path d="M302 654C406 713 504 716 610 657" stroke="#F97316" stroke-width="24" stroke-linecap="round"/>
+  <path d="M236 233L307 292" stroke="#FFF7ED" stroke-width="26" stroke-linecap="round"/>
+  <path d="M664 234L593 293" stroke="#FFF7ED" stroke-width="26" stroke-linecap="round"/>
+  <path d="M450 152V252" stroke="#FFF7ED" stroke-width="26" stroke-linecap="round"/>
+  <text x="450" y="800" text-anchor="middle" font-family="Arial, sans-serif" font-size="44" font-weight="900" fill="#FFF7ED">IMAGE PLACEHOLDER</text>
+</svg>

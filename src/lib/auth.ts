@@ -17,19 +17,124 @@ export interface AppUserProfile {
   storeSlug?: string;
 }
 
+interface CachedUserProfile extends AppUserProfile {
+  cachedAt: number;
+  expiresAt: number;
+}
+
+const AUTH_SESSION_CACHE_PREFIX = "menu-templates:v1:auth-session:";
+const AUTH_SESSION_CACHE_TTL_MS = 5 * 60 * 1000;
 const profileRequests = new Map<string, Promise<AppUserProfile | null>>();
 
-export async function getUserProfile(user: User): Promise<AppUserProfile | null> {
-  const existingRequest = profileRequests.get(user.uid);
+function getSessionStorage() {
+  if (typeof window === "undefined") return null;
 
-  if (existingRequest) {
-    return existingRequest;
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+function getProfileCacheKey(uid: string) {
+  return `${AUTH_SESSION_CACHE_PREFIX}${uid}`;
+}
+
+function isCachedUserProfile(value: unknown, uid: string): value is CachedUserProfile {
+  if (!value || typeof value !== "object") return false;
+
+  const profile = value as Partial<CachedUserProfile>;
+
+  return profile.uid === uid
+    && typeof profile.email === "string"
+    && isUserRole(profile.role)
+    && typeof profile.cachedAt === "number" && Number.isFinite(profile.cachedAt)
+    && typeof profile.expiresAt === "number" && Number.isFinite(profile.expiresAt)
+    && profile.cachedAt <= Date.now()
+    && profile.expiresAt <= profile.cachedAt + AUTH_SESSION_CACHE_TTL_MS
+    && (profile.storeId === undefined || typeof profile.storeId === "string")
+    && (profile.storeSlug === undefined || typeof profile.storeSlug === "string");
+}
+
+export function getCachedUserProfile(user: User): AppUserProfile | null {
+  const storage = getSessionStorage();
+  if (!storage) return null;
+
+  const key = getProfileCacheKey(user.uid);
+
+  try {
+    const cached = storage.getItem(key);
+    if (!cached) return null;
+
+    const profile = JSON.parse(cached);
+    if (!isCachedUserProfile(profile, user.uid) || profile.expiresAt <= Date.now()) {
+      storage.removeItem(key);
+      return null;
+    }
+
+    const { cachedAt: _cachedAt, expiresAt: _expiresAt, ...userProfile } = profile;
+    return userProfile;
+  } catch {
+    try { storage.removeItem(key); } catch { /* Storage can be blocked. */ }
+    return null;
+  }
+}
+
+export function primeUserProfile(profile: AppUserProfile) {
+  const storage = getSessionStorage();
+  if (!storage) return;
+
+  const cachedAt = Date.now();
+
+  try {
+    storage.setItem(getProfileCacheKey(profile.uid), JSON.stringify({
+      ...profile,
+      cachedAt,
+      expiresAt: cachedAt + AUTH_SESSION_CACHE_TTL_MS,
+    } satisfies CachedUserProfile));
+  } catch {
+    // Profile reads remain functional when browser storage is unavailable.
+  }
+}
+
+export function clearUserProfileCache(uid?: string) {
+  if (uid) profileRequests.delete(uid);
+  else profileRequests.clear();
+  const storage = getSessionStorage();
+  if (!storage) return;
+
+  try {
+    if (uid) {
+      storage.removeItem(getProfileCacheKey(uid));
+      return;
+    }
+
+    for (let index = storage.length - 1; index >= 0; index -= 1) {
+      const key = storage.key(index);
+      if (key?.startsWith(AUTH_SESSION_CACHE_PREFIX)) {
+        storage.removeItem(key);
+      }
+    }
+  } catch {
+    // Cache cleanup is best-effort when browser storage becomes unavailable.
+  }
+}
+
+export async function getUserProfile(user: User, options: { forceRefresh?: boolean } = {}): Promise<AppUserProfile | null> {
+  if (!options.forceRefresh) {
+    const cachedProfile = getCachedUserProfile(user);
+    if (cachedProfile) return cachedProfile;
   }
 
-  const request = fetchUserProfile(user).finally(() => {
-    profileRequests.delete(user.uid);
-  });
+  const existingRequest = profileRequests.get(user.uid);
+  if (existingRequest) return existingRequest;
 
+  const request = fetchUserProfile(user).then((profile) => {
+    if (profile && profileRequests.get(user.uid) === request) primeUserProfile(profile);
+    return profile;
+  }).finally(() => {
+    if (profileRequests.get(user.uid) === request) profileRequests.delete(user.uid);
+  });
   profileRequests.set(user.uid, request);
   return request;
 }
@@ -48,13 +153,15 @@ async function fetchUserProfile(user: User): Promise<AppUserProfile | null> {
     return null;
   }
 
-  return {
+  const profile: AppUserProfile = {
     uid: user.uid,
-    email: data.email || user.email || "",
+    email: typeof data.email === "string" ? data.email : user.email || "",
     role,
-    storeId: data.storeId,
-    storeSlug: data.storeSlug,
+    storeId: typeof data.storeId === "string" ? data.storeId : undefined,
+    storeSlug: typeof data.storeSlug === "string" ? data.storeSlug : undefined,
   };
+
+  return profile;
 }
 
 export { ROLE_LABELS, ROLES };

@@ -177,3 +177,75 @@ role: 'storeadmin'
 storeId: '<id de tienda>'
 storeSlug: '<slug de tienda>'
 ```
+
+## Validación de pedidos con Firebase Emulator
+
+La base de la issue #3 queda aislada en los archivos de pedidos, reglas, índices y pruebas; no modifica datos productivos. Antes de comenzar un cambio de pedidos, verificá el estado local con `git status --short` y conservá los cambios ajenos en otro commit o stash.
+
+La prueba reproducible cubre la carga de pedidos del `storeadmin`, el aislamiento entre tiendas y la creación pública:
+
+```sh
+npm run test:emulator
+```
+
+El comando inicia únicamente Firestore Emulator, ejecuta `tests/firestore.rules.test.mjs` y lo detiene. La carga operativa del panel usa `stores/{storeId}/orders`, filtra estados activos, se limita a los últimos siete días y a 50 resultados; no consulta pedidos de todas las tiendas ni el historial completo.
+
+## Contrato de pedido público
+
+La modalidad `in_store` representa un pedido en mesa: exige `tableNumber` (entero de 1 a 999) y no admite teléfono ni dirección. La modalidad `delivery` exige `customerPhone` y `deliveryAddress`, y no admite `tableNumber`. Ambas requieren nombre, productos, total y estado inicial `pending`.
+
+Usá `validatePublicOrder(input, store.capabilities)` desde `src/lib/orders.ts` antes de llamar a `createPublicOrder`. La validación cliente normaliza los campos y las reglas de Firestore repiten el contrato, comprueban que la capacidad correspondiente de la tienda esté habilitada y bloquean campos cruzados. Los documentos de pedidos históricos permanecen legibles: sus campos de modalidad son opcionales al leerlos.
+
+## Cola operativa de pedidos
+
+Al ingresar como `storeadmin`, `/t/{slug}/admin` abre directamente la cola de pedidos del día. La zona horaria IANA se configura en **Operación > Zona horaria de operación**; las tiendas existentes sin ese campo usan `America/Bogota` de forma compatible.
+
+La cola consulta solo `stores/{storeId}/orders` dentro de un rango explícito de inicio/fin del día local, ordena por `createdAt`, limita cada página a 25 documentos y permite cargar la página siguiente. Desde allí se puede atender el pedido con las transiciones pendiente → aceptado → preparando → listo → entregado, o cancelarlo.
+
+La pestaña **Estadísticas** incluye un calendario nativo para un día o un rango de hasta 31 días. Muestra pedidos, ventas (sin cancelados) y productos destacados, y conserva el mismo límite/paginación de 25 documentos. El índice compuesto `orders(status, createdAt desc)` está en `firestore.indexes.json` para la cola de pedidos activos; desplegalo junto a reglas e índices con `firebase deploy --only firestore`.
+
+## Pedido público y stock
+
+El carrito público puede minimizarse sin perder sus productos. Antes de agregar o confirmar, valida la modalidad configurada en la tienda, la disponibilidad del producto y el stock visible. La confirmación queda bloqueada mientras se envía y usa un identificador único por intento para evitar duplicados; ante un error conserva el carrito para reintentar.
+
+La atención administrativa usa `transitionOrderStatus`: al aceptar, una transacción comprueba disponibilidad y descuenta stock de los productos que lo controlan; al cancelar un pedido aceptado, preparando o listo, la misma transacción lo repone. No se descuenta en la creación pública ni se repone después de entregarlo.
+
+## Selector de plantillas
+
+El editor usa cards de plantilla en lugar de renderizar una tienda completa dentro del formulario. Cada card comunica su estructura y propósito, es seleccionable con teclado y lector de pantalla, y conserva los IDs canónicos al guardar. Los IDs heredados se resuelven de forma compatible mediante `resolveTemplate`.
+
+## Layouts y themes
+
+Las cuatro plantillas consumen el mismo `StoreContentModel` normalizado; cambian jerarquía, navegación, densidad y composición sin alterar los datos. Los themes solo inyectan tokens de paleta y contraste. La lista de comprobación móvil/escritorio, incluido carrito, carga, error y vacío, está en [`docs/visual-layout-checklist.md`](docs/visual-layout-checklist.md).
+
+## Release y rutas estáticas
+
+Usá `npm run verify` antes de publicar: ejecuta typecheck, pruebas de reglas con Emulator, build y validación de archivos estáticos. El workflow de `main` despliega coordinadamente Firestore Rules, índices y Storage Rules antes de GitHub Pages; requiere el secreto `FIREBASE_SERVICE_ACCOUNT`. La verificación de carga directa/refresh y el registro de evidencia de producción están en [`docs/release-checklist.md`](docs/release-checklist.md).
+
+## Sesión y permisos
+
+El perfil de permisos se deduplica en memoria y se conserva durante cinco minutos por sesión para evitar lecturas repetidas de `users/{uid}` al navegar. Los paneles distinguen carga, sesión ausente, perfil incompleto, acceso denegado y error de red; Firestore Rules sigue validando toda operación. La guía de prueba está en [`docs/session-permissions-checklist.md`](docs/session-permissions-checklist.md).
+
+## Identidad y ubicación
+
+Desde el editor se puede cargar o reemplazar el logo (imagen menor de 5 MB) y configurar latitud/longitud. Los logos se almacenan bajo `stores/{storeId}/branding/` en Firebase Storage; la tienda pública muestra el logo cuando existe y un enlace accesible a Google Maps cuando hay coordenadas. Las tiendas sin estos campos siguen funcionando sin cambios.
+
+## Acceso con Google
+
+En Firebase Console, activá **Authentication → Sign-in method → Google** y agregá `JuanCGomezS.github.io` a **Authentication → Settings → Authorized domains** para GitHub Pages. El botón Google sirve para entrar con una cuenta ya registrada; desde **Registrarme** abre Google, pide confirmar el nombre y crea solo un perfil `customer`. Si el documento `users/{uid}` ya existe, se conservan rol y vínculo de tienda; el cliente nunca puede asignarlos.
+
+## Estados y seguimiento de pedidos
+
+Mesa/recogida: **Solicitado → Confirmado → En preparación → Listo → Entregado**. Domicilio añade **En camino** entre Listo y Entregado. El panel solo muestra acciones válidas; aceptación descuenta stock y cancelar antes de entrega lo repone según el flujo existente.
+
+Al confirmar, el cliente recibe un código de alta entropía y un enlace de seguimiento que puede copiar o compartir. El negocio puede reenviarlo manualmente por WhatsApp. El documento público de seguimiento contiene solamente modalidad, estado y marcas de tiempo; Firestore permite lectura directa por código, pero bloquea listados y escrituras públicas.
+
+## Alertas de pedidos y FCM
+
+La cola activa escucha en tiempo real solo cuando está visible: una consulta por tienda, día, estados activos y máximo 25 pedidos. La primera carga establece una base y no alerta pedidos históricos. Las notificaciones locales de escritorio son voluntarias.
+
+La push con FCM es opcional y usa `functions/notifyStoreAdminOfNewOrder`, por lo que exige Blaze, Firebase Cloud Messaging configurado y una cuenta de servicio de deploy. La Function hace como máximo dos lecturas por pedido (tienda y token del admin), no hace queries de colección ni polling. Configurá un presupuesto/alertas de Google Cloud antes de desplegar Functions; sin FCM configurado, la cola local continúa funcionando.
+
+## Tienda cerrada
+
+La carta sigue visible fuera del horario de operación, pero el carrito bloquea agregar y confirmar pedidos. El cálculo usa la zona horaria configurada y permite tiendas sin horario como compatibilidad. El aviso informa la próxima apertura conocida y dirige al cliente a explorar la carta. La creación ahora pasa por la Function `createPublicOrder`, que vuelve a validar el horario con hora de servidor; Firestore Rules bloquea escrituras directas de pedidos.

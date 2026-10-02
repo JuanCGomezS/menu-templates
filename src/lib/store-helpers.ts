@@ -14,6 +14,8 @@ export interface PublicItem {
   order: number;
   stock?: number;
   trackStock?: boolean;
+  availableInStore?: boolean;
+  availableForDelivery?: boolean;
   variants?: Array<{ name: string; price?: number; stock?: number }>;
 }
 
@@ -35,7 +37,22 @@ export interface PublicStore {
   currency: Currency | string;
   templateId: string;
   themeId?: string;
+  timeZone?: string;
+  logoUrl?: string;
+  location?: { latitude?: number; longitude?: number };
+  deliveryArea?: { enabled?: boolean; radiusMeters?: number };
+  subscription?: {
+    billingPeriod?: "monthly" | "quarterly" | "semiannual" | "annual";
+    startsAt?: { toDate?: () => Date } | Date;
+    endsAt?: { toDate?: () => Date } | Date;
+  };
   template?: { id: string; name: string } | null;
+  capabilities?: {
+    inStoreOrdering?: boolean;
+    deliveryOrdering?: boolean;
+    stockControl?: boolean;
+    [key: string]: boolean | undefined;
+  };
   contact?: {
     whatsapp?: string;
     instagram?: string;
@@ -50,7 +67,7 @@ export function getStoreWithData(
   store: any,
   categories: any[],
   items: any[],
-  templates: any[]
+  templates: any[],
 ): PublicStore {
   const storeCategories = categories
     .filter((category) => category.active !== false)
@@ -58,7 +75,7 @@ export function getStoreWithData(
     .map((category) => {
       const categoryItems = items
         .filter(
-          (item) => item.categoryId === category.id && item.active !== false
+          (item) => item.categoryId === category.id && item.active !== false,
         )
         .sort((a, b) => (a.order || 0) - (b.order || 0));
 
@@ -68,7 +85,9 @@ export function getStoreWithData(
       };
     });
 
-  const template = templates.find((template) => template.id === store.templateId);
+  const template = templates.find(
+    (template) => template.id === store.templateId,
+  );
   const active = store.active ?? store.isActive ?? false;
 
   return {

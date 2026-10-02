@@ -24,40 +24,154 @@ service cloud.firestore {
       return hasRole('storeadmin') && userDoc().data.storeId == storeId;
     }
 
-    function storeIsActive(storeId) {
-      return exists(/databases/$(database)/documents/stores/$(storeId))
-        && get(/databases/$(database)/documents/stores/$(storeId)).data.active == true;
+    function hasCurrentSubscription(store) {
+      return !store.keys().hasAny(['subscription']) || (
+        store.subscription is map
+        && store.subscription.keys().hasOnly(['billingPeriod', 'startsAt', 'endsAt'])
+        && store.subscription.billingPeriod in ['monthly', 'quarterly', 'semiannual', 'annual']
+        && store.subscription.startsAt is timestamp
+        && store.subscription.endsAt is timestamp
+        && store.subscription.startsAt < store.subscription.endsAt
+        && store.subscription.startsAt <= request.time
+        && request.time < store.subscription.endsAt
+      );
     }
 
-    function isPublicOrderCreate(storeId) {
-      return storeIsActive(storeId)
+    function hasValidSubscription(store) {
+      return !store.keys().hasAny(['subscription']) || (
+        store.subscription is map
+        && store.subscription.keys().hasOnly(['billingPeriod', 'startsAt', 'endsAt'])
+        && store.subscription.billingPeriod in ['monthly', 'quarterly', 'semiannual', 'annual']
+        && store.subscription.startsAt is timestamp
+        && store.subscription.endsAt is timestamp
+        && store.subscription.startsAt < store.subscription.endsAt
+      );
+    }
+
+    function preservesSubscription() {
+      return !resource.data.keys().hasAny(['subscription'])
+        || request.resource.data.keys().hasAny(['subscription']);
+    }
+
+    function storeIsActive(storeId) {
+      return exists(/databases/$(database)/documents/stores/$(storeId))
+        && get(/databases/$(database)/documents/stores/$(storeId)).data.active == true
+        && hasCurrentSubscription(get(/databases/$(database)/documents/stores/$(storeId)).data);
+    }
+
+    function storeAdminChangesOnly(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    function hasValidDeliveryArea() {
+      return !request.resource.data.keys().hasAny(['deliveryArea']) || (
+        request.resource.data.deliveryArea is map
+        && request.resource.data.deliveryArea.keys().hasOnly(['enabled', 'radiusMeters'])
+        && request.resource.data.deliveryArea.enabled is bool
+        && request.resource.data.deliveryArea.radiusMeters is number
+        && request.resource.data.deliveryArea.radiusMeters > 0
+        && request.resource.data.deliveryArea.radiusMeters <= 50000
+      );
+    }
+
+    function isStoreAdminStoreUpdate(storeId) {
+      return isStoreAdminFor(storeId)
+        && storeAdminChangesOnly(['name', 'type', 'templateId', 'themeId', 'currency', 'contact', 'schedule', 'timeZone', 'logoUrl', 'location', 'deliveryArea', 'capabilities', 'updatedAt'])
+        && hasValidDeliveryArea();
+    }
+
+    function isStoreAdminCategoryWrite(storeId) {
+      return isStoreAdminFor(storeId)
+        && request.resource.data.keys().hasOnly(['name', 'order', 'active', 'createdAt', 'updatedAt']);
+    }
+
+    function isValidOrderStatusTransition() {
+      return (resource.data.status == 'pending' && request.resource.data.status in ['accepted', 'cancelled'])
+        || (resource.data.status == 'accepted' && request.resource.data.status in ['preparing', 'cancelled'])
+        || (resource.data.status == 'preparing' && request.resource.data.status in ['ready', 'cancelled'])
+        || (resource.data.status == 'ready' && (
+          request.resource.data.status in ['delivered', 'cancelled']
+          || (resource.data.type == 'delivery' && request.resource.data.status == 'out_for_delivery')
+        ))
+        || (resource.data.status == 'out_for_delivery' && request.resource.data.status == 'delivered');
+    }
+
+    function isStoreAdminItemWrite(storeId) {
+      return isStoreAdminFor(storeId)
         && request.resource.data.keys().hasOnly([
-          'customerName',
-          'customerPhone',
-          'type',
-          'status',
-          'items',
-          'total',
-          'deliveryAddress',
-          'notes',
-          'createdAt',
-          'updatedAt'
+          'categoryId', 'name', 'description', 'price', 'imageUrl', 'active', 'order',
+          'stock', 'trackStock', 'variants', 'availableInStore', 'availableForDelivery',
+          'createdAt', 'updatedAt'
+        ]);
+    }
+
+    function hasValidPublicOrderBase() {
+      return request.resource.data.keys().hasAll([
+          'customerName', 'type', 'status', 'items', 'total', 'clientRequestId', 'trackingCode', 'createdAt', 'updatedAt'
         ])
         && request.resource.data.customerName is string
         && request.resource.data.customerName.size() >= 2
         && request.resource.data.customerName.size() <= 80
-        && request.resource.data.customerPhone is string
-        && request.resource.data.customerPhone.size() >= 7
-        && request.resource.data.customerPhone.size() <= 30
-        && request.resource.data.type in ['in_store', 'delivery']
         && request.resource.data.status == 'pending'
+        && request.resource.data.clientRequestId is string
+        && request.resource.data.clientRequestId.size() >= 8
+        && request.resource.data.clientRequestId.size() <= 100
+        && request.resource.data.trackingCode is string
+        && request.resource.data.trackingCode.size() >= 16
+        && request.resource.data.trackingCode.size() <= 100
+        && request.resource.data.clientRequestId == request.resource.id
+        && request.resource.data.trackingCode == request.resource.id
         && request.resource.data.items is list
         && request.resource.data.items.size() > 0
         && request.resource.data.items.size() <= 40
         && request.resource.data.total is number
         && request.resource.data.total >= 0
+        && (!request.resource.data.keys().hasAny(['notes']) || (
+          request.resource.data.notes is string && request.resource.data.notes.size() <= 500
+        ))
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
+    }
+
+    function hasValidTableOrder(storeId) {
+      return get(/databases/$(database)/documents/stores/$(storeId)).data.capabilities.inStoreOrdering == true
+        && request.resource.data.keys().hasOnly([
+          'customerName', 'type', 'status', 'items', 'total', 'tableNumber', 'notes', 'clientRequestId', 'trackingCode', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.type == 'in_store'
+        && request.resource.data.tableNumber is int
+        && request.resource.data.tableNumber >= 1
+        && request.resource.data.tableNumber <= 999;
+    }
+
+    function hasValidDeliveryOrder(storeId) {
+      return get(/databases/$(database)/documents/stores/$(storeId)).data.capabilities.deliveryOrdering == true
+        && request.resource.data.keys().hasOnly([
+          'customerName', 'customerPhone', 'type', 'status', 'items', 'total', 'deliveryAddress', 'deliveryLocation', 'notes', 'clientRequestId', 'trackingCode', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.type == 'delivery'
+        && request.resource.data.customerPhone is string
+        && request.resource.data.customerPhone.matches('^[0-9]{10}$')
+        && request.resource.data.deliveryAddress is string
+        && request.resource.data.deliveryAddress.size() >= 5
+        && request.resource.data.deliveryAddress.size() <= 200
+        && request.resource.data.deliveryLocation is map
+        && request.resource.data.deliveryLocation.keys().hasOnly(['latitude', 'longitude'])
+        && request.resource.data.deliveryLocation.latitude is number
+        && request.resource.data.deliveryLocation.latitude >= -90
+        && request.resource.data.deliveryLocation.latitude <= 90
+        && request.resource.data.deliveryLocation.longitude is number
+        && request.resource.data.deliveryLocation.longitude >= -180
+        && request.resource.data.deliveryLocation.longitude <= 180;
+    }
+
+    function isPublicOrderCreate(storeId) {
+      return storeIsActive(storeId)
+        && hasValidPublicOrderBase()
+        && (hasValidTableOrder(storeId) || hasValidDeliveryOrder(storeId))
+        && !exists(/databases/$(database)/documents/stores/$(storeId)/orderTracking/$(request.resource.data.trackingCode))
+        && getAfter(/databases/$(database)/documents/stores/$(storeId)/orderTracking/$(request.resource.data.trackingCode)).data.type == request.resource.data.type
+        && getAfter(/databases/$(database)/documents/stores/$(storeId)/orderTracking/$(request.resource.data.trackingCode)).data.status == 'pending';
     }
 
     function isCustomerSelfCreate(uid) {
@@ -66,6 +180,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly([
           'uid',
           'email',
+          'name',
           'role',
           'createdAt',
           'updatedAt'
@@ -73,6 +188,11 @@ service cloud.firestore {
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.email is string
         && request.resource.data.email.size() > 3
+        && (!request.resource.data.keys().hasAny(['name']) || (
+          request.resource.data.name is string
+          && request.resource.data.name.size() >= 2
+          && request.resource.data.name.size() <= 80
+        ))
         && request.resource.data.role == 'customer'
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
@@ -106,28 +226,60 @@ service cloud.firestore {
     }
 
     match /stores/{storeId} {
-      allow read: if resource.data.active == true || isSuperAdmin() || isStoreAdminFor(storeId);
-      allow create, update, delete: if isSuperAdmin() || isStoreAdminFor(storeId);
+      allow read: if (resource.data.active == true && hasCurrentSubscription(resource.data)) || isSuperAdmin() || isStoreAdminFor(storeId);
+      allow create: if isSuperAdmin() && hasValidSubscription(request.resource.data);
+      allow delete: if isSuperAdmin();
+      allow update: if (isSuperAdmin() && hasValidSubscription(request.resource.data) && preservesSubscription()) || isStoreAdminStoreUpdate(storeId);
 
       match /categories/{categoryId} {
         allow read: if (storeIsActive(storeId) && resource.data.active == true) || isSuperAdmin() || isStoreAdminFor(storeId);
-        allow create, update, delete: if isSuperAdmin() || isStoreAdminFor(storeId);
+        allow create, update: if isSuperAdmin() || isStoreAdminCategoryWrite(storeId);
+        allow delete: if isSuperAdmin() || isStoreAdminFor(storeId);
       }
 
       match /items/{itemId} {
         allow read: if (storeIsActive(storeId) && resource.data.active == true) || isSuperAdmin() || isStoreAdminFor(storeId);
-        allow create, update, delete: if isSuperAdmin() || isStoreAdminFor(storeId);
+        allow create, update: if isSuperAdmin() || isStoreAdminItemWrite(storeId);
+        allow delete: if isSuperAdmin() || isStoreAdminFor(storeId);
       }
 
       match /orders/{orderId} {
-        allow create: if isPublicOrderCreate(storeId);
+        // Public creation goes through the callable Function so server time can enforce store hours.
+        allow create: if false;
         allow read: if isSuperAdmin() || isStoreAdminFor(storeId);
-        allow update: if isSuperAdmin() || isStoreAdminFor(storeId);
+        allow update: if isSuperAdmin() || (isStoreAdminFor(storeId) && storeAdminChangesOnly(['status', 'updatedAt']) && isValidOrderStatusTransition());
+        allow delete: if isSuperAdmin();
+      }
+
+      match /notificationDevices/{uid} {
+        allow read: if isSuperAdmin() || isStoreAdminFor(storeId);
+        allow create, update: if isStoreAdminFor(storeId)
+          && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['token', 'updatedAt'])
+          && request.resource.data.token is string
+          && request.resource.data.token.size() > 20
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if (isStoreAdminFor(storeId) && request.auth.uid == uid) || isSuperAdmin();
+      }
+
+      match /orderTracking/{trackingCode} {
+        allow get: if resource.data.keys().hasOnly(['type', 'status', 'createdAt', 'updatedAt']);
+        allow list: if false;
+        allow create: if request.resource.data.keys().hasOnly(['type', 'status', 'createdAt', 'updatedAt'])
+          && request.resource.data.type in ['in_store', 'delivery']
+          && request.resource.data.status == 'pending'
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time
+          && !exists(/databases/$(database)/documents/stores/$(storeId)/orders/$(trackingCode))
+          && getAfter(/databases/$(database)/documents/stores/$(storeId)/orders/$(trackingCode)).data.trackingCode == trackingCode
+          && getAfter(/databases/$(database)/documents/stores/$(storeId)/orders/$(trackingCode)).data.type == request.resource.data.type
+          && getAfter(/databases/$(database)/documents/stores/$(storeId)/orders/$(trackingCode)).data.status == 'pending';
+        allow update: if isSuperAdmin() || (isStoreAdminFor(storeId) && storeAdminChangesOnly(['status', 'updatedAt']) && isValidOrderStatusTransition());
         allow delete: if isSuperAdmin();
       }
 
       match /{document=**} {
-        allow read, write: if isSuperAdmin() || isStoreAdminFor(storeId);
+        allow read, write: if isSuperAdmin();
       }
     }
 

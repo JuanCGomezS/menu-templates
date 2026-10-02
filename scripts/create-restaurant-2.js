@@ -49,11 +49,17 @@ async function seedStore() {
     templateId,
     themeId: 'default',
     currency: 'COP',
+    timeZone: 'America/Bogota',
     plan: 'free_trial',
     limits: {
       maxProducts: 100,
       maxCategories: 20,
       maxImages: 30
+    },
+    capabilities: {
+      inStoreOrdering: true,
+      deliveryOrdering: true,
+      stockControl: false
     },
     contact: {
       whatsapp: '+57 300 123 4567',

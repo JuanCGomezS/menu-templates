@@ -7,18 +7,31 @@
     "dev:clean": "rm -rf node_modules/.vite .astro && astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "test:rules": "node --test tests/firestore.rules.test.mjs",
+    "test:emulator": "firebase emulators:exec --only firestore \"npm run test:rules\"",
+    "typecheck": "astro check",
+    "verify:routes": "node scripts/verify-static-routes.mjs",
+    "verify": "npm run typecheck && npm run test:emulator && npm run build && npm run verify:routes"
   },
   "dependencies": {
     "astro": "^5.16.7",
     "firebase": "^12.7.0",
     "firebase-admin": "^13.10.0",
+    "leaflet": "^1.9.4",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.10",
     "@astrojs/react": "^5.0.7",
     "@astrojs/tailwind": "^5.1.0",
-    "tailwindcss": "^3.4.1"
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "@types/leaflet": "^1.9.22",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "firebase-tools": "^14.21.0",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.9.3"
   }
 }

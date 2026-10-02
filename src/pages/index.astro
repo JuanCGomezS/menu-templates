@@ -9,7 +9,7 @@ const path = (route: string) => `${basePath}${route}`;
 
 <Layout title="Menu Templates - Menús y catálogos multi-tienda">
   <main class="min-h-screen overflow-hidden bg-[#fff8ef] text-gray-950">
-    <AppHeader client:load />
+    <AppHeader fixed client:load />
 
     <section class="relative flex min-h-[100svh] items-center px-6 py-24 sm:py-28">
       <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(251,146,60,0.28),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(20,184,166,0.16),transparent_28%),linear-gradient(135deg,#fff8ef_0%,#fffdf8_48%,#fff1d6_100%)]"></div>
@@ -54,36 +54,8 @@ const path = (route: string) => `${basePath}${route}`;
         </div>
 
         <div class="relative">
-          <div class="absolute -inset-4 rounded-[2.5rem] bg-gradient-to-br from-orange-300/40 via-white to-teal-200/40 blur-2xl"></div>
-          <div class="relative rounded-[2rem] border border-orange-200 bg-white p-5 shadow-2xl shadow-orange-200/70">
-            <div class="rounded-[1.5rem] bg-gray-950 p-5 text-white shadow-inner">
-              <div class="flex items-center justify-between border-b border-white/10 pb-4">
-                <div>
-                  <p class="text-sm text-orange-200">/t/la-esquina</p>
-                  <h2 class="text-2xl font-black">Vista previa pública</h2>
-                </div>
-                <span class="rounded-full bg-green-400/20 px-3 py-1 text-sm font-semibold text-green-200">Activa</span>
-              </div>
-              <div class="mt-5 grid gap-3">
-                <div class="rounded-2xl bg-white/10 p-4">
-                  <p class="text-xs uppercase tracking-[0.25em] text-orange-200">Restaurante clásico</p>
-                  <p class="mt-2 text-lg font-bold">Menú por categorías con horario y enlaces de contacto.</p>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                  <div class="rounded-2xl bg-orange-400 p-4 text-gray-950">
-                    <p class="text-sm font-semibold">Comida rápida</p>
-                    <p class="mt-5 text-3xl font-black">Combos</p>
-                  </div>
-                  <div class="rounded-2xl bg-teal-300 p-4 text-gray-950">
-                    <p class="text-sm font-semibold">Catálogo</p>
-                    <p class="mt-5 text-3xl font-black">Inventario</p>
-                  </div>
-                </div>
-                <div class="rounded-2xl border border-white/10 p-4">
-                  <p class="text-sm text-gray-300">Los datos públicos con cache mantienen la experiencia rápida mientras cada tienda actualiza su contenido.</p>
-                </div>
-              </div>
-            </div>
+          <div class="relative w-full h-64 sm:h-80 md:h-96 lg:h-[28rem] overflow-hidden rounded-[1.5rem] shadow-2xl">
+            <img src={path('/background.jpg')} alt="Vista previa" class="w-full h-full object-cover" />
           </div>
         </div>
       </div>
