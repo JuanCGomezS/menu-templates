@@ -22,6 +22,7 @@ import {
 import { PublicOrderCartProvider, usePublicOrderCart } from "./PublicOrderCart";
 import OrderTrackingView from "./OrderTrackingView";
 import LocationMap from "./LocationMap";
+import StoreEffectLayer from "./StoreEffectLayer";
 
 type StoreData = PublicStore;
 type ScheduleEntry = [string, string];
@@ -193,13 +194,15 @@ export function PublicStoreTemplateView({ store }: { store: StoreData }) {
   const content = (
     <ThemeFrame theme={theme}>
       {!opening.isOpen && <StoreClosedNotice message={opening.message} />}
-      <StoreTemplateContent
-        store={contentModel}
-        schedule={schedule}
-        theme={theme}
-        isOpen={isOpen}
-        template={template}
-      />
+      <StoreEffectLayer effectId={contentModel.effectId}>
+        <StoreTemplateContent
+          store={contentModel}
+          schedule={schedule}
+          theme={theme}
+          isOpen={isOpen}
+          template={template}
+        />
+      </StoreEffectLayer>
     </ThemeFrame>
   );
   return contentModel.capabilities?.inStoreOrdering ||

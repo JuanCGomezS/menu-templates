@@ -37,6 +37,7 @@ export interface PublicStore {
   currency: Currency | string;
   templateId: string;
   themeId?: string;
+  effectId?: string;
   timeZone?: string;
   logoUrl?: string;
   location?: { latitude?: number; longitude?: number };

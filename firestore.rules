@@ -74,9 +74,16 @@ service cloud.firestore {
       );
     }
 
+    function hasValidEffect() {
+      return !request.resource.data.keys().hasAny(['effectId']) || (
+        request.resource.data.effectId is string
+        && request.resource.data.effectId in ['effect-none', 'effect-mist', 'effect-storm', 'effect-glass', 'effect-particles', 'effect-gel', 'effect-elastic']
+      );
+    }
+
     function isStoreAdminStoreUpdate(storeId) {
       return isStoreAdminFor(storeId)
-        && storeAdminChangesOnly(['name', 'type', 'templateId', 'themeId', 'currency', 'contact', 'schedule', 'timeZone', 'logoUrl', 'location', 'deliveryArea', 'capabilities', 'updatedAt'])
+        && storeAdminChangesOnly(['name', 'type', 'templateId', 'themeId', 'effectId', 'currency', 'contact', 'schedule', 'timeZone', 'logoUrl', 'location', 'deliveryArea', 'capabilities', 'updatedAt'])
         && hasValidDeliveryArea();
     }
 
@@ -227,9 +234,9 @@ service cloud.firestore {
 
     match /stores/{storeId} {
       allow read: if (resource.data.active == true && hasCurrentSubscription(resource.data)) || isSuperAdmin() || isStoreAdminFor(storeId);
-      allow create: if isSuperAdmin() && hasValidSubscription(request.resource.data);
+      allow create: if isSuperAdmin() && hasValidSubscription(request.resource.data) && hasValidEffect();
       allow delete: if isSuperAdmin();
-      allow update: if (isSuperAdmin() && hasValidSubscription(request.resource.data) && preservesSubscription()) || isStoreAdminStoreUpdate(storeId);
+      allow update: if hasValidEffect() && ((isSuperAdmin() && hasValidSubscription(request.resource.data) && preservesSubscription()) || isStoreAdminStoreUpdate(storeId));
 
       match /categories/{categoryId} {
         allow read: if (storeIsActive(storeId) && resource.data.active == true) || isSuperAdmin() || isStoreAdminFor(storeId);
