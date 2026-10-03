@@ -185,6 +185,83 @@ test("storeadmin no puede cambiar campos administrativos de su tienda", async ()
   );
 });
 
+test("storeadmin can save every supported effect on its own store", async () => {
+  for (const effectId of [
+    "effect-none",
+    "effect-mist",
+    "effect-storm",
+    "effect-glass",
+    "effect-particles",
+    "effect-gel",
+    "effect-elastic",
+  ]) {
+    await assertSucceeds(
+      setDoc(
+        doc(adminDb("admin-a"), "stores", "store-a"),
+        { effectId },
+        { merge: true },
+      ),
+    );
+    const snapshot = await assertSucceeds(
+      getDoc(doc(publicDb(), "stores", "store-a")),
+    );
+    assert.equal(snapshot.data().effectId, effectId);
+  }
+});
+
+test("effects cannot be changed across stores or anonymously", async () => {
+  await assertFails(
+    setDoc(
+      doc(adminDb("admin-a"), "stores", "store-b"),
+      { effectId: "effect-storm" },
+      { merge: true },
+    ),
+  );
+  await assertFails(
+    setDoc(
+      doc(publicDb(), "stores", "store-a"),
+      { effectId: "effect-storm" },
+      { merge: true },
+    ),
+  );
+});
+
+test("effect validation rejects unknown and non-string values for both admin roles", async () => {
+  for (const uid of ["admin-a", "superadmin"]) {
+    for (const effectId of ["unknown", "", null, 42, { id: "effect-mist" }]) {
+      await assertFails(
+        setDoc(
+          doc(adminDb(uid), "stores", "store-a"),
+          { effectId },
+          { merge: true },
+        ),
+      );
+    }
+  }
+});
+
+test("stores without effects remain writable and superadmin can create valid effects", async () => {
+  await assertSucceeds(
+    setDoc(
+      doc(adminDb("admin-b"), "stores", "store-b"),
+      { name: "Legacy store" },
+      { merge: true },
+    ),
+  );
+  await assertSucceeds(
+    setDoc(doc(adminDb("superadmin"), "stores", "effect-store"), {
+      active: true,
+      effectId: "effect-mist",
+    }),
+  );
+  await assertFails(
+    setDoc(doc(adminDb("superadmin"), "stores", "invalid-effect-store"), {
+      active: true,
+      effectId: "unknown",
+    }),
+  );
+});
+
 test("storeadmin puede ajustar las capacidades operativas solo de su tienda", async () => {
   await assertSucceeds(
     setDoc(

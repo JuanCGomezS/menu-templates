@@ -1,0 +1,218 @@
+.store-fx-particles {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  contain: layout paint;
+}
+
+.store-fx-particle {
+  position: absolute;
+  width: var(--particle-size);
+  height: var(--particle-size);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--particle-color) 70%, transparent);
+  animation: store-fx-particles-drift var(--particle-duration) ease-in-out
+    var(--particle-delay) infinite alternate;
+  will-change: transform;
+}
+
+.store-fx-particle:nth-child(3n + 1) {
+  --particle-color: var(--store-accent);
+}
+.store-fx-particle:nth-child(3n + 2) {
+  --particle-color: var(--store-accent-secondary);
+}
+.store-fx-particle:nth-child(3n) {
+  --particle-color: var(--store-accent-tertiary);
+}
+
+.particle--1 {
+  left: 4%;
+  top: 11%;
+  --particle-size: 0.35rem;
+  --particle-duration: 9s;
+  --particle-delay: -5s;
+}
+.particle--2 {
+  left: 14%;
+  top: 67%;
+  --particle-size: 0.55rem;
+  --particle-duration: 12s;
+  --particle-delay: -2s;
+}
+.particle--3 {
+  left: 22%;
+  top: 27%;
+  --particle-size: 0.25rem;
+  --particle-duration: 8s;
+  --particle-delay: -6s;
+}
+.particle--4 {
+  left: 31%;
+  top: 84%;
+  --particle-size: 0.7rem;
+  --particle-duration: 14s;
+  --particle-delay: -9s;
+}
+.particle--5 {
+  left: 38%;
+  top: 15%;
+  --particle-size: 0.4rem;
+  --particle-duration: 10s;
+  --particle-delay: -1s;
+}
+.particle--6 {
+  left: 46%;
+  top: 52%;
+  --particle-size: 0.3rem;
+  --particle-duration: 11s;
+  --particle-delay: -7s;
+}
+.particle--7 {
+  left: 54%;
+  top: 7%;
+  --particle-size: 0.6rem;
+  --particle-duration: 13s;
+  --particle-delay: -4s;
+}
+.particle--8 {
+  left: 61%;
+  top: 73%;
+  --particle-size: 0.45rem;
+  --particle-duration: 9s;
+  --particle-delay: -8s;
+}
+.particle--9 {
+  left: 69%;
+  top: 34%;
+  --particle-size: 0.25rem;
+  --particle-duration: 12s;
+  --particle-delay: -3s;
+}
+.particle--10 {
+  left: 76%;
+  top: 91%;
+  --particle-size: 0.65rem;
+  --particle-duration: 15s;
+  --particle-delay: -10s;
+}
+.particle--11 {
+  left: 83%;
+  top: 19%;
+  --particle-size: 0.35rem;
+  --particle-duration: 8s;
+  --particle-delay: -5s;
+}
+.particle--12 {
+  left: 94%;
+  top: 58%;
+  --particle-size: 0.5rem;
+  --particle-duration: 11s;
+  --particle-delay: -6s;
+}
+.particle--13 {
+  left: 8%;
+  top: 43%;
+  --particle-size: 0.25rem;
+  --particle-duration: 10s;
+  --particle-delay: -9s;
+}
+.particle--14 {
+  left: 18%;
+  top: 94%;
+  --particle-size: 0.45rem;
+  --particle-duration: 13s;
+  --particle-delay: -4s;
+}
+.particle--15 {
+  left: 27%;
+  top: 56%;
+  --particle-size: 0.6rem;
+  --particle-duration: 9s;
+  --particle-delay: -7s;
+}
+.particle--16 {
+  left: 35%;
+  top: 38%;
+  --particle-size: 0.3rem;
+  --particle-duration: 12s;
+  --particle-delay: -2s;
+}
+.particle--17 {
+  left: 43%;
+  top: 97%;
+  --particle-size: 0.4rem;
+  --particle-duration: 14s;
+  --particle-delay: -11s;
+}
+.particle--18 {
+  left: 51%;
+  top: 25%;
+  --particle-size: 0.55rem;
+  --particle-duration: 10s;
+  --particle-delay: -6s;
+}
+.particle--19 {
+  left: 59%;
+  top: 62%;
+  --particle-size: 0.25rem;
+  --particle-duration: 8s;
+  --particle-delay: -3s;
+}
+.particle--20 {
+  left: 66%;
+  top: 13%;
+  --particle-size: 0.45rem;
+  --particle-duration: 13s;
+  --particle-delay: -8s;
+}
+.particle--21 {
+  left: 74%;
+  top: 48%;
+  --particle-size: 0.7rem;
+  --particle-duration: 15s;
+  --particle-delay: -5s;
+}
+.particle--22 {
+  left: 81%;
+  top: 79%;
+  --particle-size: 0.35rem;
+  --particle-duration: 9s;
+  --particle-delay: -10s;
+}
+.particle--23 {
+  left: 89%;
+  top: 39%;
+  --particle-size: 0.5rem;
+  --particle-duration: 11s;
+  --particle-delay: -1s;
+}
+.particle--24 {
+  left: 97%;
+  top: 6%;
+  --particle-size: 0.25rem;
+  --particle-duration: 12s;
+  --particle-delay: -7s;
+}
+
+@keyframes store-fx-particles-drift {
+  from {
+    transform: translate3d(-0.5rem, -1rem, 0) scale(0.9);
+  }
+  to {
+    transform: translate3d(1.5rem, 2rem, 0) scale(1.08);
+  }
+}
+
+@media (max-width: 640px) {
+  .store-fx-particle:nth-child(n + 13) {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store-fx-particle {
+    animation: none;
+  }
+}

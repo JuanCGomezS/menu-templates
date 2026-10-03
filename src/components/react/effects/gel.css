@@ -1,0 +1,118 @@
+.store-fx-gel {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  contain: layout paint;
+}
+
+.store-fx-gel-drop,
+.store-fx-gel-bridge {
+  position: absolute;
+  display: block;
+  background: color-mix(in srgb, var(--gel-color) 50%, transparent);
+  transform-origin: center;
+  will-change: transform, border-radius;
+}
+
+.store-fx-gel-drop {
+  width: clamp(4rem, 11vw, 9rem);
+  aspect-ratio: 1;
+  border-radius: 56% 44% 61% 39% / 43% 58% 42% 57%;
+  animation: store-fx-gel-pulse var(--gel-duration) ease-in-out var(--gel-delay)
+    infinite alternate;
+}
+
+.store-fx-gel-bridge {
+  height: clamp(1.5rem, 4vw, 3.5rem);
+  border-radius: 999px;
+  animation: store-fx-gel-stretch 8s ease-in-out var(--gel-delay) infinite
+    alternate;
+}
+
+.store-fx-gel-drop--one {
+  --gel-color: var(--store-accent);
+  --gel-duration: 8s;
+  --gel-delay: -3s;
+  left: -2%;
+  top: 14%;
+}
+
+.store-fx-gel-drop--two {
+  --gel-color: var(--store-accent-secondary);
+  --gel-duration: 10s;
+  --gel-delay: -6s;
+  left: 7%;
+  top: 29%;
+  width: clamp(5.5rem, 14vw, 11rem);
+}
+
+.store-fx-gel-drop--three {
+  --gel-color: var(--store-accent-tertiary);
+  --gel-duration: 9s;
+  --gel-delay: -2s;
+  right: 4%;
+  bottom: 10%;
+  width: clamp(4.5rem, 10vw, 8rem);
+}
+
+.store-fx-gel-drop--four {
+  --gel-color: var(--store-accent-secondary);
+  --gel-duration: 11s;
+  --gel-delay: -8s;
+  right: -3%;
+  bottom: 24%;
+  width: clamp(6rem, 15vw, 12rem);
+}
+
+.store-fx-gel-bridge--one {
+  --gel-color: var(--store-accent-secondary);
+  --gel-delay: -4s;
+  width: clamp(5rem, 13vw, 10rem);
+  left: 3%;
+  top: 29%;
+  rotate: 40deg;
+}
+
+.store-fx-gel-bridge--two {
+  --gel-color: var(--store-accent-tertiary);
+  --gel-delay: -1s;
+  width: clamp(5rem, 12vw, 9rem);
+  right: 2%;
+  bottom: 26%;
+  rotate: -32deg;
+}
+
+@keyframes store-fx-gel-pulse {
+  from {
+    border-radius: 56% 44% 61% 39% / 43% 58% 42% 57%;
+    transform: translate3d(-3%, -2%, 0) scale(0.92, 1.05);
+  }
+  to {
+    border-radius: 39% 61% 42% 58% / 55% 40% 60% 45%;
+    transform: translate3d(4%, 3%, 0) scale(1.07, 0.93);
+  }
+}
+
+@keyframes store-fx-gel-stretch {
+  from {
+    transform: scaleX(0.82) scaleY(0.9);
+  }
+  to {
+    transform: scaleX(1.12) scaleY(1.08);
+  }
+}
+
+@media (max-width: 640px) {
+  .store-fx-gel-drop--four,
+  .store-fx-gel-bridge--two {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store-fx-gel-drop,
+  .store-fx-gel-bridge {
+    animation: none;
+  }
+}

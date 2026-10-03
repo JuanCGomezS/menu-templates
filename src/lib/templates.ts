@@ -64,11 +64,12 @@ export const TEMPLATES: Record<string, TemplateConfig> = {
     },
     NATURAL: {
         id: "layout-natural",
-        name: "Natural",
+        name: "Botánica",
         component: "natural",
         keywords: [
             "layout-natural",
             "natural",
+            "botanica",
             "tropical",
             "template-tropical",
         ],
@@ -78,12 +79,13 @@ export const TEMPLATES: Record<string, TemplateConfig> = {
     },
     WARM: {
         id: "layout-warm",
-        name: "Cálido",
+        name: "Galería cálida",
         component: "warm",
         keywords: [
             "layout-warm",
             "warm",
             "calido",
+            "galeria-calida",
             "colorful",
             "template-colorful",
             "fast-food",
@@ -94,12 +96,13 @@ export const TEMPLATES: Record<string, TemplateConfig> = {
     },
     ELEGANT: {
         id: "layout-elegant",
-        name: "Elegante",
+        name: "Arquitectónica",
         component: "elegant",
         keywords: [
             "layout-elegant",
             "elegant",
             "elegante",
+            "arquitectonica",
             "template-elegant",
             "product-catalog",
         ],
@@ -125,12 +128,13 @@ export const TEMPLATES: Record<string, TemplateConfig> = {
     },
     MASCOT: {
         id: "layout-mascot",
-        name: "Pop",
+        name: "Personaje pop",
         component: "mascot",
         keywords: [
             "layout-mascot",
             "mascot",
             "pop",
+            "personaje-pop",
             "character",
             "template-mascot",
         ],
@@ -170,7 +174,7 @@ export const TEMPLATES: Record<string, TemplateConfig> = {
     },
     CONFETTI: {
         id: "layout-confetti",
-        name: "Vibrante",
+        name: "Confeti",
         component: "confetti",
         keywords: [
             "layout-confetti",

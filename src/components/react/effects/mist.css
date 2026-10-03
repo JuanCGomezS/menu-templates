@@ -1,0 +1,89 @@
+.store-fx-mist {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.store-fx-mist__wisp {
+  position: absolute;
+  width: clamp(10rem, 22vw, 22rem);
+  height: clamp(3.5rem, 8vw, 8rem);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--store-surface) 72%, var(--store-accent));
+  filter: blur(8px);
+  opacity: 0.18;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  animation: store-fx-mist-drift 32s cubic-bezier(0.45, 0, 0.55, 1) infinite
+    alternate;
+}
+
+.store-fx-mist__wisp--one {
+  top: 8%;
+  left: -8%;
+  animation-duration: 34s;
+}
+
+.store-fx-mist__wisp--two {
+  top: 27%;
+  right: 4%;
+  width: clamp(8rem, 17vw, 18rem);
+  opacity: 0.14;
+  animation-duration: 41s;
+  animation-direction: alternate-reverse;
+}
+
+.store-fx-mist__wisp--three {
+  top: 53%;
+  left: 18%;
+  width: clamp(12rem, 27vw, 28rem);
+  opacity: 0.16;
+  animation-duration: 38s;
+}
+
+.store-fx-mist__wisp--four {
+  right: -6%;
+  bottom: 7%;
+  opacity: 0.2;
+  animation-duration: 45s;
+  animation-direction: alternate-reverse;
+}
+
+.store-fx-mist__wisp--five {
+  bottom: 30%;
+  left: -4%;
+  width: clamp(7rem, 14vw, 15rem);
+  opacity: 0.12;
+  animation-duration: 36s;
+}
+
+@keyframes store-fx-mist-drift {
+  from {
+    transform: translate3d(-5%, -8%, 0) scale(0.94);
+  }
+
+  to {
+    transform: translate3d(18%, 10%, 0) scale(1.08);
+  }
+}
+
+@media (max-width: 640px) {
+  .store-fx-mist__wisp--four,
+  .store-fx-mist__wisp--five {
+    display: none;
+  }
+
+  .store-fx-mist__wisp {
+    filter: blur(6px);
+    animation-duration: 44s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store-fx-mist__wisp {
+    animation: none;
+    will-change: auto;
+  }
+}

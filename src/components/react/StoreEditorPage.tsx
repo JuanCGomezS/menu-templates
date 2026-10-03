@@ -22,6 +22,7 @@ import type React from "react";
 import { auth, db, storage } from "../../lib/firebase";
 import { getUserProfile, ROLES } from "../../lib/auth";
 import { clearPublicStoreCache } from "../../lib/public-store-data";
+import { getAllEffects, resolveEffect, type EffectId } from "../../lib/effects";
 import {
   getAllTemplates,
   getAllThemes,
@@ -66,6 +67,7 @@ interface StoreData {
   ownerEmail?: string;
   templateId?: string;
   themeId?: string;
+  effectId?: string;
   currency?: Currency;
   plan?: PlanType;
   subscription?: {
@@ -103,6 +105,7 @@ interface StoreFormState {
   type: StoreType;
   templateId: string;
   themeId: string;
+  effectId: EffectId;
   currency: Currency;
   plan: PlanType;
   billingPeriod: BillingPeriod;
@@ -248,6 +251,7 @@ function emptyForm(): StoreFormState {
     type: "restaurant",
     templateId: "layout-minimal",
     themeId: "theme-default",
+    effectId: "effect-none",
     currency: "COP",
     plan: "free_trial",
     billingPeriod: "monthly",
@@ -297,6 +301,7 @@ function formFromStore(store: StoreData): StoreFormState {
     store.templateId || defaults.templateId,
     store.themeId,
   );
+  const resolvedEffect = resolveEffect(store.effectId);
 
   return {
     ...defaults,
@@ -307,6 +312,7 @@ function formFromStore(store: StoreData): StoreFormState {
     type: store.type || defaults.type,
     templateId: resolvedTemplate.id,
     themeId: resolvedTheme.id,
+    effectId: resolvedEffect.id,
     currency: store.currency || defaults.currency,
     plan: store.plan || defaults.plan,
     billingPeriod: store.subscription?.billingPeriod || defaults.billingPeriod,
@@ -440,6 +446,7 @@ function makeStorePayload(form: StoreFormState, isSuperAdmin: boolean) {
     type: form.type,
     templateId: form.templateId,
     themeId: form.themeId,
+    effectId: form.effectId,
     currency: form.currency,
     ...(isSuperAdmin
       ? {
@@ -533,6 +540,11 @@ export default function StoreEditorPage() {
 
   const templates = useMemo(() => getAllTemplates(), []);
   const themes = useMemo(() => getAllThemes(), []);
+  const effects = useMemo(() => getAllEffects(), []);
+  const selectedEffect = useMemo(
+    () => resolveEffect(form.effectId),
+    [form.effectId],
+  );
   const visibleTabs = useMemo(
     () => TABS.filter((tab) => isSuperAdmin || tab.id !== "superadmin"),
     [isSuperAdmin],
@@ -1506,6 +1518,33 @@ export default function StoreEditorPage() {
                 <p className="-mt-3 text-sm text-gray-500">
                   Cambia la paleta de la plantilla sin modificar productos,
                   categorías ni funcionamiento.
+                </p>
+                <Field label="Efecto">
+                  <select
+                    name="effectId"
+                    value={form.effectId}
+                    onChange={(event) =>
+                      updateForm(
+                        "effectId",
+                        resolveEffect(event.target.value).id,
+                      )
+                    }
+                    className={COMPACT_INPUT_CLASS}
+                    aria-describedby="effect-help effect-reduced-motion"
+                  >
+                    {effects.map((effect) => (
+                      <option key={effect.id} value={effect.id}>
+                        {effect.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <p id="effect-help" className="-mt-3 text-sm text-gray-500">
+                  Añade atmósfera sin cambiar la estructura ni los colores.{" "}
+                  {selectedEffect.description}
+                </p>
+                <p id="effect-reduced-motion" className="text-xs text-gray-500">
+                  Los movimientos se reducen cuando el visitante lo prefiere.
                 </p>
               </div>
             </div>
