@@ -8,6 +8,8 @@ const db = admin.firestore();
 const { storeIsOpen } = require("./store-hours");
 const { isValidPoint, isWithinDeliveryArea } = require("./delivery-area");
 const { isStoreSubscriptionActive } = require("./subscription");
+const STORE_ADMIN_URL =
+  "https://JuanCGomezS.github.io/menu-templates/admin/store/";
 
 exports.createPublicOrder = onCall(async (request) => {
   const { storeId, order, trackingCode } = request.data || {};
@@ -125,7 +127,7 @@ exports.notifyStoreAdminOfNewOrder = onDocumentCreated(
           type: String(order.type || ""),
         },
         webpush: {
-          fcmOptions: { link: `/t/${storeSnapshot.data()?.slug || ""}/admin` },
+          fcmOptions: { link: STORE_ADMIN_URL },
         },
       });
     } catch (error) {

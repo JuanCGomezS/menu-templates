@@ -1,0 +1,249 @@
+.store-fx-seasonal {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  contain: layout paint;
+}
+
+.store-fx-motif {
+  position: absolute;
+  top: -12%;
+  left: var(--motif-left);
+  width: var(--motif-size);
+  height: var(--motif-size);
+  animation: store-fx-seasonal-fall var(--motif-duration) linear
+    var(--motif-delay) infinite;
+  will-change: transform;
+}
+
+.store-fx-stage[data-store-effect="effect-snow"] .store-fx-motif {
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.92);
+  box-shadow: 0 0 0.8rem rgb(255 255 255 / 0.55);
+}
+
+.store-fx-stage[data-store-effect="effect-petals"] .store-fx-motif {
+  border-radius: 75% 25% 70% 30%;
+  background: color-mix(in srgb, var(--store-accent) 68%, white);
+  transform-origin: 20% 80%;
+  animation-name: store-fx-seasonal-petal;
+}
+
+.store-fx-stage[data-store-effect="effect-ribbons"] .store-fx-motif,
+.store-fx-stage[data-store-effect="effect-streamers"] .store-fx-motif {
+  width: calc(var(--motif-size) * 0.55);
+  height: calc(var(--motif-size) * 2.7);
+  border-radius: 999px;
+  background: var(--store-accent);
+  box-shadow: 0 0.45rem 0.8rem rgb(16 24 40 / 0.14);
+  animation-name: store-fx-seasonal-ribbon;
+}
+
+.store-fx-stage[data-store-effect="effect-streamers"]
+  .store-fx-motif:nth-child(3n + 1) {
+  background: #facc15;
+}
+
+.store-fx-stage[data-store-effect="effect-streamers"]
+  .store-fx-motif:nth-child(3n + 2) {
+  background: #2563eb;
+}
+
+.store-fx-stage[data-store-effect="effect-streamers"]
+  .store-fx-motif:nth-child(3n) {
+  background: #dc2626;
+}
+
+.store-fx-stage[data-store-effect="effect-hearts"] .store-fx-motif {
+  width: calc(var(--motif-size) * 1.1);
+  height: calc(var(--motif-size) * 1.1);
+  border-radius: 0.18rem;
+  background: var(--store-accent);
+  transform: rotate(45deg);
+  animation-name: store-fx-seasonal-heart;
+}
+
+.store-fx-stage[data-store-effect="effect-hearts"] .store-fx-motif::before,
+.store-fx-stage[data-store-effect="effect-hearts"] .store-fx-motif::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: inherit;
+}
+
+.store-fx-stage[data-store-effect="effect-hearts"] .store-fx-motif::before {
+  left: -50%;
+}
+
+.store-fx-stage[data-store-effect="effect-hearts"] .store-fx-motif::after {
+  top: -50%;
+}
+
+.store-fx-stage[data-store-effect="effect-pumpkins"] .store-fx-motif {
+  width: calc(var(--motif-size) * 1.35);
+  height: var(--motif-size);
+  border-radius: 46% 46% 42% 42%;
+  background: #f97316;
+  box-shadow:
+    inset -0.14rem 0 #ea580c,
+    inset 0.14rem 0 #fb923c;
+  animation-name: store-fx-seasonal-pumpkin;
+}
+
+.store-fx-stage[data-store-effect="effect-pumpkins"] .store-fx-motif::before {
+  content: "";
+  position: absolute;
+  top: -28%;
+  left: 42%;
+  width: 20%;
+  height: 35%;
+  border-radius: 999px;
+  background: #365314;
+}
+
+.store-fx-stage[data-store-effect="effect-eggs"] .store-fx-motif {
+  width: calc(var(--motif-size) * 0.86);
+  height: calc(var(--motif-size) * 1.28);
+  border-radius: 50% 50% 46% 46%;
+  background: linear-gradient(
+    135deg,
+    var(--store-accent) 0 35%,
+    #fde68a 35% 58%,
+    var(--store-accent-secondary) 58%
+  );
+  animation-name: store-fx-seasonal-egg;
+}
+
+.store-fx-stage[data-store-effect="effect-candles"] .store-fx-motif {
+  width: calc(var(--motif-size) * 0.48);
+  height: calc(var(--motif-size) * 1.7);
+  border-radius: 0.1rem 0.1rem 0.3rem 0.3rem;
+  background: #fef3c7;
+  box-shadow: 0 0.42rem 1rem #f59e0b;
+  animation-name: store-fx-seasonal-candle;
+}
+
+.store-fx-stage[data-store-effect="effect-candles"] .store-fx-motif::before {
+  content: "";
+  position: absolute;
+  top: -55%;
+  left: 8%;
+  width: 84%;
+  height: 62%;
+  border-radius: 60% 40% 60% 40%;
+  background: #fb923c;
+  box-shadow: 0 0 0.8rem #fbbf24;
+}
+
+@keyframes store-fx-seasonal-fall {
+  from {
+    transform: translate3d(-1rem, -8vh, 0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.88;
+  }
+  to {
+    transform: translate3d(2rem, 112vh, 0) rotate(180deg);
+    opacity: 0;
+  }
+}
+
+@keyframes store-fx-seasonal-petal {
+  from {
+    transform: translate3d(-1rem, -8vh, 0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.82;
+  }
+  to {
+    transform: translate3d(3rem, 112vh, 0) rotate(540deg);
+    opacity: 0;
+  }
+}
+
+@keyframes store-fx-seasonal-ribbon {
+  from {
+    transform: translate3d(-1rem, -8vh, 0) rotate(-20deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.78;
+  }
+  to {
+    transform: translate3d(2rem, 112vh, 0) rotate(420deg);
+    opacity: 0;
+  }
+}
+
+@keyframes store-fx-seasonal-heart {
+  from {
+    transform: translate3d(-1rem, -8vh, 0) rotate(45deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.82;
+  }
+  to {
+    transform: translate3d(2rem, 112vh, 0) rotate(405deg);
+    opacity: 0;
+  }
+}
+
+@keyframes store-fx-seasonal-pumpkin {
+  from {
+    transform: translate3d(-1rem, -8vh, 0) rotate(-12deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.86;
+  }
+  to {
+    transform: translate3d(2.4rem, 112vh, 0) rotate(150deg);
+    opacity: 0;
+  }
+}
+
+@keyframes store-fx-seasonal-egg {
+  from {
+    transform: translate3d(-0.8rem, -8vh, 0) rotate(-18deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.82;
+  }
+  to {
+    transform: translate3d(1.8rem, 112vh, 0) rotate(180deg);
+    opacity: 0;
+  }
+}
+
+@keyframes store-fx-seasonal-candle {
+  from {
+    transform: translate3d(-1rem, -8vh, 0) rotate(-5deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.88;
+  }
+  to {
+    transform: translate3d(1.2rem, 112vh, 0) rotate(8deg);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .store-fx-motif:nth-child(n + 11) {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store-fx-motif {
+    animation: none;
+  }
+}

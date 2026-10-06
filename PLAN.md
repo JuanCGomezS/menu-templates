@@ -158,7 +158,7 @@ La autenticación se resuelve con **Firebase Auth**. La autorización se resuelv
 /admin                    → Dashboard superadmin
 /admin/store              → Crear tienda o editar tienda con `?storeId=...`
 /t/[storeSlug]            → Vista pública de tienda: menú o catálogo, resuelta en cliente
-/t/[storeSlug]/admin      → Panel admin de la tienda
+/admin/store             → Panel de la tienda asignada al storeadmin
 ```
 
 ### Decisión de routing

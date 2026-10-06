@@ -77,7 +77,13 @@ service cloud.firestore {
     function hasValidEffect() {
       return !request.resource.data.keys().hasAny(['effectId']) || (
         request.resource.data.effectId is string
-        && request.resource.data.effectId in ['effect-none', 'effect-mist', 'effect-storm', 'effect-glass', 'effect-particles', 'effect-gel', 'effect-elastic']
+        && (
+          request.resource.data.effectId in ['effect-none', 'effect-smoke', 'effect-storm', 'effect-glass', 'effect-particles', 'effect-snow', 'effect-petals', 'effect-ribbons', 'effect-hearts', 'effect-pumpkins', 'effect-eggs', 'effect-streamers', 'effect-candles']
+          || (
+            request.resource.data.effectId == resource.data.effectId
+            && resource.data.effectId in ['effect-mist', 'effect-gel', 'effect-elastic']
+          )
+        )
       );
     }
 

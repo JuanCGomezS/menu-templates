@@ -63,7 +63,7 @@ const ORDER_STATUS_STYLES: Record<
     line: "border-t-sky-500",
     badge: "bg-sky-50 text-sky-950",
     dot: "bg-sky-500",
-    icon: "/orders/send.svg",
+    icon: "/orders/delivery.svg",
   },
   delivered: {
     line: "border-t-emerald-500",

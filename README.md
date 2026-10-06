@@ -125,7 +125,7 @@ El script crea los usuarios si no existen, para lo cual exige la contraseña cor
 2. Ejecutá `npm run seed:auth` con las variables anteriores.
 3. Iniciá sesión en `/login`.
 4. Probá superadmin en `/admin`.
-5. Probá storeadmin en `/t/cafe-bella-vista/admin`.
+5. Probá storeadmin en `/admin/store/`.
 
 En GitHub Pages, las mismas rutas se sirven bajo el base path del proyecto. El código usa `import.meta.env.BASE_URL` para construir los redirects.
 
@@ -198,7 +198,7 @@ Usá `validatePublicOrder(input, store.capabilities)` desde `src/lib/orders.ts` 
 
 ## Cola operativa de pedidos
 
-Al ingresar como `storeadmin`, `/t/{slug}/admin` abre directamente la cola de pedidos del día. La zona horaria IANA se configura en **Operación > Zona horaria de operación**; las tiendas existentes sin ese campo usan `America/Bogota` de forma compatible.
+Al ingresar como `storeadmin`, `/admin/store/` abre la administración de su propia tienda. La zona horaria IANA se configura en **Operación > Zona horaria de operación**; las tiendas existentes sin ese campo usan `America/Bogota` de forma compatible.
 
 La cola consulta solo `stores/{storeId}/orders` dentro de un rango explícito de inicio/fin del día local, ordena por `createdAt`, limita cada página a 25 documentos y permite cargar la página siguiente. Desde allí se puede atender el pedido con las transiciones pendiente → aceptado → preparando → listo → entregado, o cancelarlo.
 

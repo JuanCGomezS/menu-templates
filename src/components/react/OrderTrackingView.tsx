@@ -21,7 +21,7 @@ const STATUS_ICONS: Partial<Record<OrderStatus, string>> = {
   accepted: "/orders/accept.svg",
   preparing: "/orders/cooking.svg",
   ready: "/orders/ready.svg",
-  out_for_delivery: "/orders/send.svg",
+  out_for_delivery: "/orders/delivery.svg",
   delivered: "/orders/delivered.svg",
 };
 

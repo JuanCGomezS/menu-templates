@@ -7,7 +7,10 @@ type DrawFrame = (
 ) => void;
 type CreateScene = (width: number, height: number) => DrawFrame;
 
-export function useWaterCanvas(createScene: CreateScene) {
+export function useWaterCanvas(
+  createScene: CreateScene,
+  { respectReducedMotion = false }: { respectReducedMotion?: boolean } = {},
+) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current;
@@ -24,6 +27,9 @@ export function useWaterCanvas(createScene: CreateScene) {
     let last = 0;
     let time = 0;
     let draw: DrawFrame | undefined;
+    const reduceMotion =
+      respectReducedMotion &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let stopped = false;
     const resize = () => {
       const { width, height } = canvas.getBoundingClientRect();
@@ -54,7 +60,7 @@ export function useWaterCanvas(createScene: CreateScene) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         return;
       }
-      frame = requestAnimationFrame(animate);
+      if (!reduceMotion) frame = requestAnimationFrame(animate);
     };
     let observer: ResizeObserver | undefined;
     try {

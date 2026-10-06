@@ -442,7 +442,7 @@ function createProductDraft(categoryId: string, order: number): ProductDraft {
 function makeStorePayload(form: StoreFormState, isSuperAdmin: boolean) {
   return {
     name: form.name.trim(),
-    slug: normalizeSlug(form.slug),
+    ...(isSuperAdmin ? { slug: normalizeSlug(form.slug) } : {}),
     type: form.type,
     templateId: form.templateId,
     themeId: form.themeId,
@@ -522,6 +522,7 @@ export default function StoreEditorPage() {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("operation");
   const [isDirty, setIsDirty] = useState(false);
+  const [catalogIsDirty, setCatalogIsDirty] = useState(false);
   const [categoryDrafts, setCategoryDrafts] = useState<CategoryDraft[]>([]);
   const [productDrafts, setProductDrafts] = useState<ProductDraft[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -590,6 +591,7 @@ export default function StoreEditorPage() {
         setForm(emptyForm());
         setCategoryDrafts([]);
         setProductDrafts([]);
+        setCatalogIsDirty(false);
         setIsDirty(false);
         setStatus("allowed");
         return;
@@ -609,6 +611,7 @@ export default function StoreEditorPage() {
           formFromStore({ id: snapshot.id, ...snapshot.data() } as StoreData),
         );
         await loadStoreProducts(snapshot.id);
+        setCatalogIsDirty(false);
         setIsDirty(false);
         setStatus("allowed");
       } catch (err) {
@@ -791,12 +794,17 @@ export default function StoreEditorPage() {
     );
   };
 
+  const markCatalogDirty = () => {
+    setCatalogIsDirty(true);
+    setIsDirty(true);
+  };
+
   const addCategory = () => {
     setCategoryDrafts((current) => [
       ...current,
       createCategoryDraft(current.length),
     ]);
-    setIsDirty(true);
+    markCatalogDirty();
   };
 
   const updateCategory = <K extends keyof CategoryDraft>(
@@ -809,7 +817,7 @@ export default function StoreEditorPage() {
         category.id === id ? { ...category, [key]: value } : category,
       ),
     );
-    setIsDirty(true);
+    markCatalogDirty();
   };
 
   const removeCategory = (id: string) => {
@@ -819,7 +827,7 @@ export default function StoreEditorPage() {
     setProductDrafts((current) =>
       current.filter((product) => product.categoryId !== id),
     );
-    setIsDirty(true);
+    markCatalogDirty();
   };
 
   const addProduct = (categoryId: string) => {
@@ -830,7 +838,7 @@ export default function StoreEditorPage() {
         current.filter((product) => product.categoryId === categoryId).length,
       ),
     ]);
-    setIsDirty(true);
+    markCatalogDirty();
   };
 
   const updateProduct = <K extends keyof ProductDraft>(
@@ -843,7 +851,7 @@ export default function StoreEditorPage() {
         product.id === id ? { ...product, [key]: value } : product,
       ),
     );
-    setIsDirty(true);
+    markCatalogDirty();
   };
 
   const updateProductImage = (id: string, file?: File) => {
@@ -873,7 +881,7 @@ export default function StoreEditorPage() {
     setProductDrafts((current) =>
       current.filter((product) => product.id !== id),
     );
-    setIsDirty(true);
+    markCatalogDirty();
   };
 
   const getStoreAdminUserId = async (email: string) => {
@@ -1036,13 +1044,20 @@ export default function StoreEditorPage() {
         stock: toOptionalNumber(product.stock),
       }))
       .filter((product) => product.name && categoryIds.has(product.categoryId));
+    const shouldSaveCatalog = activeTab === "products";
 
-    if (categoriesToSave.length > toPositiveNumber(form.maxCategories, 20)) {
+    if (
+      shouldSaveCatalog &&
+      categoriesToSave.length > toPositiveNumber(form.maxCategories, 20)
+    ) {
       setError("La tienda supera el límite de categorías configurado.");
       return;
     }
 
-    if (productsToSave.length > toPositiveNumber(form.maxProducts, 100)) {
+    if (
+      shouldSaveCatalog &&
+      productsToSave.length > toPositiveNumber(form.maxProducts, 100)
+    ) {
       setError("La tienda supera el límite de productos configurado.");
       return;
     }
@@ -1050,7 +1065,9 @@ export default function StoreEditorPage() {
     setSaving(true);
 
     try {
-      const storeAdmin = await getStoreAdminUserId(form.storeAdminEmail);
+      const storeAdmin = isSuperAdmin
+        ? await getStoreAdminUserId(form.storeAdminEmail)
+        : null;
       const storeRef =
         mode === "edit" && form.id
           ? doc(db, "stores", form.id)
@@ -1077,23 +1094,15 @@ export default function StoreEditorPage() {
         form.ownerUid !== storeAdmin.userId
           ? doc(db, "users", form.ownerUid)
           : null;
-      const previousOwnerSnapshot = previousOwnerRef
-        ? await getDoc(previousOwnerRef)
-        : null;
+      const previousOwnerSnapshot =
+        isSuperAdmin && previousOwnerRef
+          ? await getDoc(previousOwnerRef)
+          : null;
 
       if (isSuperAdmin)
         await assertUniqueSlug(slug, mode === "edit" ? storeId : undefined);
 
-      const [existingCategoriesSnapshot, existingItemsSnapshot] =
-        await Promise.all([
-          getDocs(collection(db, "stores", storeId, "categories")),
-          getDocs(collection(db, "stores", storeId, "items")),
-        ]);
-
-      const uploadedProducts = await uploadProductImages(
-        storeId,
-        productsToSave,
-      );
+      let uploadedProducts = productsToSave;
       const batch = writeBatch(db);
       batch.set(
         storeRef,
@@ -1103,68 +1112,76 @@ export default function StoreEditorPage() {
         { merge: true },
       );
 
-      const savedCategoryIds = new Set(
-        categoriesToSave.map((category) => category.id),
-      );
-      const savedProductIds = new Set(
-        uploadedProducts.map((product) => product.id),
-      );
-
-      existingCategoriesSnapshot.docs.forEach((categoryDoc) => {
-        if (!savedCategoryIds.has(categoryDoc.id)) {
-          batch.delete(categoryDoc.ref);
-        }
-      });
-
-      existingItemsSnapshot.docs.forEach((itemDoc) => {
-        if (!savedProductIds.has(itemDoc.id)) {
-          batch.delete(itemDoc.ref);
-        }
-      });
-
-      categoriesToSave.forEach((category) => {
-        batch.set(
-          doc(db, "stores", storeId, "categories", category.id),
-          {
-            name: category.name,
-            active: category.active,
-            order: category.order,
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true },
+      if (shouldSaveCatalog) {
+        const [existingCategoriesSnapshot, existingItemsSnapshot] =
+          await Promise.all([
+            getDocs(collection(db, "stores", storeId, "categories")),
+            getDocs(collection(db, "stores", storeId, "items")),
+          ]);
+        uploadedProducts = await uploadProductImages(storeId, productsToSave);
+        const savedCategoryIds = new Set(
+          categoriesToSave.map((category) => category.id),
         );
-      });
-
-      uploadedProducts.forEach((product) => {
-        batch.set(
-          doc(db, "stores", storeId, "items", product.id),
-          {
-            categoryId: product.categoryId,
-            name: product.name,
-            description: product.description,
-            price: product.price,
-            active: product.active,
-            order: product.order,
-            ...(form.stockControl
-              ? {
-                  trackStock: product.trackStock,
-                  stock: product.trackStock ? product.stock : 0,
-                }
-              : {}),
-            ...(form.inStoreOrdering
-              ? { availableInStore: product.availableInStore }
-              : {}),
-            ...(form.deliveryOrdering
-              ? { availableForDelivery: product.availableForDelivery }
-              : {}),
-            ...(product.imageUrl ? { imageUrl: product.imageUrl } : {}),
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true },
+        const savedProductIds = new Set(
+          uploadedProducts.map((product) => product.id),
         );
-      });
 
-      if (storeAdmin) {
+        existingCategoriesSnapshot.docs.forEach((categoryDoc) => {
+          if (!savedCategoryIds.has(categoryDoc.id)) {
+            batch.delete(categoryDoc.ref);
+          }
+        });
+
+        existingItemsSnapshot.docs.forEach((itemDoc) => {
+          if (!savedProductIds.has(itemDoc.id)) {
+            batch.delete(itemDoc.ref);
+          }
+        });
+
+        categoriesToSave.forEach((category) => {
+          batch.set(
+            doc(db, "stores", storeId, "categories", category.id),
+            {
+              name: category.name,
+              active: category.active,
+              order: category.order,
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true },
+          );
+        });
+
+        uploadedProducts.forEach((product) => {
+          batch.set(
+            doc(db, "stores", storeId, "items", product.id),
+            {
+              categoryId: product.categoryId,
+              name: product.name,
+              description: product.description,
+              price: product.price,
+              active: product.active,
+              order: product.order,
+              ...(form.stockControl
+                ? {
+                    trackStock: product.trackStock,
+                    stock: product.trackStock ? product.stock : 0,
+                  }
+                : {}),
+              ...(form.inStoreOrdering
+                ? { availableInStore: product.availableInStore }
+                : {}),
+              ...(form.deliveryOrdering
+                ? { availableForDelivery: product.availableForDelivery }
+                : {}),
+              ...(product.imageUrl ? { imageUrl: product.imageUrl } : {}),
+              updatedAt: serverTimestamp(),
+            },
+            { merge: true },
+          );
+        });
+      }
+
+      if (isSuperAdmin && storeAdmin) {
         const previousOwnerData = previousOwnerSnapshot?.data();
 
         if (
@@ -1195,7 +1212,7 @@ export default function StoreEditorPage() {
           },
           { merge: true },
         );
-      } else if (mode === "edit" && form.ownerUid) {
+      } else if (isSuperAdmin && mode === "edit" && form.ownerUid) {
         batch.update(doc(db, "users", form.ownerUid), {
           storeId,
           storeSlug: slug,
@@ -1227,21 +1244,24 @@ export default function StoreEditorPage() {
       });
       setLogoFile(null);
       setLogoToDelete(null);
-      setCategoryDrafts(
-        categoriesToSave.map((category) => ({
-          ...category,
-          order: String(category.order),
-        })),
-      );
-      setProductDrafts(
-        uploadedProducts.map((product) => ({
-          ...product,
-          price: String(product.price),
-          order: String(product.order),
-          stock: String(product.stock),
-        })),
-      );
-      setIsDirty(false);
+      if (shouldSaveCatalog) {
+        setCatalogIsDirty(false);
+        setCategoryDrafts(
+          categoriesToSave.map((category) => ({
+            ...category,
+            order: String(category.order),
+          })),
+        );
+        setProductDrafts(
+          uploadedProducts.map((product) => ({
+            ...product,
+            price: String(product.price),
+            order: String(product.order),
+            stock: String(product.stock),
+          })),
+        );
+      }
+      setIsDirty(shouldSaveCatalog ? false : catalogIsDirty);
       window.history.replaceState(
         null,
         "",
@@ -1314,14 +1334,24 @@ export default function StoreEditorPage() {
         {mode === "edit" && (
           <>
             {form.slug && (
-              <a
-                href={withBasePath(`/t/${form.slug}`)}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                type="button"
+                onClick={() => {
+                  const destination = new URL(
+                    withBasePath(`/t/${encodeURIComponent(form.slug)}`),
+                    window.location.origin,
+                  );
+                  if (destination.origin !== window.location.origin) return;
+                  window.open(
+                    destination.toString(),
+                    "_blank",
+                    "noopener,noreferrer",
+                  );
+                }}
                 className="rounded-xl border border-gray-300 px-4 py-2 font-bold text-gray-700 transition hover:border-gray-950"
               >
                 Ver tienda
-              </a>
+              </button>
             )}
             {isSuperAdmin && (
               <a
@@ -2385,7 +2415,7 @@ export default function StoreEditorPage() {
           )}
         </div>
 
-        {activeTab !== "operation" && (
+        {activeTab !== "operation" && activeTab !== "statistics" && (
           <div className="m-6 flex justify-end">
             <button
               type="submit"

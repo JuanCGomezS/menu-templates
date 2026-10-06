@@ -188,12 +188,18 @@ test("storeadmin no puede cambiar campos administrativos de su tienda", async ()
 test("storeadmin can save every supported effect on its own store", async () => {
   for (const effectId of [
     "effect-none",
-    "effect-mist",
+    "effect-smoke",
     "effect-storm",
     "effect-glass",
     "effect-particles",
-    "effect-gel",
-    "effect-elastic",
+    "effect-snow",
+    "effect-petals",
+    "effect-ribbons",
+    "effect-hearts",
+    "effect-pumpkins",
+    "effect-eggs",
+    "effect-streamers",
+    "effect-candles",
   ]) {
     await assertSucceeds(
       setDoc(
@@ -207,6 +213,33 @@ test("storeadmin can save every supported effect on its own store", async () => 
     );
     assert.equal(snapshot.data().effectId, effectId);
   }
+});
+
+test("legacy removed effects remain writable until replaced", async () => {
+  await testEnv.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), "stores", "store-a"),
+      {
+        effectId: "effect-gel",
+      },
+      { merge: true },
+    );
+  });
+
+  await assertSucceeds(
+    setDoc(
+      doc(adminDb("admin-a"), "stores", "store-a"),
+      { name: "Tienda legacy" },
+      { merge: true },
+    ),
+  );
+  await assertSucceeds(
+    setDoc(
+      doc(adminDb("admin-a"), "stores", "store-a"),
+      { effectId: "effect-hearts" },
+      { merge: true },
+    ),
+  );
 });
 
 test("effects cannot be changed across stores or anonymously", async () => {
@@ -228,7 +261,7 @@ test("effects cannot be changed across stores or anonymously", async () => {
 
 test("effect validation rejects unknown and non-string values for both admin roles", async () => {
   for (const uid of ["admin-a", "superadmin"]) {
-    for (const effectId of ["unknown", "", null, 42, { id: "effect-mist" }]) {
+    for (const effectId of ["unknown", "", null, 42, { id: "effect-smoke" }]) {
       await assertFails(
         setDoc(
           doc(adminDb(uid), "stores", "store-a"),
@@ -251,7 +284,7 @@ test("stores without effects remain writable and superadmin can create valid eff
   await assertSucceeds(
     setDoc(doc(adminDb("superadmin"), "stores", "effect-store"), {
       active: true,
-      effectId: "effect-mist",
+      effectId: "effect-smoke",
     }),
   );
   await assertFails(
