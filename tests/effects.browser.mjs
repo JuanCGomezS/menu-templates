@@ -81,7 +81,7 @@ const server = await createServer({
     },
   ],
 });
-const page = `<!doctype html><html><head><link rel="icon" href="data:,"><link rel="stylesheet" href="/__effects.css"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+const page = `<!doctype html><html lang="es"><head><meta charset="UTF-8"><title>Vista de prueba · Efectos de agua</title>${preview ? '<link href="https://fonts.googleapis.com/css2?family=Material+Icons+Outlined&display=swap" rel="stylesheet">' : ""}<link rel="icon" href="data:,"><link rel="stylesheet" href="/__effects.css"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
 body{margin:0;font:16px sans-serif;background:#111827;color:#fff8ef}.test-content{padding:32px;min-height:120vh}.test-content h1{font-size:48px}button{font:inherit}#app{--store-bg:#fff8ef;--store-surface:#ffffff;--store-text:#111827;--store-accent:#f97316;--store-accent-secondary:#62c9ca;--store-accent-tertiary:#f5d866}
 </style></head><body><div id="app"></div><script type="module">
 import React from 'react';
@@ -98,7 +98,7 @@ const root = createRoot(document.getElementById('app'));
 window.showEffect = id => root.render(React.createElement(StoreEffectLayer, {effectId:id}, React.createElement('main',{className:'test-content'},React.createElement('h1',null,'Store effects'),React.createElement('p',null,'Catalog content must remain readable.'),React.createElement('button',{id:'order',onClick:()=>window.orders++},'Add product'))));
 window.showStore = (templateId, effectId, themeId = 'theme-default') => {
   const schedule = Object.fromEntries(['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map(day=>[day,{open:'00:00',close:'23:59',closed:false}]));
-  const store = {id:'fixture',name:'Studio Store',slug:'fixture',active:true,isActive:true,currency:'USD',templateId,themeId,effectId,schedule,timeZone:'America/Bogota',capabilities:{inStoreOrdering:true},contact:{address:'Sample address'},categories:[{id:'collection',name:'Collection',items:[{id:'sample',categoryId:'collection',name:'Everyday essential',description:'A sample item to verify that content and ordering remain accessible.',price:25,order:0}]}]};
+  const store = {id:'fixture',name:'Tienda de muestra',slug:'fixture',active:true,isActive:true,currency:'USD',templateId,themeId,effectId,schedule,timeZone:'America/Bogota',capabilities:{inStoreOrdering:true},contact:{address:'Sample address'},categories:[{id:'collection',name:'Colección',items:[{id:'sample',categoryId:'collection',name:'Producto de ejemplo',description:'Datos de prueba para comparar los efectos sin modificar tu tienda.',price:25,order:0}]}]};
   root.render(React.createElement(PublicStoreTemplateView,{store}));
 };
 window.orders = 0;
@@ -279,9 +279,7 @@ try {
       url: `http://127.0.0.1:${port}/__effects?effect=effect-storm`,
     });
     await navigation;
-    await waitFor(
-      'window.ready && document.querySelector(".store-fx-controls")',
-    );
+    await waitFor("window.ready");
     assert.equal(
       await evaluate('!!document.querySelector("[data-store-effect]")'),
       false,
@@ -292,12 +290,29 @@ try {
       ),
       false,
     );
+    assert.equal(
+      await evaluate('!!document.querySelector(".store-fx-controls")'),
+      false,
+    );
     console.log("PASS reduced motion: no renderer loaded");
     await command("Emulation.setEmulatedMedia", {
       features: [{ name: "prefers-reduced-motion", value: "no-preference" }],
     });
     await waitFor('document.querySelector("[data-store-effect]")');
-    const effects = ["mist", "storm", "glass", "particles", "gel", "elastic"];
+    const effects = [
+      "smoke",
+      "storm",
+      "glass",
+      "particles",
+      "snow",
+      "petals",
+      "ribbons",
+      "hearts",
+      "pumpkins",
+      "eggs",
+      "streamers",
+      "candles",
+    ];
     const screenshotDir = process.env.EFFECT_SCREENSHOTS;
     if (screenshotDir) await mkdir(screenshotDir, { recursive: true });
     for (const width of [375, 1440]) {
@@ -330,21 +345,25 @@ try {
           ),
           "isolate",
         );
-        if (effect === "storm" || effect === "glass") {
+        if (["smoke", "storm", "glass"].includes(effect)) {
+          const canvasSelector =
+            effect === "smoke"
+              ? "canvas.store-fx-smoke"
+              : "canvas.store-fx-water";
           await waitFor(
-            'document.querySelector("canvas.store-fx-water")?.width > 0',
+            `document.querySelector(${JSON.stringify(canvasSelector)})?.width > 0`,
           );
           const first = await evaluate(
-            'document.querySelector("canvas.store-fx-water").toDataURL()',
+            `document.querySelector(${JSON.stringify(canvasSelector)}).toDataURL()`,
           );
           await evaluate("new Promise(resolve=>setTimeout(resolve,250))");
           const second = await evaluate(
-            'document.querySelector("canvas.store-fx-water").toDataURL()',
+            `document.querySelector(${JSON.stringify(canvasSelector)}).toDataURL()`,
           );
           assert.notEqual(
             first,
             second,
-            "Water simulation must evolve over time",
+            `${effect} canvas must evolve over time`,
           );
         }
         assert.equal(
@@ -357,28 +376,7 @@ try {
           await evaluate("document.documentElement.scrollWidth <= innerWidth"),
           true,
         );
-        await evaluate(
-          'document.querySelector(".store-fx-controls button").click()',
-        );
-        await waitFor('!document.querySelector("[data-store-effect]")');
-        const stoppedFrames = await evaluate("window.waterFrames");
-        await evaluate("new Promise(resolve=>setTimeout(resolve,100))");
-        assert.equal(
-          await evaluate("window.waterFrames"),
-          stoppedFrames,
-          "Paused canvas must stop drawing",
-        );
-        assert.equal(
-          await evaluate(
-            'document.querySelector(".store-fx-controls button").getAttribute("aria-pressed")',
-          ),
-          "true",
-        );
         await evaluate('document.getElementById("order").click()');
-        await evaluate(
-          'document.querySelector(".store-fx-controls button").click()',
-        );
-        await waitFor('document.querySelector("[data-store-effect]")');
         if (screenshotDir) {
           await evaluate("new Promise(resolve=>setTimeout(resolve,1200))");
           const { data } = await command("Page.captureScreenshot", {
@@ -390,26 +388,11 @@ try {
           );
         }
         console.log(
-          `PASS ${effect} ${width}px: mounted, pause/resume, no overflow`,
+          `PASS ${effect} ${width}px: mounted, ordering works, no overflow`,
         );
       }
     }
     assert.equal(await evaluate("window.orders"), effects.length * 2);
-    await evaluate(
-      'document.querySelector(".store-fx-controls button").click();window.showEffect("effect-gel")',
-    );
-    await waitFor(
-      'document.querySelector(".store-fx-controls button").textContent.includes("Gel")',
-    );
-    assert.equal(
-      await evaluate('!!document.querySelector("[data-store-effect]")'),
-      false,
-    );
-    console.log("PASS pause persists across effect changes");
-    await evaluate(
-      'document.querySelector(".store-fx-controls button").click()',
-    );
-    await waitFor('document.querySelector("[data-store-effect]")');
     await evaluate(
       'Object.defineProperty(document,"hidden",{configurable:true,get:()=>true});document.dispatchEvent(new Event("visibilitychange"))',
     );
@@ -424,7 +407,7 @@ try {
     });
     await waitFor('!document.querySelector("[data-store-effect]")');
     await evaluate('window.showEffect("unknown")');
-    await waitFor('!document.querySelector(".store-fx-controls")');
+    await waitFor('!document.querySelector("[data-store-effect]")');
     assert.equal(
       await evaluate('!!document.querySelector("[data-store-effect]")'),
       false,
@@ -543,15 +526,22 @@ try {
       }
     }
     await evaluate('window.showEffect("effect-none")');
-  await waitFor('!document.querySelector(".store-fx-stage")');
-  await evaluate('window.savedObserver = window.ResizeObserver; window.ResizeObserver = class { constructor() { throw new Error("Simulated observer failure"); } }; window.showEffect("effect-glass")');
-  await waitFor('document.querySelector("canvas.store-fx-water")');
-  await clickElement('document.getElementById("order")');
-  assert.ok(await evaluate('!!document.querySelector("main")'), 'Observer failure must preserve catalog');
-  await evaluate('window.ResizeObserver = window.savedObserver; delete window.savedObserver; window.showEffect("effect-none")');
-  await waitFor('!document.querySelector(".store-fx-stage")');
-  console.log('PASS ResizeObserver failure leaves catalog usable');
-  assert.deepEqual(exceptions, []);
+    await waitFor('!document.querySelector(".store-fx-stage")');
+    await evaluate(
+      'window.savedObserver = window.ResizeObserver; window.ResizeObserver = class { constructor() { throw new Error("Simulated observer failure"); } }; window.showEffect("effect-glass")',
+    );
+    await waitFor('document.querySelector("canvas.store-fx-water")');
+    await clickElement('document.getElementById("order")');
+    assert.ok(
+      await evaluate('!!document.querySelector("main")'),
+      "Observer failure must preserve catalog",
+    );
+    await evaluate(
+      'window.ResizeObserver = window.savedObserver; delete window.savedObserver; window.showEffect("effect-none")',
+    );
+    await waitFor('!document.querySelector(".store-fx-stage")');
+    console.log("PASS ResizeObserver failure leaves catalog usable");
+    assert.deepEqual(exceptions, []);
   }
 } finally {
   socket?.close();

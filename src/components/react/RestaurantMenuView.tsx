@@ -130,6 +130,26 @@ export function PublicStoreTemplateView({ store }: { store: StoreData }) {
   const contentModel = normalizeStoreContent(store);
 
   useEffect(() => {
+    const originalTitle = document.title;
+    const favicon =
+      document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
+    const originalFavicon = favicon?.href;
+    const originalFaviconType = favicon?.getAttribute("type");
+
+    if (contentModel.name) document.title = contentModel.name;
+    if (favicon && contentModel.logoUrl) {
+      favicon.href = contentModel.logoUrl;
+      favicon.removeAttribute("type");
+    }
+
+    return () => {
+      document.title = originalTitle;
+      if (favicon && originalFavicon) favicon.href = originalFavicon;
+      if (favicon && originalFaviconType) favicon.type = originalFaviconType;
+    };
+  }, [contentModel.logoUrl, contentModel.name]);
+
+  useEffect(() => {
     const refresh = () => setNow(new Date());
     let interval: number | undefined;
     const timeout = window.setTimeout(

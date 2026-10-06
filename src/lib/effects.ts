@@ -1,11 +1,17 @@
 export type EffectId =
   | "effect-none"
-  | "effect-mist"
+  | "effect-smoke"
   | "effect-storm"
   | "effect-glass"
   | "effect-particles"
-  | "effect-gel"
-  | "effect-elastic";
+  | "effect-snow"
+  | "effect-petals"
+  | "effect-ribbons"
+  | "effect-hearts"
+  | "effect-pumpkins"
+  | "effect-eggs"
+  | "effect-streamers"
+  | "effect-candles";
 
 export interface EffectConfig {
   id: EffectId;
@@ -20,9 +26,10 @@ const EFFECTS: readonly EffectConfig[] = [
     description: "Presentación sin animación ambiental.",
   },
   {
-    id: "effect-mist",
-    name: "Niebla",
-    description: "Bruma suave que se desplaza lentamente por los bordes.",
+    id: "effect-smoke",
+    name: "Humo ascendente",
+    description:
+      "Penachos de humo cálido que ascienden desde la base y se disipan.",
   },
   {
     id: "effect-storm",
@@ -38,19 +45,49 @@ const EFFECTS: readonly EffectConfig[] = [
   },
   {
     id: "effect-particles",
-    name: "Partículas",
-    description: "Partículas ligeras que flotan alrededor del catálogo.",
-  },
-  {
-    id: "effect-gel",
-    name: "Gel",
-    description: "Gotas orgánicas que fluyen y cambian de forma.",
-  },
-  {
-    id: "effect-elastic",
-    name: "Elástico",
+    name: "Partículas prismáticas",
     description:
-      "Cintas decorativas que se estiran y recuperan su forma sin mover los controles.",
+      "Destellos y pequeñas piezas de color que recorren el fondo con calma.",
+  },
+  {
+    id: "effect-snow",
+    name: "Lluvia de nieve",
+    description: "Copos ligeros para el tema navideño.",
+  },
+  {
+    id: "effect-petals",
+    name: "Flores al viento",
+    description: "Pétalos suaves para el tema del Día de la Madre.",
+  },
+  {
+    id: "effect-ribbons",
+    name: "Cintas de celebración",
+    description: "Tiras de papel sobrias para el tema del Día del Padre.",
+  },
+  {
+    id: "effect-hearts",
+    name: "Lluvia de corazones",
+    description: "Corazones flotantes para el tema de San Valentín.",
+  },
+  {
+    id: "effect-pumpkins",
+    name: "Lluvia de calabazas",
+    description: "Pequeñas calabazas para el tema de Halloween.",
+  },
+  {
+    id: "effect-eggs",
+    name: "Lluvia de Pascua",
+    description: "Huevos de colores para el tema de Pascua.",
+  },
+  {
+    id: "effect-streamers",
+    name: "Brillos patrios",
+    description: "Cintas azul, amarilla y roja para el tema de Independencia.",
+  },
+  {
+    id: "effect-candles",
+    name: "Velitas encendidas",
+    description: "Luces cálidas para el tema del Día de las Velitas.",
   },
 ];
 

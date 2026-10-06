@@ -15,12 +15,18 @@ const loaders: Record<
   AnimatedEffectId,
   () => Promise<{ default: ComponentType }>
 > = {
-  "effect-mist": () => import("./effects/MistEffect"),
+  "effect-smoke": () => import("./effects/SmokeEffect"),
   "effect-storm": () => import("./effects/StormEffect"),
   "effect-glass": () => import("./effects/GlassEffect"),
   "effect-particles": () => import("./effects/ParticlesEffect"),
-  "effect-gel": () => import("./effects/GelEffect"),
-  "effect-elastic": () => import("./effects/ElasticEffect"),
+  "effect-snow": () => import("./effects/SeasonalEffect"),
+  "effect-petals": () => import("./effects/SeasonalEffect"),
+  "effect-ribbons": () => import("./effects/SeasonalEffect"),
+  "effect-hearts": () => import("./effects/SeasonalEffect"),
+  "effect-pumpkins": () => import("./effects/SeasonalEffect"),
+  "effect-eggs": () => import("./effects/SeasonalEffect"),
+  "effect-streamers": () => import("./effects/SeasonalEffect"),
+  "effect-candles": () => import("./effects/SeasonalEffect"),
 };
 
 export default function StoreEffectLayer({
@@ -45,7 +51,6 @@ export default function StoreEffectLayer({
     reduced: boolean;
     visible: boolean;
   }>({ id: null, reduced: true, visible: false });
-  const [paused, setPaused] = useState(false);
   const [loaded, setLoaded] = useState<{
     id: EffectId;
     Renderer: ComponentType;
@@ -74,7 +79,6 @@ export default function StoreEffectLayer({
     environment.id === effect.id &&
     environment.visible &&
     !environment.reduced &&
-    !paused &&
     failedId !== effect.id;
 
   useEffect(() => {
@@ -98,26 +102,6 @@ export default function StoreEffectLayer({
 
   return (
     <div ref={scope}>
-      <div className="store-fx-controls">
-        {environment.id === effect.id ? (
-          environment.reduced ? (
-            <span>Animación desactivada: movimiento reducido</span>
-          ) : failedId === effect.id ? (
-            <span>Efecto no disponible</span>
-          ) : (
-            <button
-              type="button"
-              aria-pressed={paused}
-              onClick={() => setPaused((value) => !value)}
-            >
-              {paused ? "Reanudar efecto" : "Pausar efecto"}
-              <span className="store-fx-control-name"> · {effect.name}</span>
-            </button>
-          )
-        ) : (
-          <span>Efecto: {effect.name}</span>
-        )}
-      </div>
       {children}
       {running &&
         Renderer &&

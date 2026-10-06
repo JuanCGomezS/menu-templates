@@ -22,11 +22,24 @@ const { normalizeStoreContent } = loadModule("../src/lib/store-content.ts");
 
 test("effects are independent, unique and sorted after the disabled default", () => {
   const effects = getAllEffects();
-  assert.equal(effects.length, 7);
+  assert.equal(effects.length, 13);
   assert.equal(effects[0].id, "effect-none");
   assert.deepEqual(
     effects.slice(1).map((effect) => effect.name),
-    ["Cristal mojado", "Elástico", "Gel", "Lluvia", "Niebla", "Partículas"],
+    [
+      "Brillos patrios",
+      "Cintas de celebración",
+      "Cristal mojado",
+      "Flores al viento",
+      "Humo ascendente",
+      "Lluvia",
+      "Lluvia de calabazas",
+      "Lluvia de corazones",
+      "Lluvia de nieve",
+      "Lluvia de Pascua",
+      "Partículas prismáticas",
+      "Velitas encendidas",
+    ],
   );
   assert.equal(
     new Set(effects.map((effect) => effect.id)).size,
@@ -45,7 +58,7 @@ test("old stores and invalid effect values fall back to no effect", () => {
     null,
     "",
     "unknown",
-    "EFFECT-MIST",
+    "EFFECT-SMOKE",
     1,
     {},
     [],

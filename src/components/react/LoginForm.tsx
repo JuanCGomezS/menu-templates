@@ -5,7 +5,6 @@ import type { AppUserProfile } from "../../lib/auth";
 import { withBasePath } from "../../lib/base-path";
 import { ROLES } from "../../../config/app-constants.js";
 
-const STORE_PENDING_PATH = withBasePath("/t/tienda-pendiente/admin");
 const MISSING_PROFILE_MESSAGE =
   "Tu cuenta existe, pero aún no tiene un perfil completo. Vamos a intentar completarlo automáticamente.";
 
@@ -87,41 +86,22 @@ function getRedirectPath(profile: AppUserProfile) {
     return withBasePath("/admin");
   }
 
-  if (profile.role === ROLES.STOREADMIN && profile.storeSlug) {
-    return withBasePath(`/t/${profile.storeSlug}/admin`);
+  if (profile.role === ROLES.STOREADMIN) {
+    return withBasePath("/admin/store/");
   }
 
-  return STORE_PENDING_PATH;
-}
-
-async function resolveRedirect(
-  profile: AppUserProfile,
-  getStoreSlugById: (storeId: string) => Promise<string | null>,
-) {
-  if (
-    profile.role !== ROLES.STOREADMIN ||
-    profile.storeSlug ||
-    !profile.storeId
-  ) {
-    return getRedirectPath(profile);
-  }
-
-  const slug = await getStoreSlugById(profile.storeId);
-  return slug ? withBasePath(`/t/${slug}/admin`) : STORE_PENDING_PATH;
+  return withBasePath("/");
 }
 
 async function redirectForUser(user: User) {
-  const [{ getUserProfile }, { getStoreSlugById }] = await Promise.all([
-    import("../../lib/auth"),
-    import("../../lib/public-store-data"),
-  ]);
+  const { getUserProfile } = await import("../../lib/auth");
   const profile = await getUserProfile(user);
 
   if (!profile) {
     return null;
   }
 
-  const path = await resolveRedirect(profile, getStoreSlugById);
+  const path = getRedirectPath(profile);
   window.location.assign(path);
   return path;
 }

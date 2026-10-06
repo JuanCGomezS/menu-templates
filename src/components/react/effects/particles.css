@@ -11,9 +11,11 @@
   width: var(--particle-size);
   height: var(--particle-size);
   border-radius: 999px;
-  background: color-mix(in srgb, var(--particle-color) 70%, transparent);
-  animation: store-fx-particles-drift var(--particle-duration) ease-in-out
-    var(--particle-delay) infinite alternate;
+  background: color-mix(in srgb, var(--particle-color) 74%, white 26%);
+  box-shadow: 0 0.35rem 0.8rem
+    color-mix(in srgb, var(--particle-color) 32%, transparent);
+  animation: store-fx-particles-drift var(--particle-duration)
+    cubic-bezier(0.16, 1, 0.3, 1) var(--particle-delay) infinite alternate;
   will-change: transform;
 }
 
@@ -25,6 +27,23 @@
 }
 .store-fx-particle:nth-child(3n) {
   --particle-color: var(--store-accent-tertiary);
+}
+
+.store-fx-particle:nth-child(4n + 2) {
+  border-radius: 0.1rem;
+  transform: rotate(45deg);
+}
+
+.store-fx-particle:nth-child(4n + 3) {
+  width: calc(var(--particle-size) * 0.58);
+  height: calc(var(--particle-size) * 1.65);
+  border-radius: 999px;
+}
+
+.store-fx-particle:nth-child(5n) {
+  background: transparent;
+  border: 0.11rem solid color-mix(in srgb, var(--particle-color) 78%, white 22%);
+  box-shadow: none;
 }
 
 .particle--1 {
