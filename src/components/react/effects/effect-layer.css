@@ -35,6 +35,11 @@
       #000
     );
   }
+
+  .store-fx-stage[data-store-effect="effect-smoke"] {
+    opacity: 5;
+    mask-image: none;
+  }
 }
 
 .store-fx-stage[data-store-effect="effect-storm"],
