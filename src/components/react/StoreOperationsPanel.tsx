@@ -20,6 +20,7 @@ type StoreAccess = {
   slug?: string;
   currency?: string;
   timeZone?: string;
+  logoUrl?: string;
 };
 
 const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
@@ -493,13 +494,23 @@ function OrdersQueue({ store }: { store: StoreAccess }) {
           if (
             window.localStorage.getItem(key) === "enabled" &&
             Notification.permission === "granted"
-          )
-            new Notification("Nuevo pedido", {
+          ) {
+            const notificationOptions: NotificationOptions & {
+              renotify?: boolean;
+            } = {
               body:
                 newOrders.length === 1
                   ? "Revisa la cola operativa."
                   : `${newOrders.length} pedidos esperan atención.`,
-            });
+              tag: `new-order:${store.id}`,
+              renotify: true,
+              ...(store.logoUrl ? { icon: store.logoUrl } : {}),
+            };
+            new Notification(
+              store.name ? `Nuevo pedido · ${store.name}` : "Nuevo pedido",
+              notificationOptions,
+            );
+          }
         },
         (error) => console.warn("No se pudo escuchar pedidos nuevos:", error),
       );
@@ -514,7 +525,7 @@ function OrdersQueue({ store }: { store: StoreAccess }) {
       unsubscribe();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [store.id, store.timeZone]);
+  }, [store.id, store.logoUrl, store.name, store.timeZone]);
 
   const enablePushAlerts = async () => {
     const user = auth.currentUser;
