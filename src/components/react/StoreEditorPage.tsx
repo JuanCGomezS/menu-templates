@@ -1598,6 +1598,7 @@ export default function StoreEditorPage() {
                       slug: form.slug,
                       currency: form.currency,
                       timeZone: form.timeZone,
+                      logoUrl: form.logoUrl,
                     }}
                     view="orders"
                   />
@@ -2210,6 +2211,7 @@ export default function StoreEditorPage() {
                     slug: form.slug,
                     currency: form.currency,
                     timeZone: form.timeZone,
+                    logoUrl: form.logoUrl,
                   }}
                   view="history"
                 />

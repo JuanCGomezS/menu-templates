@@ -99,7 +99,8 @@ exports.notifyStoreAdminOfNewOrder = onDocumentCreated(
     if (!order || order.status !== "pending") return;
 
     const storeSnapshot = await db.doc(`stores/${event.params.storeId}`).get();
-    const ownerUid = storeSnapshot.data()?.ownerUid;
+    const store = storeSnapshot.data();
+    const ownerUid = store?.ownerUid;
     if (!ownerUid) {
       logger.info("Order without assigned store admin; push skipped.", {
         storeId: event.params.storeId,
@@ -114,19 +115,32 @@ exports.notifyStoreAdminOfNewOrder = onDocumentCreated(
     const token = deviceSnapshot.data()?.token;
     if (!token) return;
 
+    const storeName = typeof store?.name === "string" ? store.name.trim() : "";
+    const logoUrl =
+      typeof store?.logoUrl === "string" && /^https?:\/\//i.test(store.logoUrl)
+        ? store.logoUrl
+        : "";
+    const title = storeName ? `Nuevo pedido · ${storeName}` : "Nuevo pedido";
+    const body = "Revisa la cola operativa.";
+    const webpushNotification = {
+      title,
+      body,
+      tag: `new-order:${event.params.storeId}`,
+      renotify: true,
+    };
+    if (logoUrl) webpushNotification.icon = logoUrl;
+
     try {
       await admin.messaging().send({
         token,
-        notification: {
-          title: "Nuevo pedido",
-          body: "Revisa la cola operativa.",
-        },
+        notification: { title, body },
         data: {
           storeId: event.params.storeId,
           orderId: event.params.orderId,
           type: String(order.type || ""),
         },
         webpush: {
+          notification: webpushNotification,
           fcmOptions: { link: STORE_ADMIN_URL },
         },
       });
