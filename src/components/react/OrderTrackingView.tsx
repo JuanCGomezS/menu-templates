@@ -199,7 +199,7 @@ export default function OrderTrackingView({
 
       <ol
         aria-label="Etapas del pedido"
-        className="mt-8 flex snap-x overflow-x-auto px-1 pb-3 [scrollbar-color:var(--store-accent,#ff5a1f)_transparent] [scrollbar-width:thin] sm:overflow-visible"
+        className="mt-8 space-y-4 px-1 sm:flex sm:space-y-0"
       >
         {steps.map((status, index) => {
           const isCompleted = currentStep > index;
@@ -215,12 +215,12 @@ export default function OrderTrackingView({
             <li
               key={status}
               aria-current={isCurrent ? "step" : undefined}
-              className="relative flex min-w-28 flex-1 snap-start flex-col items-center text-center sm:min-w-0"
+              className="relative flex min-h-10 items-center gap-3 text-left sm:min-w-0 sm:flex-1 sm:flex-col sm:gap-0 sm:text-center"
             >
               {index < steps.length - 1 && (
                 <span
                   aria-hidden="true"
-                  className={`absolute left-[calc(50%+1.25rem)] right-[calc(-50%+1.25rem)] top-5 h-px ${isCompleted ? "bg-[var(--store-accent,#ff5a1f)]" : "bg-[var(--store-border,#d7dcd5)]"}`}
+                  className={`absolute left-5 top-10 h-4 w-px sm:left-[calc(50%+1.25rem)] sm:right-[calc(-50%+1.25rem)] sm:top-5 sm:h-px sm:w-auto ${isCompleted ? "bg-[var(--store-accent,#ff5a1f)]" : "bg-[var(--store-border,#d7dcd5)]"}`}
                 />
               )}
               <span
@@ -242,7 +242,7 @@ export default function OrderTrackingView({
                 )}
               </span>
               <span
-                className={`mt-3 min-h-10 px-1 text-xs font-bold leading-5 ${isFuture ? "text-gray-500" : "text-gray-900"}`}
+                className={`min-h-0 px-0 text-xs font-bold leading-5 sm:mt-3 sm:min-h-10 sm:px-1 ${isFuture ? "text-gray-500" : "text-gray-900"}`}
               >
                 {STATUS_LABELS[status]}
               </span>

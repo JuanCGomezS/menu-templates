@@ -550,6 +550,7 @@ export function PublicOrderCartProvider({
         address={deliveryAddress}
         initialLocation={deliveryLocation}
         storeLocation={store.location}
+        storeLogoUrl={store.logoUrl}
         deliveryArea={store.deliveryArea}
         open={locationDialogOpen}
         onClose={() => setLocationDialogOpen(false)}

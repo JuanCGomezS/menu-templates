@@ -719,6 +719,7 @@ function FrutalServiceFolio({
             </div>
             <LocationMap
               location={location}
+              logoUrl={store.logoUrl}
               className="h-72 w-full sm:h-96"
               title={`Ubicación de ${store.name}`}
             />
@@ -1103,6 +1104,7 @@ function MascotServiceDeck({
                 <>
                   <LocationMap
                     location={location}
+                    logoUrl={store.logoUrl}
                     className="h-64 w-full rounded-[1.5rem]"
                     title={`Ubicación de ${store.name}`}
                   />
@@ -1473,6 +1475,7 @@ function IllustratedFooter({
                 <div className="mt-6 grid overflow-hidden border [border-color:color-mix(in_srgb,var(--store-accent)_35%,transparent)] bg-[var(--store-surface)] lg:grid-cols-[1fr_auto]">
                   <LocationMap
                     location={location}
+                    logoUrl={store.logoUrl}
                     className="h-64 w-full"
                     title={`Ubicación de ${store.name}`}
                   />
@@ -1816,6 +1819,7 @@ function BrasaContact({ store }: { store: StoreData }) {
         <div className="mt-5 overflow-hidden border border-white/20 bg-[#151515] p-2 shadow-[0_18px_38px_rgba(0,0,0,0.35)]">
           <LocationMap
             location={location}
+            logoUrl={store.logoUrl}
             className="h-64 w-full"
             title={`Ubicación de ${store.name}`}
           />
@@ -2183,6 +2187,7 @@ function ConfettiContact({ store }: { store: StoreData }) {
         <div className="mt-5 overflow-hidden rounded-[1.75rem] border-2 [border-color:color-mix(in_srgb,var(--store-text)_15%,transparent)] bg-[var(--store-surface)] p-2 shadow-[0_18px_38px_color-mix(in_srgb,var(--store-text)_14%,transparent)]">
           <LocationMap
             location={location}
+            logoUrl={store.logoUrl}
             className="h-64 w-full rounded-[1.25rem]"
             title={`Ubicación de ${store.name}`}
           />
@@ -2538,6 +2543,7 @@ function MinimalServicePanel({
             </div>
             <LocationMap
               location={location}
+              logoUrl={store.logoUrl}
               className="h-64 w-full sm:h-80"
               title={`Ubicación de ${store.name}`}
             />
@@ -2894,6 +2900,7 @@ function NaturalServicePanel({
             </div>
             <LocationMap
               location={location}
+              logoUrl={store.logoUrl}
               className="h-72 w-full sm:h-96"
               title={`Ubicación de ${store.name}`}
             />
@@ -3297,6 +3304,7 @@ function WarmServiceDeck({
             </div>
             <LocationMap
               location={location}
+              logoUrl={store.logoUrl}
               className="h-72 w-full sm:h-96"
               title={`Ubicación de ${store.name}`}
             />
@@ -3652,6 +3660,7 @@ function ElegantServiceFolio({
             </div>
             <LocationMap
               location={location}
+              logoUrl={store.logoUrl}
               className="h-72 w-full sm:h-96"
               title={`Ubicación de ${store.name}`}
             />
