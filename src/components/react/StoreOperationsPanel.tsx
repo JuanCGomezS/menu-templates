@@ -1,4 +1,5 @@
 import type { QueryDocumentSnapshot } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 import { useEffect, useRef, useState } from "react";
 import { auth } from "../../lib/firebase";
 import {
@@ -10,7 +11,7 @@ import {
   type StoreOrder,
 } from "../../lib/orders";
 import { formatPrice } from "../../lib/utils";
-import { registerOrderPush } from "../../lib/order-notifications";
+import { hasOrderPush, registerOrderPush } from "../../lib/order-notifications";
 import { withBasePath } from "../../lib/base-path";
 
 type StoreAccess = {
@@ -93,6 +94,32 @@ function formatOrderStatus(status?: string) {
 
 function getOrderStatusStyle(status?: string) {
   return status ? ORDER_STATUS_STYLES[status as OrderStatus] : undefined;
+}
+
+function getOrderWhatsAppMessage(order: StoreOrder, trackingUrl: string) {
+  const customerName = order.customerName?.trim();
+  const greeting = customerName ? `Hola, ${customerName}.` : "Hola.";
+  const tracking = ` Puedes consultar el estado aquí: ${trackingUrl}`;
+
+  switch (order.status) {
+    case "accepted":
+      return `${greeting} Tu pedido fue confirmado y comenzaremos a prepararlo.${tracking}`;
+    case "preparing":
+      return `${greeting} Ya estamos preparando tu pedido.${tracking}`;
+    case "ready":
+      return order.type === "delivery"
+        ? `${greeting} Tu pedido está listo y pronto saldrá hacia tu dirección.${tracking}`
+        : `${greeting} Tu pedido está listo para recogerlo en la tienda.${tracking}`;
+    case "out_for_delivery":
+      return `${greeting} Tu pedido va en camino a tu dirección.${tracking}`;
+    case "delivered":
+      return `${greeting} Tu pedido fue entregado. ¡Gracias por tu compra!${tracking}`;
+    case "cancelled":
+      return `${greeting} Tu pedido fue cancelado. Escríbenos si necesitas ayuda.${tracking}`;
+    case "pending":
+    default:
+      return `${greeting} Sigue tu pedido aquí: ${trackingUrl}`;
+  }
 }
 
 function mergeOrders(current: StoreOrder[], incoming: StoreOrder[]) {
@@ -345,8 +372,11 @@ function OrdersQueue({ store }: { store: StoreAccess }) {
   const [newOrderMessage, setNewOrderMessage] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
   const [desktopAlerts, setDesktopAlerts] = useState(false);
+  const [pushAlerts, setPushAlerts] = useState(false);
   const seenOrdersRef = useRef(new Set<string>());
   const loadRequestRef = useRef(0);
+  const pushStatusRequestRef = useRef(0);
+  const pushContextRef = useRef(0);
 
   const load = async (nextPage = false, keepQueueVisible = false) => {
     const requestId = ++loadRequestRef.current;
@@ -388,6 +418,46 @@ function OrdersQueue({ store }: { store: StoreAccess }) {
   useEffect(() => {
     void load();
   }, [store.id, store.timeZone]);
+
+  useEffect(() => {
+    let cancelled = false;
+    pushContextRef.current += 1;
+    setPushAlerts(false);
+    const loadPushAlerts = async () => {
+      const requestId = ++pushStatusRequestRef.current;
+      if (
+        !auth.currentUser ||
+        !("Notification" in window) ||
+        Notification.permission !== "granted"
+      ) {
+        if (!cancelled && requestId === pushStatusRequestRef.current)
+          setPushAlerts(false);
+        return;
+      }
+      try {
+        const enabled = await hasOrderPush(store.id, auth.currentUser);
+        if (!cancelled && requestId === pushStatusRequestRef.current)
+          setPushAlerts(enabled);
+      } catch {
+        if (!cancelled && requestId === pushStatusRequestRef.current)
+          setPushAlerts(false);
+      }
+    };
+    const refreshPushAlerts = () => {
+      if (document.visibilityState === "visible") void loadPushAlerts();
+    };
+    const unsubscribe = onAuthStateChanged(auth, () => {
+      pushContextRef.current += 1;
+      void loadPushAlerts();
+    });
+    document.addEventListener("visibilitychange", refreshPushAlerts);
+    return () => {
+      cancelled = true;
+      pushContextRef.current += 1;
+      unsubscribe();
+      document.removeEventListener("visibilitychange", refreshPushAlerts);
+    };
+  }, [store.id]);
 
   useEffect(() => {
     const key = `menu-templates:order-alerts:${store.id}`;
@@ -447,12 +517,21 @@ function OrdersQueue({ store }: { store: StoreAccess }) {
   }, [store.id, store.timeZone]);
 
   const enablePushAlerts = async () => {
-    if (!auth.currentUser) {
+    const user = auth.currentUser;
+    const contextId = pushContextRef.current;
+    if (!user) {
       setFeedbackMessage("Inicia sesión nuevamente para activar push.");
       return;
     }
     try {
-      await registerOrderPush(store.id, auth.currentUser);
+      await registerOrderPush(store.id, user);
+      if (
+        contextId !== pushContextRef.current ||
+        auth.currentUser?.uid !== user.uid
+      )
+        return;
+      pushStatusRequestRef.current += 1;
+      setPushAlerts(true);
       setFeedbackMessage(
         "Notificaciones push activadas para este dispositivo.",
       );
@@ -546,10 +625,11 @@ function OrdersQueue({ store }: { store: StoreAccess }) {
           </button>
           <button
             type="button"
+            disabled={pushAlerts}
             onClick={() => void enablePushAlerts()}
-            className="rounded-full border border-gray-300 px-3 py-1 text-xs font-bold text-gray-700"
+            className="rounded-full border border-gray-300 px-3 py-1 text-xs font-bold text-gray-700 disabled:cursor-default disabled:opacity-60"
           >
-            Activar alertas push
+            {pushAlerts ? "Alertas push activadas" : "Activar alertas push"}
           </button>
         </div>
       </div>
@@ -804,12 +884,14 @@ function OrderCard({
         )}
         {trackingUrl && order.customerPhone && (
           <a
-            href={`https://wa.me/${(order.customerPhone || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(`Sigue tu pedido: ${trackingUrl}`)}`}
+            href={`https://wa.me/${(order.customerPhone || "").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(getOrderWhatsAppMessage(order, trackingUrl))}`}
             target="_blank"
             rel="noopener noreferrer"
             className="rounded-md px-2.5 py-1.5 text-xs font-bold text-green-700 transition hover:bg-green-50"
           >
-            Enviar seguimiento
+            {order.status === "pending"
+              ? "Enviar seguimiento"
+              : "Enviar actualización"}
           </a>
         )}
       </div>
