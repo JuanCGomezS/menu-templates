@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import type { Map as LeafletMap, Marker } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { DeliveryLocation } from "../../lib/orders";
-import { withBasePath } from "../../lib/base-path";
 import {
   isValidDeliveryArea,
   isValidDeliveryPoint,
@@ -19,6 +18,7 @@ type Props = {
   address: string;
   initialLocation: DeliveryLocation | null;
   storeLocation?: { latitude?: number; longitude?: number };
+  storeLogoUrl?: string;
   deliveryArea?: DeliveryArea;
   open: boolean;
   onClose: () => void;
@@ -29,6 +29,7 @@ export default function DeliveryLocationDialog({
   address,
   initialLocation,
   storeLocation,
+  storeLogoUrl,
   deliveryArea,
   open,
   onClose,
@@ -99,11 +100,21 @@ export default function DeliveryLocationDialog({
       }).addTo(map);
       const radiusMeters = deliveryArea?.radiusMeters ?? 0;
       if (isValidDeliveryPoint(storeLocation)) {
+        const storeMarker = document.createElement("span");
+        storeMarker.className = "store-location-marker";
+        storeMarker.setAttribute("aria-hidden", "true");
+        if (storeLogoUrl) {
+          const image = document.createElement("img");
+          image.src = storeLogoUrl;
+          image.alt = "";
+          image.addEventListener("error", () => image.remove());
+          storeMarker.append(image);
+        }
         const storeIcon = L.divIcon({
           className: "store-location-marker-wrap",
-          html: `<span class="store-location-marker" aria-hidden="true"><img src="${withBasePath("/orders/shop.svg")}" alt=""></span>`,
-          iconSize: [30, 30],
-          iconAnchor: [15, 15],
+          html: storeMarker,
+          iconSize: [34, 34],
+          iconAnchor: [17, 17],
         });
         L.marker([storeLocation.latitude, storeLocation.longitude], {
           icon: storeIcon,
@@ -235,7 +246,7 @@ export default function DeliveryLocationDialog({
       aria-labelledby="delivery-location-title"
       className="m-auto w-[min(100%-1.5rem,34rem)] rounded-2xl border border-slate-200 bg-white p-0 text-slate-950 shadow-[0_24px_64px_rgba(15,23,42,0.28)] backdrop:bg-slate-950/45"
     >
-      <style>{`.delivery-location-marker-wrap, .store-location-marker-wrap { background: transparent; border: 0; } .delivery-location-marker { display: block; width: 22px; height: 22px; border: 3px solid #ffffff; border-radius: 50% 50% 50% 0; background: #e05a2a; box-shadow: 0 3px 8px rgba(15,23,42,.25); transform: rotate(-45deg); } .store-location-marker { display: grid; width: 26px; height: 26px; place-items: center; border: 2px solid #ffffff; border-radius: 999px; background: #ffffff; box-shadow: 0 2px 8px rgba(15,23,42,.3); } .store-location-marker img { width: 15px; height: 15px; }`}</style>
+      <style>{`.delivery-location-marker-wrap, .store-location-marker-wrap { background: transparent; border: 0; } .delivery-location-marker { display: block; width: 22px; height: 22px; border: 3px solid #ffffff; border-radius: 50% 50% 50% 0; background: #e05a2a; box-shadow: 0 3px 8px rgba(15,23,42,.25); transform: rotate(-45deg); } .store-location-marker { position: relative; display: block; width: 30px; height: 30px; } .store-location-marker::before { position: absolute; inset: 50% auto auto 50%; width: 8px; height: 8px; border-radius: 999px; background: #ea580c; content: ""; transform: translate(-50%,-50%); } .store-location-marker img { position: absolute; z-index: 1; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; }`}</style>
       <div className="border-b border-slate-100 px-5 py-4">
         <div className="flex items-start justify-between gap-4">
           <div>

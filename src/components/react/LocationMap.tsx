@@ -25,6 +25,7 @@ type Props = {
   editable?: boolean;
   radiusMeters?: number;
   onChange?: (location: MapLocation) => void;
+  logoUrl?: string;
   className?: string;
   title: string;
 };
@@ -34,6 +35,7 @@ export default function LocationMap({
   editable = false,
   radiusMeters,
   onChange,
+  logoUrl,
   className = "h-72 w-full",
   title,
 }: Props) {
@@ -112,10 +114,31 @@ export default function LocationMap({
     }
 
     const point: [number, number] = [location.latitude, location.longitude];
+    const markerContent = document.createElement("span");
+    markerContent.className = "store-map-marker__content";
+    markerContent.setAttribute("aria-hidden", "true");
+    if (logoUrl) {
+      const image = document.createElement("img");
+      image.src = logoUrl;
+      image.alt = "";
+      image.className = "store-map-marker__image";
+      image.addEventListener("error", () => image.remove());
+      markerContent.append(image);
+    }
+    const markerIcon = L.divIcon({
+      className: "store-map-marker",
+      html: markerContent,
+      iconSize: [42, 42],
+      iconAnchor: [21, 21],
+    });
     if (markerRef.current) {
       markerRef.current.setLatLng(point);
+      markerRef.current.setIcon(markerIcon);
     } else {
-      const marker = L.marker(point, { draggable: editable }).addTo(map);
+      const marker = L.marker(point, {
+        draggable: editable,
+        icon: markerIcon,
+      }).addTo(map);
       markerRef.current = marker;
       if (editable) {
         marker.on("dragend", () => {
@@ -147,7 +170,7 @@ export default function LocationMap({
       circleRef.current = null;
       map.setView(point, 16);
     }
-  }, [editable, location, mapReady, radiusMeters]);
+  }, [editable, location, logoUrl, mapReady, radiusMeters]);
 
   if (failed) {
     return (
@@ -159,5 +182,10 @@ export default function LocationMap({
     );
   }
 
-  return <div ref={elementRef} className={className} aria-label={title} />;
+  return (
+    <>
+      <style>{`.store-map-marker { background: transparent; border: 0; } .store-map-marker__content { position: relative; display: block; width: 42px; height: 42px; } .store-map-marker__content::before { position: absolute; inset: 50% auto auto 50%; width: 10px; height: 10px; border-radius: 999px; background: #ea580c; content: ""; transform: translate(-50%,-50%); } .store-map-marker__image { position: absolute; z-index: 1; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; }`}</style>
+      <div ref={elementRef} className={className} aria-label={title} />
+    </>
+  );
 }
