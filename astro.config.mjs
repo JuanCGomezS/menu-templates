@@ -5,8 +5,7 @@ import react from "@astrojs/react";
 
 // https://astro.build/config
 export default defineConfig({
-    site: "https://JuanCGomezS.github.io",
-    base: "/menu-templates/",
+    site: "https://agilsmart.is-local.org",
     integrations: [tailwind(), react()],
     vite: {
         optimizeDeps: {
