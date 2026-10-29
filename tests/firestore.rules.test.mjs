@@ -318,6 +318,27 @@ test("storeadmin puede ajustar las capacidades operativas solo de su tienda", as
   );
 });
 
+test("admins can mark products as sold out only with a boolean", async () => {
+  const itemRef = doc(
+    adminDb("admin-a"),
+    "stores",
+    "store-a",
+    "items",
+    "item-1",
+  );
+
+  await assertSucceeds(setDoc(itemRef, { soldOut: true }, { merge: true }));
+  await assertSucceeds(setDoc(itemRef, { soldOut: false }, { merge: true }));
+  await assertFails(setDoc(itemRef, { soldOut: "true" }, { merge: true }));
+  await assertFails(
+    setDoc(
+      doc(adminDb("admin-b"), "stores", "store-a", "items", "item-1"),
+      { soldOut: true },
+      { merge: true },
+    ),
+  );
+});
+
 test("storeadmin solo puede actualizar el estado de un pedido", async () => {
   await assertSucceeds(
     setDoc(

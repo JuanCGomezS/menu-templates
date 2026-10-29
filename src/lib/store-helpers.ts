@@ -14,9 +14,19 @@ export interface PublicItem {
   order: number;
   stock?: number;
   trackStock?: boolean;
+  soldOut?: boolean;
   availableInStore?: boolean;
   availableForDelivery?: boolean;
   variants?: Array<{ name: string; price?: number; stock?: number }>;
+}
+
+export function isPublicItemSoldOut(item: PublicItem) {
+  return (
+    item.soldOut === true ||
+    (item.trackStock === true &&
+      typeof item.stock === "number" &&
+      item.stock <= 0)
+  );
 }
 
 export interface PublicCategory {

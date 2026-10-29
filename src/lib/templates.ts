@@ -7,7 +7,13 @@ export type TemplateComponent =
     | "brasa"
     | "illustrated"
     | "mascot"
-    | "frutal";
+    | "frutal"
+    | "garden"
+    | "chronicle"
+    | "invitation"
+    | "billboard"
+    | "spotlight"
+    | "ribbon";
 export type ThemeComponent =
     | "default"
     | "christmas"
@@ -17,7 +23,8 @@ export type ThemeComponent =
     | "halloween"
     | "easter"
     | "independence"
-    | "velitas";
+    | "velitas"
+    | "mexican";
 
 export interface TemplateConfig {
     id: string;
@@ -46,6 +53,60 @@ export interface ThemeConfig {
 }
 
 export const TEMPLATES: Record<string, TemplateConfig> = {
+    GARDEN: {
+        id: "layout-garden",
+        name: "Jardín",
+        component: "garden",
+        keywords: ["layout-garden", "garden", "jardin"],
+        type: "all",
+        description:
+            "Carta orgánica de dos columnas, fotografías amplias y títulos con carácter.",
+    },
+    CHRONICLE: {
+        id: "layout-chronicle",
+        name: "Crónica",
+        component: "chronicle",
+        keywords: ["layout-chronicle", "chronicle", "cronica"],
+        type: "all",
+        description:
+            "Recorrido vertical con descripciones a un lado y fotografías al otro.",
+    },
+    INVITATION: {
+        id: "layout-invitation",
+        name: "Invitación",
+        component: "invitation",
+        keywords: ["layout-invitation", "invitation", "invitacion"],
+        type: "all",
+        description:
+            "Carta centrada de aire ceremonial, con categorías y productos en una lectura pausada.",
+    },
+    BILLBOARD: {
+        id: "layout-billboard",
+        name: "Pizarra",
+        component: "billboard",
+        keywords: ["layout-billboard", "billboard", "pizarra"],
+        type: "all",
+        description:
+            "Tipografía contundente y secciones enmarcadas para una carta de lectura rápida.",
+    },
+    SPOTLIGHT: {
+        id: "layout-spotlight",
+        name: "Escaparate",
+        component: "spotlight",
+        keywords: ["layout-spotlight", "spotlight", "escaparate"],
+        type: "all",
+        description:
+            "Portada panorámica con una fotografía protagonista y un catálogo visual amplio.",
+    },
+    RIBBON: {
+        id: "layout-ribbon",
+        name: "Bandas",
+        component: "ribbon",
+        keywords: ["layout-ribbon", "ribbon", "bandas"],
+        type: "all",
+        description:
+            "Productos en bandas horizontales con fotografía y precios destacados.",
+    },
     MINIMAL: {
         id: "layout-minimal",
         name: "Minimalista",
@@ -190,6 +251,91 @@ export const TEMPLATES: Record<string, TemplateConfig> = {
 };
 
 export const THEMES: Record<string, ThemeConfig> = {
+    MEXICAN: {
+        id: "theme-mexican",
+        name: "Mexicano",
+        component: "mexican",
+        keywords: ["theme-mexican", "mexican", "mexicano"],
+        description:
+            "Rojo profundo, verde y papel picado. Combínalo con cualquier composición de la nueva colección.",
+        tokens: {
+            accent: "#fff8ec",
+            accentSecondary: "#34845c",
+            accentTertiary: "#ef6666",
+            onAccent: "#711b20",
+            background: "#711b20",
+            surface: "#87262c",
+            text: "#fff8ec",
+        },
+    },
+    HERB: {
+        id: "theme-herb",
+        name: "Huerto",
+        component: "default",
+        keywords: ["theme-herb", "herb", "huerto"],
+        description:
+            "Verde hoja, papel claro y acentos de cosecha, inspirado en la carta orgánica.",
+        tokens: {
+            accent: "#405a24",
+            accentSecondary: "#cddd9c",
+            accentTertiary: "#e0a460",
+            onAccent: "#ffffff",
+            background: "#eef3df",
+            surface: "#fffef8",
+            text: "#293b1c",
+        },
+    },
+    CHARCOAL: {
+        id: "theme-charcoal",
+        name: "Carbón",
+        component: "default",
+        keywords: ["theme-charcoal", "charcoal", "carbon"],
+        description:
+            "Negro carbón y rojo vivo para una carta gráfica de alto contraste.",
+        tokens: {
+            accent: "#f04445",
+            accentSecondary: "#b52c30",
+            accentTertiary: "#e8b879",
+            onAccent: "#141414",
+            background: "#161616",
+            surface: "#242424",
+            text: "#fffaf2",
+        },
+    },
+    CACAO: {
+        id: "theme-cacao",
+        name: "Cacao",
+        component: "default",
+        keywords: ["theme-cacao", "cacao"],
+        description:
+            "Cacao oscuro, tonos tostados y oro cálido para destacar la fotografía.",
+        tokens: {
+            accent: "#f2b94b",
+            accentSecondary: "#934314",
+            accentTertiary: "#edcd91",
+            onAccent: "#321b12",
+            background: "#321b12",
+            surface: "#482a1d",
+            text: "#fff2d8",
+        },
+    },
+    MATCHA: {
+        id: "theme-matcha",
+        name: "Matcha",
+        component: "default",
+        keywords: ["theme-matcha", "matcha"],
+        description:
+            "Verde intenso y papel marfil para bandas de producto y precios definidos.",
+        tokens: {
+            accent: "#293b13",
+            accentSecondary: "#d7e795",
+            accentTertiary: "#a9c04a",
+            onAccent: "#ffffff",
+            background: "#c4d76f",
+            surface: "#fffdeb",
+            text: "#243413",
+        },
+    },
     DEFAULT: {
         id: "theme-default",
         name: "Default",
@@ -215,7 +361,7 @@ export const THEMES: Record<string, ThemeConfig> = {
             accent: "#e9589b",
             accentSecondary: "#62c9ca",
             accentTertiary: "#f5d866",
-            onAccent: "#382a3b",
+            onAccent: "#241625",
             background: "#fcebf2",
             surface: "#fffdf8",
             text: "#382a3b",
@@ -256,7 +402,7 @@ export const THEMES: Record<string, ThemeConfig> = {
             "Ambientación emocional para fechas especiales, detalles, postres y regalos.",
         tokens: {
             accent: "#ec4899",
-            onAccent: "#4a1733",
+            onAccent: "#301021",
             background: "#fff1f2",
             surface: "#ffffff",
             text: "#831843",
@@ -293,7 +439,7 @@ export const THEMES: Record<string, ThemeConfig> = {
             "Ambientación romántica para regalos, cenas y promociones especiales.",
         tokens: {
             accent: "#db2777",
-            onAccent: "#3f1025",
+            onAccent: "#ffffff",
             background: "#fff1f2",
             surface: "#ffffff",
             text: "#881337",
@@ -328,7 +474,7 @@ export const THEMES: Record<string, ThemeConfig> = {
             "Ambientación suave para Pascua, postres, detalles y productos de temporada.",
         tokens: {
             accent: "#a855f7",
-            onAccent: "#2e1065",
+            onAccent: "#1d082f",
             background: "#faf5ff",
             surface: "#ffffff",
             text: "#581c87",

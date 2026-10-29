@@ -109,11 +109,16 @@ service cloud.firestore {
         || (resource.data.status == 'out_for_delivery' && request.resource.data.status == 'delivered');
     }
 
+    function hasValidItemSoldOut() {
+      return !request.resource.data.keys().hasAny(['soldOut'])
+        || request.resource.data.soldOut is bool;
+    }
+
     function isStoreAdminItemWrite(storeId) {
       return isStoreAdminFor(storeId)
         && request.resource.data.keys().hasOnly([
           'categoryId', 'name', 'description', 'price', 'imageUrl', 'active', 'order',
-          'stock', 'trackStock', 'variants', 'availableInStore', 'availableForDelivery',
+          'stock', 'trackStock', 'soldOut', 'variants', 'availableInStore', 'availableForDelivery',
           'createdAt', 'updatedAt'
         ]);
     }
@@ -252,7 +257,7 @@ service cloud.firestore {
 
       match /items/{itemId} {
         allow read: if (storeIsActive(storeId) && resource.data.active == true) || isSuperAdmin() || isStoreAdminFor(storeId);
-        allow create, update: if isSuperAdmin() || isStoreAdminItemWrite(storeId);
+        allow create, update: if hasValidItemSoldOut() && (isSuperAdmin() || isStoreAdminItemWrite(storeId));
         allow delete: if isSuperAdmin() || isStoreAdminFor(storeId);
       }
 

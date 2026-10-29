@@ -6,7 +6,11 @@ import {
   type DeliveryLocation,
   type OrderMode,
 } from "../../lib/orders";
-import type { PublicItem, PublicStore } from "../../lib/store-helpers";
+import {
+  isPublicItemSoldOut,
+  type PublicItem,
+  type PublicStore,
+} from "../../lib/store-helpers";
 import { formatPrice } from "../../lib/utils";
 import { isWithinDeliveryArea } from "../../lib/delivery-area";
 import { withBasePath } from "../../lib/base-path";
@@ -88,7 +92,7 @@ export function PublicOrderCartProvider({
       return;
     }
 
-    if (item.trackStock && typeof item.stock === "number" && item.stock < 1) {
+    if (isPublicItemSoldOut(item)) {
       setNotice("Este producto está agotado.");
       return;
     }
@@ -158,7 +162,8 @@ export function PublicOrderCartProvider({
         (mode === "delivery"
           ? line.item.availableForDelivery === false
           : line.item.availableInStore === false) ||
-        (line.item.trackStock &&
+        isPublicItemSoldOut(line.item) ||
+        (line.item.trackStock === true &&
           typeof line.item.stock === "number" &&
           line.quantity > line.item.stock),
     );

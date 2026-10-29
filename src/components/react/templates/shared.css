@@ -1,0 +1,296 @@
+@font-face {
+  font-family: "Atelier Condensed";
+  src: url("/fonts/atelier-condensed.woff2") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Atelier Serif";
+  src: url("/fonts/atelier-serif.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+.store-atelier {
+  --atelier-display: "Atelier Condensed", "Archivo", sans-serif;
+  --atelier-serif: "Atelier Serif", Georgia, serif;
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  background: var(--store-bg);
+  color: var(--store-text);
+  font-family: "Archivo", sans-serif;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  caret-color: var(--store-accent);
+  scrollbar-color: var(--store-accent) var(--store-bg);
+}
+
+.store-atelier *,
+.store-atelier *::before,
+.store-atelier *::after {
+  box-sizing: border-box;
+}
+.store-atelier ::selection {
+  background: var(--store-accent);
+  color: var(--store-on-accent);
+}
+.store-atelier :focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 5px;
+}
+.store-atelier h1,
+.store-atelier h2,
+.store-atelier h3,
+.store-atelier p,
+.store-atelier figure {
+  margin: 0;
+}
+.store-atelier h1,
+.store-atelier h2 {
+  text-wrap: balance;
+}
+.store-atelier img {
+  max-width: 100%;
+}
+.store-atelier a {
+  color: inherit;
+  text-underline-offset: 5px;
+}
+.store-atelier button {
+  font: inherit;
+  cursor: pointer;
+}
+.store-atelier section[id] {
+  scroll-margin-top: 6rem;
+}
+.atelier-decoration {
+  height: 80px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.atelier-decoration svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.atelier-decoration--christmas {
+  height: 96px;
+}
+.atelier-identity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-block: 1.25rem;
+  font-size: 0.875rem;
+}
+.atelier-brand {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.8rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+.atelier-brand img {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  object-fit: contain;
+  background: var(--store-surface);
+  border-radius: 50%;
+  padding: 4px;
+}
+.atelier-status {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+}
+.atelier-nav {
+  display: flex;
+  gap: 1.5rem;
+  overflow-x: auto;
+  padding: 1.1rem 4px;
+  border-block: 1px solid var(--store-border);
+  scrollbar-width: thin;
+}
+.atelier-nav a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  text-decoration: none;
+  font-weight: 650;
+}
+.atelier-nav a:hover {
+  text-decoration: underline;
+}
+.atelier-empty {
+  padding: 3rem 0;
+}
+.atelier-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 1.25rem;
+  padding-block: 1.5rem;
+}
+.atelier-item--photo {
+  grid-template-columns: 88px minmax(0, 1fr) auto;
+}
+.atelier-item-photo {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+.atelier-item-copy {
+  min-width: 0;
+}
+.atelier-item-copy h3 {
+  font-size: 1.15rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+.atelier-item-copy p {
+  margin-top: 0.6rem;
+  max-width: 65ch;
+  font-size: 0.875rem;
+  line-height: 1.65;
+}
+.atelier-item[data-sold-out] .atelier-item-photo {
+  opacity: 0.55;
+}
+.atelier-purchase {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.6rem;
+  max-width: 100%;
+}
+.atelier-price {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  line-height: 1.3;
+}
+.atelier-sold-out {
+  font-size: 0.8rem;
+}
+.atelier-purchase button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 44px;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font-size: 0.8rem;
+  font-weight: 650;
+  transition:
+    background-color 160ms ease-out,
+    color 160ms ease-out;
+}
+.atelier-purchase button:hover {
+  background: var(--store-text);
+  color: var(--store-bg);
+}
+.atelier-purchase svg {
+  flex-shrink: 0;
+}
+.atelier-footer {
+  position: relative;
+  margin-top: 4rem;
+  border-top: 1px solid var(--store-border);
+  padding: 3rem max(1.5rem, calc((100% - 1120px) / 2)) 8rem;
+  background: var(--store-surface);
+  color: var(--store-text);
+}
+.atelier-footer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 4rem;
+}
+.atelier-footer h2 {
+  font-size: 1.25rem;
+  font-weight: 650;
+  margin-bottom: 1.25rem;
+}
+.atelier-footer p {
+  max-width: 42ch;
+  font-size: 0.9rem;
+}
+.atelier-contact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+.atelier-contact a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+}
+.atelier-footer dl {
+  margin: 0;
+  font-size: 0.875rem;
+}
+.atelier-footer dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--store-border);
+}
+.atelier-footer dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.atelier-location {
+  margin-top: 3rem;
+}
+.atelier-location > a {
+  display: inline-block;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 600px) {
+  .atelier-identity {
+    gap: 0.75rem;
+  }
+  .atelier-item {
+    gap: 0.9rem;
+  }
+  .atelier-item--photo {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+  .atelier-item--photo > .atelier-purchase {
+    grid-column: 2;
+    align-items: flex-start;
+  }
+  .atelier-footer-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2.5rem;
+  }
+  .atelier-decoration {
+    height: 64px;
+  }
+  .atelier-decoration--christmas {
+    height: 80px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store-atelier *,
+  .store-atelier *::before,
+  .store-atelier *::after {
+    scroll-behavior: auto;
+    transition: none;
+    animation: none;
+  }
+}

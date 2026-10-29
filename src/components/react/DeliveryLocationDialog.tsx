@@ -45,6 +45,10 @@ export default function DeliveryLocationDialog({
     | null
   >(null);
   const locationRequestIdRef = useRef(0);
+  const addressSearchRequestIdRef = useRef(0);
+  const addressSearchCacheRef = useRef(
+    new Map<string, DeliveryLocation | null>(),
+  );
   const openRef = useRef(open);
   const [location, setLocation] = useState<DeliveryLocation>(
     initialLocation || DEFAULT_LOCATION,
@@ -53,6 +57,7 @@ export default function DeliveryLocationDialog({
     initialLocation !== null,
   );
   const [locating, setLocating] = useState(false);
+  const [searchingAddress, setSearchingAddress] = useState(false);
   const [locationError, setLocationError] = useState("");
   const [mapReady, setMapReady] = useState(false);
   const outsideCoverage =
@@ -63,7 +68,9 @@ export default function DeliveryLocationDialog({
     openRef.current = open;
     if (!open) {
       locationRequestIdRef.current += 1;
+      addressSearchRequestIdRef.current += 1;
       setLocating(false);
+      setSearchingAddress(false);
     }
 
     const dialog = dialogRef.current;
@@ -154,7 +161,9 @@ export default function DeliveryLocationDialog({
       ) => {
         if (invalidatePendingRequest) {
           locationRequestIdRef.current += 1;
+          addressSearchRequestIdRef.current += 1;
           setLocating(false);
+          setSearchingAddress(false);
         }
         if (markerRef.current) {
           markerRef.current.setLatLng([
@@ -197,6 +206,80 @@ export default function DeliveryLocationDialog({
       setMapReady(false);
     };
   }, [initialLocation, open]);
+
+  useEffect(() => {
+    if (!open || !mapReady || initialLocation || address.trim().length < 5)
+      return;
+
+    const query = address.trim();
+    const requestId = ++addressSearchRequestIdRef.current;
+    const cachedLocation = addressSearchCacheRef.current.get(query);
+    const moveToAddress = (nextLocation: DeliveryLocation) => {
+      if (requestId !== addressSearchRequestIdRef.current || !openRef.current)
+        return;
+      placeMarkerRef.current?.(nextLocation, false);
+      mapRef.current?.setView(
+        [nextLocation.latitude, nextLocation.longitude],
+        17,
+      );
+    };
+
+    if (cachedLocation) {
+      moveToAddress(cachedLocation);
+      return;
+    }
+    if (addressSearchCacheRef.current.has(query)) {
+      setLocationError(
+        "No encontramos esa dirección. Ajusta el texto o mueve el pin manualmente.",
+      );
+      return;
+    }
+
+    const controller = new AbortController();
+    setSearchingAddress(true);
+    setLocationError("");
+    void fetch(
+      `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=es&q=${encodeURIComponent(query)}`,
+      { signal: controller.signal },
+    )
+      .then(async (response) => {
+        const results = (await response.json()) as Array<{
+          lat?: string;
+          lon?: string;
+        }>;
+        const result = results[0];
+        const candidate = result
+          ? { latitude: Number(result.lat), longitude: Number(result.lon) }
+          : null;
+        const nextLocation = isValidDeliveryPoint(candidate) ? candidate : null;
+        addressSearchCacheRef.current.set(query, nextLocation);
+        if (!response.ok || !nextLocation) {
+          if (
+            requestId === addressSearchRequestIdRef.current &&
+            openRef.current
+          )
+            setLocationError(
+              "No encontramos esa dirección. Ajusta el texto o mueve el pin manualmente.",
+            );
+          return;
+        }
+        moveToAddress(nextLocation);
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError")
+          return;
+        if (requestId === addressSearchRequestIdRef.current && openRef.current)
+          setLocationError(
+            "No se pudo buscar la dirección. Mueve el pin manualmente.",
+          );
+      })
+      .finally(() => {
+        if (requestId === addressSearchRequestIdRef.current)
+          setSearchingAddress(false);
+      });
+
+    return () => controller.abort();
+  }, [address, initialLocation, mapReady, open]);
 
   const requestCurrentLocation = () => {
     if (!navigator.geolocation) {
@@ -285,7 +368,7 @@ export default function DeliveryLocationDialog({
         <button
           type="button"
           onClick={requestCurrentLocation}
-          disabled={locating || !mapReady}
+          disabled={locating || searchingAddress || !mapReady}
           className="absolute left-3 top-3 z-[500] inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:cursor-wait disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-600"
         >
           <span
@@ -294,7 +377,11 @@ export default function DeliveryLocationDialog({
           >
             my_location
           </span>
-          {locating ? "Ubicando…" : "Usar mi ubicación"}
+          {searchingAddress
+            ? "Buscando dirección…"
+            : locating
+              ? "Ubicando…"
+              : "Usar mi ubicación"}
         </button>
       </div>
 
@@ -332,7 +419,7 @@ export default function DeliveryLocationDialog({
           <button
             type="button"
             onClick={() => onConfirm(location)}
-            disabled={!locationSelected || outsideCoverage}
+            disabled={!locationSelected || outsideCoverage || searchingAddress}
             className="rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-600 focus-visible:ring-offset-2"
           >
             {locationSelected ? "Guardar ubicación" : "Selecciona un punto"}
