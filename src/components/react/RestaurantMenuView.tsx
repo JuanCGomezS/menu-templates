@@ -10,10 +10,11 @@ import {
   type ThemeConfig,
 } from "../../lib/templates";
 import { withBasePath } from "../../lib/base-path";
-import type {
-  PublicCategory,
-  PublicItem,
-  PublicStore,
+import {
+  isPublicItemSoldOut as isSoldOut,
+  type PublicCategory,
+  type PublicItem,
+  type PublicStore,
 } from "../../lib/store-helpers";
 import {
   normalizeStoreContent,
@@ -23,6 +24,16 @@ import { PublicOrderCartProvider, usePublicOrderCart } from "./PublicOrderCart";
 import OrderTrackingView from "./OrderTrackingView";
 import LocationMap from "./LocationMap";
 import StoreEffectLayer from "./StoreEffectLayer";
+import {
+  GardenLayout,
+  ChronicleLayout,
+  InvitationLayout,
+} from "./templates/PaperLayouts";
+import {
+  BillboardLayout,
+  SpotlightLayout,
+  RibbonLayout,
+} from "./templates/PosterLayouts";
 
 type StoreData = PublicStore;
 type ScheduleEntry = [string, string];
@@ -70,6 +81,12 @@ const layoutRenderers: Record<
   illustrated: IllustratedLayout,
   mascot: MascotLayout,
   frutal: FrutalLayout,
+  garden: GardenLayout,
+  chronicle: ChronicleLayout,
+  invitation: InvitationLayout,
+  billboard: BillboardLayout,
+  spotlight: SpotlightLayout,
+  ribbon: RibbonLayout,
 };
 
 export default function RestaurantMenuView({ slug }: Props) {
@@ -3724,8 +3741,4 @@ function EmptyMenu() {
 
 function getFeaturedItems(store: StoreData): PublicItem[] {
   return store.categories.flatMap((category) => category.items).slice(0, 4);
-}
-
-function isSoldOut(item: PublicItem) {
-  return item.trackStock && typeof item.stock === "number" && item.stock <= 0;
 }

@@ -69,8 +69,55 @@ exports.createPublicOrder = onCall(async (request) => {
       "failed-precondition",
       "La ubicación de entrega está fuera del área de cobertura.",
     );
+
   const orderRef = storeRef.collection("orders").doc(trackingCode);
-  if ((await orderRef.get()).exists) return { trackingCode }; // Safe retry with same client key.
+  if ((await orderRef.get()).exists) return { trackingCode };
+
+  const quantitiesByItemId = new Map();
+  for (const item of order.items) {
+    if (
+      !item ||
+      typeof item.itemId !== "string" ||
+      !Number.isInteger(item.quantity) ||
+      item.quantity < 1
+    )
+      throw new HttpsError("invalid-argument", "Contenido de pedido inválido.");
+    quantitiesByItemId.set(
+      item.itemId,
+      (quantitiesByItemId.get(item.itemId) || 0) + item.quantity,
+    );
+  }
+  const itemSnapshots = await db.getAll(
+    ...[...quantitiesByItemId.keys()].map((itemId) =>
+      storeRef.collection("items").doc(itemId),
+    ),
+  );
+  for (const itemSnapshot of itemSnapshots) {
+    const item = itemSnapshot.data();
+    const quantity = quantitiesByItemId.get(itemSnapshot.id);
+    const availableForMode =
+      order.type === "delivery"
+        ? item?.availableForDelivery !== false
+        : item?.availableInStore !== false;
+    if (
+      !item ||
+      item.active === false ||
+      !availableForMode ||
+      item.soldOut === true
+    )
+      throw new HttpsError(
+        "failed-precondition",
+        "Uno o más productos ya no están disponibles.",
+      );
+    if (
+      item.trackStock === true &&
+      (!Number.isInteger(item.stock) || item.stock < quantity)
+    )
+      throw new HttpsError(
+        "failed-precondition",
+        "Uno o más productos ya no tienen stock suficiente.",
+      );
+  }
   const now = admin.firestore.FieldValue.serverTimestamp();
   const batch = db.batch();
   batch.create(orderRef, {

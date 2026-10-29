@@ -156,6 +156,7 @@ interface ProductDraft {
   order: string;
   trackStock: boolean;
   stock: string;
+  soldOut: boolean;
   availableInStore: boolean;
   availableForDelivery: boolean;
   imageFile?: File;
@@ -434,6 +435,7 @@ function createProductDraft(categoryId: string, order: number): ProductDraft {
     order: String(order),
     trackStock: false,
     stock: "0",
+    soldOut: false,
     availableInStore: true,
     availableForDelivery: true,
   };
@@ -784,6 +786,7 @@ export default function StoreEditorPage() {
             order: String(data.order ?? 0),
             trackStock: data.trackStock === true,
             stock: String(data.stock ?? 0),
+            soldOut: data.soldOut === true,
             availableInStore: data.availableInStore !== false,
             availableForDelivery: data.availableForDelivery !== false,
             imageUrl:
@@ -1161,6 +1164,7 @@ export default function StoreEditorPage() {
               price: product.price,
               active: product.active,
               order: product.order,
+              soldOut: product.soldOut,
               ...(form.stockControl
                 ? {
                     trackStock: product.trackStock,
@@ -1334,24 +1338,14 @@ export default function StoreEditorPage() {
         {mode === "edit" && (
           <>
             {form.slug && (
-              <button
-                type="button"
-                onClick={() => {
-                  const destination = new URL(
-                    withBasePath(`/t/${encodeURIComponent(form.slug)}`),
-                    window.location.origin,
-                  );
-                  if (destination.origin !== window.location.origin) return;
-                  window.open(
-                    destination.toString(),
-                    "_blank",
-                    "noopener,noreferrer",
-                  );
-                }}
+              <a
+                href={withBasePath(`/t/${encodeURIComponent(form.slug)}`)}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="rounded-xl border border-gray-300 px-4 py-2 font-bold text-gray-700 transition hover:border-gray-950"
               >
                 Ver tienda
-              </button>
+              </a>
             )}
             {isSuperAdmin && (
               <a
@@ -1457,6 +1451,7 @@ export default function StoreEditorPage() {
                 <Field label="Plantilla">
                   <select
                     name="templateId"
+                    aria-describedby="template-help"
                     value={form.templateId}
                     onChange={(event) =>
                       updateForm("templateId", event.target.value)
@@ -1470,9 +1465,10 @@ export default function StoreEditorPage() {
                     ))}
                   </select>
                 </Field>
-                <p className="-mt-3 text-sm text-gray-500">
-                  Define la estructura, jerarquía y forma de presentar el mismo
-                  catálogo.
+                <p id="template-help" className="-mt-3 text-sm text-gray-500">
+                  {templates.find((template) => template.id === form.templateId)
+                    ?.description ||
+                    "Define la estructura, jerarquía y forma de presentar el mismo catálogo."}
                 </p>
                 <section
                   className="rounded-2xl border border-gray-200 p-4"
@@ -1532,6 +1528,7 @@ export default function StoreEditorPage() {
                 <Field label="Tema">
                   <select
                     name="themeId"
+                    aria-describedby="theme-help"
                     value={form.themeId}
                     onChange={(event) =>
                       updateForm("themeId", event.target.value)
@@ -1545,9 +1542,11 @@ export default function StoreEditorPage() {
                     ))}
                   </select>
                 </Field>
-                <p className="-mt-3 text-sm text-gray-500">
-                  Cambia la paleta de la plantilla sin modificar productos,
-                  categorías ni funcionamiento.
+                <p id="theme-help" className="-mt-3 text-sm text-gray-500">
+                  Cambia los colores sin modificar el catálogo. En las
+                  plantillas Jardín, Crónica, Invitación, Pizarra, Escaparate y
+                  Bandas, los temas Mexicano y Navidad también añaden
+                  decoración.
                 </p>
                 <Field label="Efecto">
                   <select
@@ -2107,6 +2106,21 @@ export default function StoreEditorPage() {
                                         className="h-4 w-4 accent-orange-600"
                                       />{" "}
                                       Visible
+                                    </label>
+                                    <label className="flex items-center gap-2">
+                                      <input
+                                        type="checkbox"
+                                        checked={product.soldOut}
+                                        onChange={(event) =>
+                                          updateProduct(
+                                            product.id,
+                                            "soldOut",
+                                            event.target.checked,
+                                          )
+                                        }
+                                        className="h-4 w-4 accent-orange-600"
+                                      />{" "}
+                                      Agotado
                                     </label>
                                     {form.inStoreOrdering && (
                                       <label className="flex items-center gap-2">

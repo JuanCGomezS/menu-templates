@@ -1,0 +1,567 @@
+.atelier--garden,
+.atelier--chronicle,
+.atelier--invitation {
+  --paper-line: color-mix(in srgb, var(--store-text) 20%, transparent);
+  --paper-muted: var(--store-text);
+  background: var(--store-bg);
+  color: var(--store-text);
+  min-height: 100vh;
+}
+
+.atelier--garden :is(a, button),
+.atelier--chronicle :is(a, button),
+.atelier--invitation :is(a, button) {
+  outline-color: var(--store-accent);
+}
+
+.atelier--garden ::selection,
+.atelier--chronicle ::selection,
+.atelier--invitation ::selection {
+  background: var(--store-accent);
+  color: var(--store-on-accent);
+}
+
+.atelier--garden .atelier-nav,
+.atelier--chronicle .atelier-nav,
+.atelier--invitation .atelier-nav {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  gap: 1.25rem;
+  overflow-x: auto;
+  padding: 0.9rem max(1.25rem, calc((100vw - 72rem) / 2));
+  border-block: 1px solid var(--paper-line);
+  background: var(--store-bg);
+  white-space: nowrap;
+}
+
+.atelier--garden .atelier-nav a,
+.atelier--chronicle .atelier-nav a,
+.atelier--invitation .atelier-nav a {
+  color: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.atelier--garden .atelier-nav a:hover,
+.atelier--chronicle .atelier-nav a:hover,
+.atelier--invitation .atelier-nav a:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+}
+
+.atelier--garden .atelier-item,
+.atelier--chronicle .atelier-item,
+.atelier--invitation .atelier-item {
+  min-width: 0;
+}
+.atelier--garden .atelier-item h3,
+.atelier--chronicle .atelier-item h3,
+.atelier--invitation .atelier-item h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.atelier--garden .atelier-item-copy p,
+.atelier--chronicle .atelier-item-copy p,
+.atelier--invitation .atelier-item-copy p {
+  margin: 0.35rem 0 0;
+  color: var(--paper-muted);
+  overflow-wrap: anywhere;
+}
+.atelier--garden .atelier-purchase,
+.atelier--chronicle .atelier-purchase,
+.atelier--invitation .atelier-purchase {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.atelier--garden .atelier-price,
+.atelier--chronicle .atelier-price,
+.atelier--invitation .atelier-price {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.atelier--garden .atelier-purchase button,
+.atelier--chronicle .atelier-purchase button,
+.atelier--invitation .atelier-purchase button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 0;
+  padding: 0.55rem 0.65rem;
+  background: var(--store-accent);
+  color: var(--store-on-accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+.atelier--garden .atelier-sold-out,
+.atelier--chronicle .atelier-sold-out,
+.atelier--invitation .atelier-sold-out {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.atelier-category-empty {
+  margin: 1rem 0 0;
+  color: var(--paper-muted);
+  font-size: 0.9rem;
+}
+
+.garden-hero {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+  overflow: hidden;
+  max-width: 78rem;
+  margin: 1.5rem auto 0;
+  padding: clamp(1.5rem, 5vw, 4.5rem);
+  background: var(--store-surface);
+}
+.garden-hero::before,
+.garden-hero::after {
+  position: absolute;
+  z-index: -1;
+  content: "";
+  background: var(--store-accent-soft);
+}
+.garden-hero::before {
+  width: 29rem;
+  height: 18rem;
+  right: -11rem;
+  top: -9rem;
+  border-radius: 50% 35% 55% 40% / 50% 55% 35% 48%;
+}
+.garden-hero::after {
+  width: 12rem;
+  height: 12rem;
+  left: -6rem;
+  bottom: -6rem;
+  border-radius: 58% 42% 35% 65% / 40% 45% 55% 60%;
+  background: var(--store-accent-tertiary);
+  opacity: 0.22;
+}
+.garden-hero__identity {
+  align-self: start;
+}
+.garden-hero .atelier-identity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.garden-hero .atelier-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+.garden-hero .atelier-brand img {
+  object-fit: contain;
+}
+.garden-hero .atelier-status {
+  border: 1px solid var(--paper-line);
+  padding: 0.35rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.garden-hero__heading {
+  align-self: center;
+}
+.garden-hero h1,
+.invitation-masthead h1 {
+  max-width: 10ch;
+  margin: 0;
+  font-family: var(--atelier-serif, serif);
+  font-size: clamp(3.4rem, 9vw, 6rem);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+.garden-hero__heading a,
+.invitation-masthead > a {
+  display: inline-block;
+  margin-top: 1.5rem;
+  color: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
+  border-bottom: 2px solid var(--store-accent);
+  padding-bottom: 0.3rem;
+}
+.garden-hero__photo {
+  width: min(100%, 29rem);
+  margin: 0;
+  justify-self: end;
+  align-self: end;
+  padding: 0.65rem;
+  background: var(--store-bg);
+  transform: rotate(2deg);
+  box-shadow: 0 20px 40px color-mix(in srgb, var(--store-text) 20%, transparent);
+}
+.garden-hero__photo img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 5 / 4;
+  object-fit: cover;
+}
+.garden-catalog {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3.5rem;
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: clamp(2.5rem, 7vw, 5rem) clamp(1.25rem, 4vw, 3rem);
+  background: var(--store-surface);
+}
+.garden-category {
+  scroll-margin-top: 6rem;
+  min-width: 0;
+}
+.garden-category h2 {
+  display: inline-block;
+  margin: 0 0 1.5rem;
+  color: var(--store-on-accent);
+  font-family: var(--atelier-serif, serif);
+  font-size: clamp(1.5rem, 3vw, 2.35rem);
+  font-weight: 400;
+  line-height: 1;
+}
+.garden-category h2 span {
+  display: block;
+  padding: 0.5rem 1rem 0.6rem;
+  background: var(--store-accent);
+  border-radius: 42% 58% 50% 50% / 45% 42% 58% 55%;
+  transform: rotate(-1deg);
+  overflow-wrap: anywhere;
+}
+.garden-category:nth-child(even) h2 span {
+  background: var(--store-bg);
+  color: var(--store-text);
+  border: 1px solid var(--paper-line);
+  transform: rotate(1deg);
+}
+.garden-category__items {
+  border-top: 1px dashed var(--paper-line);
+}
+.garden-category .atelier-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.8rem;
+  align-items: center;
+  padding: 0.8rem 0;
+  border-bottom: 1px dashed var(--paper-line);
+}
+.garden-category .atelier-item h3 {
+  font-size: 1rem;
+}
+.garden-category .atelier-item-copy p {
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.garden-category .atelier-purchase {
+  justify-content: end;
+}
+
+.chronicle-hero {
+  padding: 1.25rem max(1.25rem, calc((100vw - 72rem) / 2)) 2.5rem;
+  background: var(--store-bg);
+  color: var(--store-text);
+}
+.chronicle-hero .atelier-identity {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--paper-line);
+}
+.chronicle-hero .atelier-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+.chronicle-hero .atelier-brand img {
+  object-fit: contain;
+}
+.chronicle-hero .atelier-status {
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+.chronicle-hero__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-top: clamp(1.5rem, 4vw, 3rem);
+}
+.chronicle-hero h1 {
+  max-width: 11ch;
+  margin: 0;
+  font-family: var(--atelier-display, sans-serif);
+  font-size: clamp(3.6rem, 11vw, 6rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.chronicle-hero__title a {
+  color: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-underline-offset: 0.3em;
+}
+.chronicle-catalog {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: clamp(2.5rem, 5vw, 5rem) clamp(1.25rem, 4vw, 3rem);
+}
+.chronicle-category {
+  scroll-margin-top: 6rem;
+  margin-bottom: clamp(3.3rem, 7vw, 6.5rem);
+}
+.chronicle-category h2 {
+  margin: 0 0 1.5rem;
+  font-family: var(--atelier-display, sans-serif);
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.chronicle-route {
+  position: relative;
+}
+.chronicle-route::before {
+  position: absolute;
+  content: "";
+  width: 1px;
+  top: 0.9rem;
+  bottom: 0.9rem;
+  left: 0.45rem;
+  background: var(--paper-line);
+}
+.chronicle-product {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.1rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0 0 1.75rem;
+}
+.chronicle-product::before {
+  z-index: 1;
+  content: "";
+  width: 0.65rem;
+  height: 0.65rem;
+  margin-top: 0.4rem;
+  border: 2px solid var(--store-bg);
+  border-radius: 50%;
+  background: var(--store-accent);
+  box-shadow: 0 0 0 1px var(--store-accent);
+}
+.chronicle-product .atelier-item-copy {
+  grid-column: 2;
+}
+.chronicle-product .atelier-item h3,
+.chronicle-product h3 {
+  font-family: var(--atelier-display, sans-serif);
+  font-size: 1.35rem;
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+.chronicle-product .atelier-item-photo {
+  grid-column: 2;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  margin-top: 0.15rem;
+}
+.chronicle-product .atelier-purchase {
+  grid-column: 2;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  align-self: start;
+  flex-wrap: wrap;
+  padding-top: 0.65rem;
+}
+
+.atelier--invitation {
+  background: var(--store-text);
+  color: var(--store-bg);
+}
+.atelier--invitation .atelier-nav {
+  background: var(--store-text);
+  border-color: color-mix(in srgb, var(--store-bg) 25%, transparent);
+}
+.invitation-masthead {
+  max-width: 55rem;
+  margin: 0 auto;
+  padding: 1rem clamp(1.25rem, 4vw, 3rem) 2.5rem;
+  text-align: center;
+}
+.invitation-masthead .atelier-identity {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: clamp(1.8rem, 4vw, 3rem);
+  text-align: left;
+}
+.invitation-masthead .atelier-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: inherit;
+  font-size: 0.88rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+.invitation-masthead .atelier-brand img {
+  object-fit: contain;
+}
+.invitation-masthead .atelier-status {
+  font-size: 0.72rem;
+}
+.invitation-masthead h1 {
+  max-width: 12ch;
+  margin-inline: auto;
+  font-size: clamp(3.25rem, 10vw, 6rem);
+  line-height: 1;
+}
+.invitation-paper {
+  color: var(--store-text);
+  max-width: 43rem;
+  margin: 0 auto clamp(3rem, 8vw, 7rem);
+  padding: clamp(1.5rem, 6vw, 4.5rem) clamp(1.2rem, 7vw, 5rem);
+  background: var(--store-surface);
+  box-shadow: 0 23px 55px color-mix(in srgb, var(--store-text) 13%, transparent);
+}
+.invitation-category {
+  scroll-margin-top: 6rem;
+  text-align: center;
+}
+.invitation-category + .invitation-category {
+  margin-top: clamp(2.8rem, 6vw, 5.5rem);
+  padding-top: clamp(2.8rem, 6vw, 5.5rem);
+  border-top: 1px solid var(--paper-line);
+}
+.invitation-category__photo {
+  display: block;
+  width: 100%;
+  max-height: 15rem;
+  margin: 0 0 1.8rem;
+  object-fit: cover;
+}
+.invitation-category h2 {
+  margin: 0 0 1.25rem;
+  color: var(--store-text);
+  font-family: var(--atelier-serif, serif);
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  font-weight: 400;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+.invitation-category__items {
+  display: grid;
+  gap: 1rem;
+}
+.invitation-category .atelier-item {
+  grid-template-columns: minmax(0, 1fr);
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--paper-line);
+}
+.invitation-category .atelier-item h3 {
+  font-family: var(--atelier-serif, serif);
+  font-size: 1.2rem;
+  font-weight: 400;
+  line-height: 1;
+}
+.invitation-category .atelier-item-copy p {
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+.invitation-category .atelier-purchase {
+  flex-direction: row;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 0.65rem;
+}
+
+@media (min-width: 700px) {
+  .garden-hero {
+    grid-template-columns: 0.8fr minmax(0, 1.05fr);
+    grid-template-rows: auto 1fr;
+  }
+  .garden-hero__identity {
+    grid-column: 1 / -1;
+  }
+  .garden-hero__photo {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .garden-catalog {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .chronicle-product {
+    grid-template-columns: 1.1rem minmax(0, 1fr) minmax(12rem, 0.72fr);
+    grid-template-rows: min-content 1fr;
+    column-gap: 1.4rem;
+  }
+  .chronicle-product .atelier-item-copy {
+    grid-column: 2;
+  }
+  .chronicle-product .atelier-item-photo {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    margin: 0;
+    align-self: start;
+    aspect-ratio: 4 / 3;
+  }
+  .chronicle-product .atelier-purchase {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 374px) {
+  .garden-hero,
+  .chronicle-hero,
+  .invitation-masthead {
+    padding-inline: 1rem;
+  }
+  .invitation-paper {
+    padding-inline: 1rem;
+  }
+  .garden-category .atelier-purchase button {
+    padding-inline: 0.45rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .garden-hero__photo {
+    transition: transform 280ms ease-out;
+  }
+  .garden-hero__photo:hover {
+    transform: rotate(0.5deg) translateY(-3px);
+  }
+}

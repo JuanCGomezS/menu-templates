@@ -212,11 +212,11 @@ La atención administrativa usa `transitionOrderStatus`: al aceptar, una transac
 
 ## Selector de plantillas
 
-El editor usa cards de plantilla en lugar de renderizar una tienda completa dentro del formulario. Cada card comunica su estructura y propósito, es seleccionable con teclado y lector de pantalla, y conserva los IDs canónicos al guardar. Los IDs heredados se resuelven de forma compatible mediante `resolveTemplate`.
+La pestaña **Diseño** permite elegir una plantilla y un tema por separado mediante selectores nativos. La descripción de la plantilla explica su composición y los IDs canónicos se conservan al guardar. Los IDs heredados se resuelven de forma compatible mediante `resolveTemplate`.
 
 ## Layouts y themes
 
-Las cuatro plantillas consumen el mismo `StoreContentModel` normalizado; cambian jerarquía, navegación, densidad y composición sin alterar los datos. Los themes solo inyectan tokens de paleta y contraste. La lista de comprobación móvil/escritorio, incluido carrito, carga, error y vacío, está en [`docs/visual-layout-checklist.md`](docs/visual-layout-checklist.md).
+Las plantillas consumen el mismo `StoreContentModel` normalizado; cambian jerarquía, navegación, densidad y composición sin alterar los datos. Los temas aportan paleta y contraste. En la colección **Jardín, Crónica, Invitación, Pizarra, Escaparate y Bandas**, los temas **Mexicano** y **Navidad** también aportan decoración independiente de la composición. Las combinaciones inspiradas en las referencias y la vista local de demostración están en [`docs/template-collection.md`](docs/template-collection.md). La lista de comprobación móvil/escritorio, incluido carrito, carga, error y vacío, está en [`docs/visual-layout-checklist.md`](docs/visual-layout-checklist.md).
 
 ## Release y rutas estáticas
 

@@ -1,0 +1,454 @@
+.atelier--billboard,
+.atelier--spotlight,
+.atelier--ribbon {
+  --poster-space: max(1.25rem, calc((100vw - 1180px) / 2));
+}
+
+.billboard-header,
+.billboard-catalog,
+.spotlight-hero,
+.spotlight-catalog,
+.ribbon-header,
+.ribbon-catalog {
+  padding-inline: var(--poster-space);
+}
+
+.billboard-header {
+  background: color-mix(in srgb, var(--store-bg) 86%, #000);
+}
+.billboard-masthead {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(15rem, 0.85fr);
+  min-height: clamp(19rem, 35vw, 27rem);
+  border-block: 1px solid var(--store-border);
+}
+.billboard-masthead > div:first-child {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+  padding: 2.5rem clamp(1.5rem, 5vw, 5rem) 2.5rem 0;
+}
+.billboard-masthead h1,
+.spotlight-intro h1,
+.ribbon-top h1 {
+  max-width: 9ch;
+  font-family: var(--atelier-display);
+  font-size: clamp(3.6rem, 10vw, 6rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-transform: uppercase;
+}
+.atelier--billboard .billboard-action,
+.spotlight-intro a,
+.ribbon-top > a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  margin-top: 2rem;
+  padding: 0.55rem 1rem;
+  background: var(--store-accent);
+  color: var(--store-on-accent);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+.billboard-hero-photo {
+  width: 100%;
+  height: 100%;
+  min-height: 18rem;
+  max-height: 27rem;
+  object-fit: cover;
+  border-left: 1px solid var(--store-border);
+}
+.billboard-hero-type {
+  display: grid;
+  place-items: center;
+  min-height: 18rem;
+  padding: 1rem;
+  border-left: 1px solid var(--store-border);
+  background: var(--store-accent-soft);
+  color: var(--store-accent);
+  font-family: var(--atelier-display);
+  font-size: clamp(4rem, 10vw, 6rem);
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.billboard-catalog {
+  padding-block: clamp(3rem, 8vw, 7rem);
+}
+.billboard-category {
+  margin: 0 auto clamp(3.5rem, 7vw, 6rem);
+  max-width: 1100px;
+  border: 1px solid var(--store-border);
+}
+.billboard-category h2 {
+  position: relative;
+  display: table;
+  max-width: calc(100% - 2rem);
+  margin: -1px 0 0 -1px;
+  padding: 0.7rem 1.2rem;
+  background: var(--store-accent);
+  color: var(--store-on-accent);
+  font-family: var(--atelier-display);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.billboard-items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.billboard-item {
+  min-height: 9.5rem;
+  padding: 1.5rem;
+  border-right: 1px solid var(--store-border);
+  border-bottom: 1px solid var(--store-border);
+}
+.billboard-item:nth-child(2n) {
+  border-right: 0;
+}
+.billboard-item .atelier-item-copy h3 {
+  font-family: var(--atelier-serif);
+  font-size: 1.25rem;
+}
+.billboard-item .atelier-purchase {
+  justify-content: space-between;
+  min-width: 7rem;
+}
+.poster-category-empty {
+  padding: 2rem;
+  color: var(--store-text);
+}
+
+.spotlight-hero {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: center;
+  column-gap: 2rem;
+  padding-bottom: 3rem;
+  min-height: min(45rem, 100vh);
+  overflow: hidden;
+  background: var(--store-bg);
+}
+.spotlight-hero .atelier-identity {
+  position: relative;
+  z-index: 3;
+  grid-column: 1 / -1;
+  width: 100%;
+  border-bottom: 1px solid var(--store-border);
+}
+.spotlight-intro {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding-block: 3rem;
+}
+.spotlight-intro h1 {
+  max-width: 8ch;
+  font-size: clamp(3.7rem, 8.5vw, 6rem);
+}
+.spotlight-photo {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 5 / 4;
+  object-fit: cover;
+  box-shadow: 0 24px 50px color-mix(in srgb, var(--store-text) 22%, transparent);
+}
+.spotlight-hero--photo::after {
+  position: absolute;
+  z-index: 0;
+  right: -10vw;
+  top: 10rem;
+  width: min(52vw, 44rem);
+  height: min(52vw, 44rem);
+  border-radius: 50%;
+  background: var(--store-accent-soft);
+  content: "";
+}
+.spotlight-fallback {
+  position: relative;
+  z-index: 1;
+  color: var(--store-text);
+  font-family: var(--atelier-display);
+  font-size: clamp(3rem, 8vw, 6rem);
+  font-weight: 700;
+  line-height: 1;
+  text-align: right;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.spotlight-catalog {
+  padding-block: 1rem clamp(4rem, 8vw, 8rem);
+}
+.spotlight-catalog > .atelier-nav {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+.spotlight-category {
+  display: grid;
+  grid-template-columns: minmax(0, 0.74fr) minmax(0, 1.26fr);
+  gap: clamp(2rem, 8vw, 9rem);
+  max-width: 1180px;
+  margin: clamp(4rem, 11vw, 10rem) auto 0;
+}
+.spotlight-category--right {
+  grid-template-columns: minmax(0, 1.26fr) minmax(0, 0.74fr);
+}
+.spotlight-category--right .spotlight-category-heading {
+  order: 2;
+}
+.spotlight-category-heading h2 {
+  max-width: 9ch;
+  font-family: var(--atelier-display);
+  font-size: clamp(3rem, 7vw, 5.5rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+}
+.spotlight-category-heading img {
+  display: block;
+  width: 75%;
+  margin-top: 2.5rem;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  box-shadow: 0 18px 42px color-mix(in srgb, var(--store-text) 18%, transparent);
+}
+.spotlight-category--right .spotlight-category-heading img {
+  margin-left: auto;
+}
+.spotlight-products {
+  border-top: 1px solid var(--store-border);
+}
+.spotlight-item {
+  border-bottom: 1px solid var(--store-border);
+}
+.spotlight-item .atelier-item-photo {
+  width: 94px;
+}
+
+.ribbon-header {
+  display: grid;
+  grid-template-columns: clamp(4rem, 11vw, 10rem) minmax(0, 1fr);
+  border-bottom: 1px solid var(--store-border);
+}
+.ribbon-side-title {
+  grid-row: span 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: var(--store-accent);
+  color: var(--store-on-accent);
+  font-family: var(--atelier-display);
+  font-size: clamp(3rem, 9vw, 6rem);
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+.ribbon-top {
+  min-width: 0;
+  padding-left: clamp(1.25rem, 4vw, 4rem);
+}
+.ribbon-top h1 {
+  max-width: 12ch;
+  padding-block: clamp(2rem, 5vw, 5rem);
+}
+.ribbon-top > a {
+  margin-top: 0;
+  margin-bottom: 2rem;
+}
+.ribbon-header .atelier-nav {
+  padding-left: clamp(1.25rem, 4vw, 4rem);
+}
+.ribbon-catalog {
+  padding-block: clamp(3rem, 7vw, 7rem);
+}
+.ribbon-category {
+  max-width: 1180px;
+  margin: 0 auto clamp(4rem, 8vw, 8rem);
+}
+.ribbon-category > h2 {
+  margin-bottom: 1rem;
+  color: var(--store-text);
+  font-family: var(--atelier-display);
+  font-size: clamp(2.7rem, 6vw, 5rem);
+  font-weight: 700;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+.ribbon-products {
+  display: grid;
+  gap: 1.1rem;
+}
+.ribbon-product {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1.25rem;
+  align-items: center;
+  min-height: 10rem;
+  padding: 1.25rem clamp(1.25rem, 4vw, 3rem);
+  background: var(--store-surface);
+  border: 1px solid var(--store-border);
+}
+.ribbon-product--photo {
+  grid-template-columns: clamp(6.5rem, 16vw, 14rem) minmax(0, 1fr) auto;
+}
+.ribbon-product > img {
+  width: 100%;
+  height: 100%;
+  min-height: 7rem;
+  max-height: 13rem;
+  object-fit: cover;
+}
+.ribbon-copy {
+  min-width: 0;
+}
+.ribbon-copy h3 {
+  font-family: var(--atelier-serif);
+  font-size: clamp(1.3rem, 2.5vw, 2rem);
+  line-height: 1.05;
+}
+.ribbon-copy p {
+  margin-top: 0.6rem;
+  color: var(--store-text);
+  font-size: 0.9rem;
+}
+.ribbon-purchase {
+  min-width: min(12rem, 30vw);
+}
+.ribbon-purchase .atelier-purchase {
+  align-items: stretch;
+}
+.ribbon-purchase .atelier-price {
+  display: block;
+  padding: 0.6rem 0.8rem;
+  background: var(--store-accent);
+  color: var(--store-on-accent);
+  font-family: var(--atelier-display);
+  font-size: clamp(1.5rem, 3.2vw, 2.5rem);
+  line-height: 1;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.ribbon-purchase .atelier-purchase button {
+  width: 100%;
+}
+
+@media (max-width: 700px) {
+  .billboard-masthead {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .billboard-masthead > div:first-child {
+    padding-right: 0;
+  }
+  .billboard-hero-photo,
+  .billboard-hero-type {
+    min-height: 14rem;
+    max-height: 20rem;
+    border-top: 1px solid var(--store-border);
+    border-left: 0;
+  }
+  .billboard-items {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .billboard-item,
+  .billboard-item:nth-child(2n) {
+    border-right: 0;
+  }
+  .spotlight-hero {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+  .spotlight-intro {
+    padding-block: 2rem;
+  }
+  .spotlight-photo {
+    width: 100%;
+    max-height: 24rem;
+  }
+  .spotlight-fallback {
+    text-align: left;
+  }
+  .spotlight-category,
+  .spotlight-category--right {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2rem;
+  }
+  .spotlight-category--right .spotlight-category-heading {
+    order: 0;
+  }
+  .spotlight-category-heading img,
+  .spotlight-category--right .spotlight-category-heading img {
+    width: min(76%, 23rem);
+    margin-left: 0;
+  }
+  .ribbon-header {
+    display: block;
+  }
+  .ribbon-side-title {
+    display: block;
+    padding: 0.7rem var(--poster-space);
+    font-size: clamp(3rem, 14vw, 5rem);
+    writing-mode: horizontal-tb;
+    transform: none;
+  }
+  .ribbon-top {
+    padding-left: 0;
+  }
+  .ribbon-header .atelier-nav {
+    padding-left: 0;
+  }
+  .ribbon-product,
+  .ribbon-product--photo {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+  .ribbon-product > img {
+    max-height: 16rem;
+  }
+  .ribbon-purchase {
+    min-width: 0;
+  }
+  .ribbon-purchase .atelier-purchase {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+  }
+  .ribbon-purchase .atelier-sold-out {
+    align-self: center;
+  }
+}
+
+@media (max-width: 375px) {
+  .billboard-masthead h1,
+  .spotlight-intro h1,
+  .ribbon-top h1 {
+    font-size: clamp(3rem, 17vw, 4.1rem);
+  }
+  .billboard-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .billboard-item .atelier-purchase {
+    align-items: flex-start;
+  }
+}

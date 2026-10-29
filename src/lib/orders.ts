@@ -504,7 +504,7 @@ export async function transitionOrderStatus(
           order.type === "delivery"
             ? item.availableForDelivery !== false
             : item.availableInStore !== false;
-        if (item.active === false || !availableForMode)
+        if (item.active === false || !availableForMode || item.soldOut === true)
           throw new Error(
             `El producto ${item.name || orderItem.name || ""} ya no está disponible.`,
           );
